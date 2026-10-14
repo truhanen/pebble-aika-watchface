@@ -24,6 +24,40 @@ test('STATIC_WIDGETS includes the Distance widget (id 21)', () => {
   assert.strictEqual(opt.label, 'Distance');
 });
 
+test('STATIC_WIDGETS offers exactly the contract ids (no 1, no retired 4, no legacy 15/16/17)', () => {
+  const ids = STATIC_WIDGETS.map((o) => o.id).sort((a, b) => a - b);
+  assert.deepStrictEqual(ids, [0, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 18, 19, 20, 21, 22, 23, 24, 25,
+    26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 255]);
+  assert.strictEqual(new Set(ids).size, ids.length, 'ids are unique');
+});
+
+test('STATIC_WIDGETS labels for the Phase 4 widgets', () => {
+  const label = (id) => STATIC_WIDGETS.find((o) => o.id === id).label;
+  assert.strictEqual(label(2), 'Battery (icon + %)');
+  assert.deepStrictEqual([26, 27, 28, 29, 30, 31, 32, 33, 34].map(label), [
+    'Date d.m.', 'Date dd.mm.', 'Date dd.mm', 'Date d.m.yyyy', 'Date Wkday dd',
+    'Date Wkday d.m.', 'Date Wkday', 'Date dd Mon', 'Date yyyy-mm-dd']);
+  assert.strictEqual(label(35), 'Digital time');
+  assert.strictEqual(label(36), 'Battery (icon only)');
+  assert.strictEqual(label(37), 'Weather (icon only)');
+  assert.strictEqual(label(38), 'Bluetooth (icon only)');
+});
+
+test("the retired \"Today's Date\" widget (4) is not offered", () => {
+  assert.strictEqual(STATIC_WIDGETS.find((o) => o.id === 4), undefined);
+  assert.ok(!STATIC_WIDGETS.some((o) => /Today's Date/.test(o.label)));
+});
+
+test('FONT_OPTIONS has the 17 contract labels; FONT_DEFAULT is 31', () => {
+  const { FONT_OPTIONS, FONT_DEFAULT } = require('../src/pkjs/widget_options');
+  assert.strictEqual(FONT_DEFAULT, 31);
+  assert.strictEqual(FONT_OPTIONS.length, 17);
+  assert.strictEqual(FONT_OPTIONS[0], 'Gothic 3x-small (14)');
+  assert.strictEqual(FONT_OPTIONS[5], 'Gothic medium (28 bold)');
+  assert.strictEqual(FONT_OPTIONS[7], 'Bitham large (30 black)');
+  assert.strictEqual(FONT_OPTIONS[16], 'Leco 5x-large (60 bold)');
+});
+
 test('STATIC_WIDGETS includes the Battery Days widget (id 22)', () => {
   const opt = STATIC_WIDGETS.find((o) => o.id === 22);
   assert.ok(opt, 'Battery Days option present');

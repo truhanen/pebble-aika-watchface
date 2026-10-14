@@ -1,6 +1,6 @@
 # Nyquist 3
 
-An analog watchface for the Pebble Time 2 (emery). It uses bold Nyquist-style hands, a dithered tick strip along the screen edges (one block per minute, centred on its minute boundary, with black 5-minute marks), and configurable widgets along the left, right, top and bottom edges.
+An analog watchface for the Pebble Time 2 (emery). It uses bold Nyquist-style hands, 60 separate edge ticks (one per minute boundary, each 6 px long and 4 px deep, black on the 5-minute marks and 20% dithered otherwise), and configurable widgets along the left, right, top and bottom edges.
 
 <p><img src="screenshots/main.png" width="180" alt="Nyquist 3 watchface"></p>
 

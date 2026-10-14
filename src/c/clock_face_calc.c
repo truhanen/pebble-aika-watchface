@@ -21,88 +21,50 @@ void cf_hand_pose(float cx, float cy, float sin_a, float cos_a, int shoulder,
                                 cf_snap(outer_y - apex_ext * cos_a) };
 }
 
-// Unit vectors (sin, cos) * 32767 of the rays at clockwise angles j*6deg + 3deg,
-// j = 0..59, i.e. the edges between tick blocks (y-up frame). Ray j separates
-// tick j (below) from tick j+1 (above). Generated, not hand-typed:
-//   round(32767 * sin(radians(6*j + 3))), round(32767 * cos(radians(6*j + 3)))
-static const int16_t s_ray_sin[60] = {
-     1715,   5126,   8481,  11743,  14876,  17846,  20621,  23170,  25465,  27481,
-    29196,  30591,  31650,  32364,  32722,  32722,  32364,  31650,  30591,  29196,
-    27481,  25465,  23170,  20621,  17846,  14876,  11743,   8481,   5126,   1715,
-    -1715,  -5126,  -8481, -11743, -14876, -17846, -20621, -23170, -25465, -27481,
-   -29196, -30591, -31650, -32364, -32722, -32722, -32364, -31650, -30591, -29196,
-   -27481, -25465, -23170, -20621, -17846, -14876, -11743,  -8481,  -5126,  -1715,
-};
-static const int16_t s_ray_cos[60] = {
-    32722,  32364,  31650,  30591,  29196,  27481,  25465,  23170,  20621,  17846,
-    14876,  11743,   8481,   5126,   1715,  -1715,  -5126,  -8481, -11743, -14876,
-   -17846, -20621, -23170, -25465, -27481, -29196, -30591, -31650, -32364, -32722,
-   -32722, -32364, -31650, -30591, -29196, -27481, -25465, -23170, -20621, -17846,
-   -14876, -11743,  -8481,  -5126,  -1715,   1715,   5126,   8481,  11743,  14876,
-    17846,  20621,  23170,  25465,  27481,  29196,  30591,  31650,  32364,  32722,
-};
-
-// 0 for clockwise angles in [0, 180), 1 for [180, 360). (sx, sy) is y-up.
-static int half_of(int32_t sx, int32_t sy) {
-  return (sx > 0 || (sx == 0 && sy > 0)) ? 0 : 1;
-}
-
-// Is the clockwise angle of a strictly smaller than that of b?
-static bool cw_less(int32_t ax, int32_t ay, int32_t bx, int32_t by) {
-  int ha = half_of(ax, ay), hb = half_of(bx, by);
-  if (ha != hb) { return ha < hb; }
-  // Same half-plane: sin(A - B) = ax*by - ay*bx < 0  <=>  A < B.
-  return (int64_t)ax * by - (int64_t)ay * bx < 0;
-}
-
-int cf_tick_of_direction(int32_t dx2, int32_t dy2) {
-  int32_t sx = dx2, sy = -dy2;   // to the y-up frame
-  // Binary search for the last ray j with angle(j) <= angle(v); -1 if none (< 3deg).
-  int lo = -1, hi = 59;
-  while (lo < hi) {
-    int mid = (lo + hi + 1) / 2;
-    if (cw_less(sx, sy, s_ray_sin[mid], s_ray_cos[mid])) { hi = mid - 1; } else { lo = mid; }
+void cf_boundary_hit(int w, int h, float sin_a, float cos_a, int *edge, float *t) {
+  float cx = w / 2.0f, cy = h / 2.0f;
+  float dx = sin_a, dy = -cos_a;   // screen frame, y grows downwards
+  const float big = 1e30f;
+  float tx = big, ty = big;
+  if (dx > 1e-6f) { tx = (w - cx) / dx; } else if (dx < -1e-6f) { tx = cx / -dx; }
+  if (dy > 1e-6f) { ty = (h - cy) / dy; } else if (dy < -1e-6f) { ty = cy / -dy; }
+  if (ty <= tx) {
+    float x = cx + dx * ty;
+    if (dy < 0) { *edge = CF_EDGE_TOP; *t = x; } else { *edge = CF_EDGE_BOTTOM; *t = w - x; }
+  } else {
+    float y = cy + dy * tx;
+    if (dx > 0) { *edge = CF_EDGE_RIGHT; *t = y; } else { *edge = CF_EDGE_LEFT; *t = h - y; }
   }
-  // Past ray j the tick is j + 1; before ray 0 and past ray 59 it is tick 0.
-  return (lo + 1) % 60;
 }
 
-int cf_strip_pixel_count(int w, int h) {
-  return 2 * CF_STRIP_W * w + 2 * CF_STRIP_W * (h - 2 * CF_STRIP_W);
+// Pixel of layer d's ring (rectangle inset by d, walked clockwise from its top-left
+// corner, each corner pixel once) at ring index i, any integer (wraps).
+static CfPoint ring_pixel(int w, int h, int d, int i) {
+  int a = w - 1 - 2 * d, b = h - 1 - 2 * d, len = 2 * a + 2 * b;
+  i %= len;
+  if (i < 0) { i += len; }
+  if (i < a)         { return (CfPoint){ (int16_t)(d + i), (int16_t)d }; }
+  i -= a;
+  if (i < b)         { return (CfPoint){ (int16_t)(w - 1 - d), (int16_t)(d + i) }; }
+  i -= b;
+  if (i < a)         { return (CfPoint){ (int16_t)(w - 1 - d - i), (int16_t)(h - 1 - d) }; }
+  i -= a;
+  return (CfPoint){ (int16_t)d, (int16_t)(h - 1 - d - i) };
 }
 
-int cf_strip_row_spans(int y, int w, int h, int x0[2], int x1[2]) {
-  if (y < 0 || y >= h) { return 0; }
-  if (y < CF_STRIP_W || y >= h - CF_STRIP_W) {
-    x0[0] = 0; x1[0] = w;
-    return 1;
+void cf_tick_pixels(int w, int h, int edge, float t, CfPoint out[CF_TICK_PIXELS]) {
+  int k = (int)(t + 0.5f);   // t >= 0: round half up
+  int base[4] = { 0, w - 1, w + h - 2, 2 * w + h - 3 };
+  int o = base[edge] + k;
+  int n = 0;
+  for (int d = 0; d < CF_STRIP_W; d++) {
+    int start = o - (2 * edge + 1) * d - CF_TICK_LEN / 2;
+    for (int j = 0; j < CF_TICK_LEN; j++) { out[n++] = ring_pixel(w, h, d, start + j); }
   }
-  x0[0] = 0;              x1[0] = CF_STRIP_W;
-  x0[1] = w - CF_STRIP_W; x1[1] = w;
-  return 2;
 }
 
-// 10% black: dither pattern from mathewreiss/dithering library.
-static bool dither_10(int x, int y) {
-  return (x % 8 == 0 && y % 4 == 0) || ((x + 4) % 8 == 0 && (y + 2) % 4 == 0);
-}
-
-// 20% black: dither pattern from mathewreiss/dithering library.
-static bool dither_20(int x, int y) {
-  return (x % 4 + y % 4 == 0) || ((x + 2) % 4 + (y + 2) % 4 == 0);
-}
-
-// 30% black: dither pattern from mathewreiss/dithering library.
-static bool dither_30(int x, int y) {
-  return (x + y) % 2 == 0 && ((x + y) % 4 != 0 || ((x + y) % 4 == 0 && x % 2 != 0 && y % 2 != 0));
-}
-
-bool cf_shade_is_black(int shade, int x, int y) {
-  switch (shade) {
-    case 0:  return false;
-    case 1:  return dither_10(x, y);
-    case 2:  return dither_20(x, y);
-    case 3:  return dither_30(x, y);
-    default: return true;
-  }
+bool cf_tick_is_black(int b, int x, int y) {
+  static const uint8_t bayer[4][4] = { { 0, 8, 2, 10 }, { 12, 4, 14, 6 },
+                                       { 3, 11, 1, 9 },  { 15, 7, 13, 5 } };
+  return b % 5 == 0 || bayer[y & 3][x & 3] < 3;
 }

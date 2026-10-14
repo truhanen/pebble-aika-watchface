@@ -1,5 +1,6 @@
-// Clock face: hour + minute hands, centre pivot, the dithered tick strip along the
-// screen edges and the widgets (icons below the hands, values above), all on one
+// Clock face: hour + minute hands, centre pivot, the 60 minute-boundary ticks along
+// the screen edges (separate, equal-length, black on every 5th and 18.75% dithered
+// otherwise) and the widgets (icons below the hands, values above), all on one
 // full-screen layer.
 //
 // Hand dimensions are those of the Nyquist watchface (truhanen/
@@ -23,9 +24,6 @@ Layer *clock_face_layer;
 
 static int s_hours;
 static int s_minutes;
-
-// Tick index (0..59) of every strip pixel, in cf_strip_row_spans order.
-static uint8_t *s_strip_tick;
 
 static GPoint to_gpoint(CfPoint p) { return GPoint(p.x, p.y); }
 
@@ -63,41 +61,40 @@ static void draw_hand_fill(GContext *ctx, const CfHandPose *p, GColor color) {
   gpath_draw_filled(ctx, &s_path);
 }
 
-static void build_strip_table(int w, int h) {
-  s_strip_tick = malloc(cf_strip_pixel_count(w, h));
-  if (!s_strip_tick) { return; }
-  int cx = w / 2, cy = h / 2, i = 0;
-  for (int y = 0; y < h; y++) {
-    int x0[2], x1[2];
-    int n = cf_strip_row_spans(y, w, h, x0, x1);
-    for (int s = 0; s < n; s++) {
-      for (int x = x0[s]; x < x1[s]; x++) {
-        s_strip_tick[i++] = (uint8_t)cf_tick_of_direction(2 * x + 1 - 2 * cx,
-                                                              2 * y + 1 - 2 * cy);
-      }
+// Colour of every tick pixel, computed once at init.
+typedef struct { uint8_t x, y, argb; } TickPixel;
+static TickPixel s_tick_pixels[CF_TICK_COUNT * CF_TICK_PIXELS];
+
+static void build_tick_table(int w, int h) {
+  int n = 0;
+  for (int b = 0; b < CF_TICK_COUNT; b++) {
+    int32_t angle = b * TRIG_MAX_ANGLE / CF_TICK_COUNT;
+    float sin_a = (float)sin_lookup(angle) / TRIG_MAX_RATIO;
+    float cos_a = (float)cos_lookup(angle) / TRIG_MAX_RATIO;
+    int edge;
+    float t;
+    cf_boundary_hit(w, h, sin_a, cos_a, &edge, &t);
+    CfPoint px[CF_TICK_PIXELS];
+    cf_tick_pixels(w, h, edge, t, px);
+    for (int i = 0; i < CF_TICK_PIXELS; i++) {
+      s_tick_pixels[n++] = (TickPixel){
+        (uint8_t)px[i].x, (uint8_t)px[i].y,
+        cf_tick_is_black(b, px[i].x, px[i].y) ? GColorBlack.argb : GColorWhite.argb };
     }
   }
 }
 
-// Writes the strip's plain shades straight into the framebuffer, over whatever is
-// underneath (including the minute hand).
-static void draw_strip(GContext *ctx, GRect bounds) {
-  if (!s_strip_tick) { return; }
+// Writes the tick pixels straight into the framebuffer, over whatever is underneath
+// (including the minute hand). Everything else in the strip area is left as drawn.
+static void draw_ticks(GContext *ctx) {
   GBitmap *fb = graphics_capture_frame_buffer(ctx);
   if (!fb) { return; }
-  const uint8_t black = GColorBlack.argb, white = GColorWhite.argb;
-  int w = bounds.size.w, h = bounds.size.h, i = 0;
-  for (int y = 0; y < h; y++) {
-    int x0[2], x1[2];
-    int n = cf_strip_row_spans(y, w, h, x0, x1);
-    if (n == 0) { continue; }
-    GBitmapDataRowInfo row = gbitmap_get_data_row_info(fb, y);
-    for (int s = 0; s < n; s++) {
-      for (int x = x0[s]; x < x1[s]; x++) {
-        bool is_black = cf_shade_is_black(cf_strip_shade(s_strip_tick[i++]), x, y);
-        row.data[x] = is_black ? black : white;
-      }
-    }
+  int last_y = -1;
+  GBitmapDataRowInfo row = { 0 };
+  for (int i = 0; i < CF_TICK_COUNT * CF_TICK_PIXELS; i++) {
+    const TickPixel *p = &s_tick_pixels[i];
+    if (p->y != last_y) { row = gbitmap_get_data_row_info(fb, p->y); last_y = p->y; }
+    row.data[p->x] = p->argb;
   }
   graphics_release_frame_buffer(ctx, fb);
 }
@@ -163,14 +160,14 @@ static void face_update_proc(Layer *l, GContext *ctx) {
 
   WidgetLayer_drawValues(ctx);
 
-  draw_strip(ctx, bounds);
+  draw_ticks(ctx);
   draw_warn_border(ctx, bounds);
 }
 
 void ClockFace_init(Window *window) {
   Layer *root = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(root);
-  build_strip_table(bounds.size.w, bounds.size.h);
+  build_tick_table(bounds.size.w, bounds.size.h);
   clock_face_layer = layer_create(bounds);
   layer_set_update_proc(clock_face_layer, face_update_proc);
   layer_add_child(root, clock_face_layer);
@@ -178,8 +175,6 @@ void ClockFace_init(Window *window) {
 
 void ClockFace_deinit(void) {
   layer_destroy(clock_face_layer);
-  free(s_strip_tick);
-  s_strip_tick = NULL;
 }
 
 void ClockFace_redraw(void) {

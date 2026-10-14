@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Tuomas Airaksinen
 
 /* Clay custom component "widgetList": a reorderable list of widget slots. Each row
-   is either a plain widget (a widget <select> plus a font <select>), or a "Rotating"
+   is either a plain widget (a widget <select> plus an "Aa" font <select>), or a "Rotating"
    group (main <select> == 255) that expands into an interval <select> + a member
    sub-list, each member with its own widget + font selects. The component value is
    an array of slot objects:
@@ -29,6 +29,9 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   const MAX_MEMBERS = 6;
   const DEFAULT_INTERVAL = 3;     // 1 min
   const FONT_DEFAULT = 31;        // "position default" (the watch picks per list)
+  // Font the watch uses for FONT_DEFAULT in this list (5 side lists, 7 top/bottom);
+  // only used to label the "Default (...)" option.
+  const cfgDefFont = parseInt(self.config && self.config.defaultFont, 10);
   const MAX_FONT = 16;
   const LEGACY_HIDE_FLAG = 0x20;  // old stored values: hide flag OR-ed into the id
   // Toggleable = has an icon or a unit to hide. No-op for Empty(0), Bluetooth(1),
@@ -40,9 +43,10 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     if (id >= 36 && id <= 38) { return false; }
     return true;
   }
-  // Has a text value drawn in a font: not Empty, not the icon-only widgets.
+  // Has a font setting: text widgets and Empty (the font sets the slot height), not
+  // the icon-only widgets.
   function hasFontId(id: number): boolean {
-    return id !== 0 && !(id >= 36 && id <= 38);
+    return !(id >= 36 && id <= 38);
   }
   function hideBtnHtml(id: number, hidden: boolean, cls: string): string {
     if (!isToggleableId(id)) { return ''; }
@@ -283,8 +287,12 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   }
 
   function fontOptionsHtml(selected: number): string {
+    let defLabel = 'Default';
+    if (!isNaN(cfgDefFont) && cfgDefFont >= 0 && cfgDefFont < FONT_OPTIONS.length) {
+      defLabel += ' (' + FONT_OPTIONS[cfgDefFont].replace(/\s*\(.*$/, '') + ')';
+    }
     let html = '<option value="' + FONT_DEFAULT + '"' + (selected === FONT_DEFAULT ? ' selected' : '') +
-      '>Default</option>';
+      '>' + defLabel + '</option>';
     for (let i = 0; i < FONT_OPTIONS.length; i++) {
       html += '<option value="' + i + '"' + (i === selected ? ' selected' : '') + '>' + FONT_OPTIONS[i] + '</option>';
     }
@@ -293,8 +301,11 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
 
   function fontRowHtml(id: number, font: number, cls: string): string {
     if (!hasFontId(id)) { return ''; }
-    return '<div class="wl-fontrow"><span class="wl-fontlbl">Font</span>' +
-      '<select class="' + cls + '">' + fontOptionsHtml(font) + '</select></div>';
+    // A native <select> (opacity 0) stretched over the visible "Aa" label: closed it
+    // reads "Aa", tapped it opens the native picker with the full list.
+    return '<span class="wl-fontbox' + (font !== FONT_DEFAULT ? ' wl-custom' : '') + '">' +
+      '<span class="wl-aa" aria-hidden="true">Aa</span>' +
+      '<select class="' + cls + '" title="Font" aria-label="Font">' + fontOptionsHtml(font) + '</select></span>';
   }
 
   function memberHtml(raw: any): string {
@@ -302,10 +313,10 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     return '<div class="wl-mem">' +
       '<div class="wl-mmain">' +
       '<select class="wl-msel">' + memberOptionsHtml(e.id) + '</select>' +
+      fontRowHtml(e.id, e.font, 'wl-mfont') +
       hideBtnHtml(e.id, e.hide, 'wl-mhide') +
       '<button type="button" class="wl-mdel" title="Remove member">&#10005;</button>' +
-      '</div>' + fontRowHtml(e.id, e.font, 'wl-mfont') +
-      '</div>';
+      '</div></div>';
   }
 
   function groupHtml(interval: number, members: any[]): string {
@@ -326,7 +337,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     let html = '<div class="wl-row">' +
       '<div class="wl-main">' +
       '<select class="wl-sel">' + mainOptionsHtml(mainSel) + '</select>' +
-      (isRot ? '' : hideBtnHtml(e.id, e.hide, 'wl-hide')) +
+      (isRot ? '' : fontRowHtml(e.id, e.font, 'wl-font') + hideBtnHtml(e.id, e.hide, 'wl-hide')) +
       '<button type="button" class="wl-up" title="Move up">&#9650;</button>' +
       '<button type="button" class="wl-down" title="Move down">&#9660;</button>' +
       '<button type="button" class="wl-del" title="Remove">&#10005;</button>' +
@@ -335,8 +346,6 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
       const iv = (typeof slot.interval === 'number') ? slot.interval : DEFAULT_INTERVAL;
       const mems = Array.isArray(slot.members) ? slot.members : [];
       html += groupHtml(iv, mems);
-    } else {
-      html += fontRowHtml(e.id, e.font, 'wl-font');
     }
     return html + '</div>';
   }
@@ -569,6 +578,11 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   root.addEventListener('change', function(ev: Event) {
     const t = ev.target as HTMLElement;
     if (!t || t.tagName !== 'SELECT') { return; }
+    if (t.classList.contains('wl-font') || t.classList.contains('wl-mfont')) {
+      const box = t.parentNode as HTMLElement;
+      if ((parseInt((t as HTMLSelectElement).value, 10)) !== FONT_DEFAULT) { box.classList.add('wl-custom'); }
+      else { box.classList.remove('wl-custom'); }
+    }
     if (t.classList.contains('wl-sel')) {
       // main select changed: reconcile rotating <-> plain, seeding a fresh group.
       const slots = readSlots();
@@ -627,28 +641,29 @@ const widgetListComponent = {
   // member buttons MUST override min-width (else forced to 12rem, squeezing selects).
   style:
     '.wl-row{display:flex;flex-direction:column;margin:0 0 8px 0}' +
-    '.wl-main{display:flex;align-items:center}' +
-    '.wl-row .wl-sel{flex:1 1 auto;min-width:0;height:2.8rem;margin:0;' +
+    '.wl-main,.wl-mmain{display:flex;align-items:center;flex-wrap:nowrap;min-width:0}' +
+    '.wl-row .wl-sel,.wl-mem .wl-msel{flex:1 1 0;min-width:0;width:0;height:2.6rem;margin:0;' +
       'background-color:#767676;color:#fff;border:none;border-radius:0.3rem;' +
-      'padding:0 0.5rem;color-scheme:dark}' +
-    '.wl-row .wl-main button,.wl-row .wl-main .wl-hide{flex:0 0 auto;min-width:0;width:2.8rem;height:2.8rem;margin:0 0 0 6px;padding:0}' +
-    '.wl-mem .wl-mhide{flex:0 0 auto;min-width:0;width:2.6rem;height:2.6rem;margin:0 0 0 6px;padding:0}' +
+      'padding:0 0.3rem;font-size:.85rem;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;color-scheme:dark}' +
+    '.wl-row .wl-main button,.wl-mem .wl-mmain button{flex:0 0 auto;min-width:0;width:2rem;height:2.6rem;' +
+      'margin:0 0 0 3px;padding:0;font-size:.85rem}' +
     '.wl-row .wl-hidden{opacity:.55}' +
     '.wl-row button[disabled]{opacity:.35}' +
+    '.wl-fontbox{position:relative;flex:0 0 auto;width:2.5rem;height:2.6rem;margin:0 0 0 3px;' +
+      'background-color:#767676;border-radius:0.3rem;display:block}' +
+    '.wl-aa{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;' +
+      'justify-content:center;color:#fff;font-size:.9rem;pointer-events:none}' +
+    '.wl-custom .wl-aa{font-weight:bold;color:#ff9a3c}' +
+    '.wl-custom:after{content:"";position:absolute;top:3px;right:3px;width:6px;height:6px;' +
+      'border-radius:3px;background:#ff9a3c;pointer-events:none}' +
+    '.wl-fontbox select{position:absolute;left:0;top:0;width:100%;height:100%;margin:0;padding:0;' +
+      'opacity:0;border:none;font-size:16px}' +
     '.wl-group{margin:6px 0 0 12px;padding:6px 8px;border-left:3px solid #767676}' +
     '.wl-introw{display:flex;align-items:center;margin:0 0 6px 0}' +
     '.wl-intlbl{margin:0 8px 0 0;color:#fff}' +
     '.wl-group .wl-int{flex:1 1 auto;min-width:0;height:2.6rem;background-color:#767676;color:#fff;' +
       'border:none;border-radius:0.3rem;padding:0 0.5rem;color-scheme:dark}' +
-    '.wl-fontrow{display:flex;align-items:center;margin:4px 0 0 12px}' +
-    '.wl-fontlbl{margin:0 8px 0 0;color:#fff;font-size:.85em}' +
-    '.wl-fontrow select{flex:1 1 auto;min-width:0;height:2.4rem;margin:0;background-color:#767676;color:#fff;' +
-      'border:none;border-radius:0.3rem;padding:0 0.5rem;color-scheme:dark}' +
     '.wl-mem{margin:0 0 8px 0}' +
-    '.wl-mmain{display:flex;align-items:center}' +
-    '.wl-mem .wl-msel{flex:1 1 auto;min-width:0;height:2.6rem;background-color:#767676;color:#fff;' +
-      'border:none;border-radius:0.3rem;padding:0 0.5rem;color-scheme:dark}' +
-    '.wl-mem .wl-mdel{flex:0 0 auto;min-width:0;width:2.6rem;height:2.6rem;margin:0 0 0 6px;padding:0}' +
     '.wl-madd{min-width:0;margin:2px 0 4px 0}' +
     '.wl-add{margin:8px 0 10px 0}',
   manipulator: {

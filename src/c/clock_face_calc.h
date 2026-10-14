@@ -1,5 +1,5 @@
 #pragma once
-// Pure geometry for the clock face (hands + edge minute strip). Pebble-free
+// Pure geometry for the clock face (hands + edge tick strip). Pebble-free
 // (stdint/stdbool only) so tests/test_clock_face_calc.c can host-compile it.
 #include <stdbool.h>
 #include <stdint.h>
@@ -42,18 +42,21 @@ int cf_snap(float v);
 void cf_hand_pose(float cx, float cy, float sin_a, float cos_a, int shoulder,
                   int width, int apex_ext, int tail, CfHandPose *out);
 
-// Minute index 0..59 of the direction (dx2, dy2) from the clock centre, in
-// doubled screen units (dx2 = 2*x + 1 - 2*cx for the centre of pixel x; y grows
-// downwards). Minute m covers clockwise angles [m*6deg, (m+1)*6deg) from 12.
-int cf_minute_of_direction(int32_t dx2, int32_t dy2);
+// Tick index 0..59 of the direction (dx2, dy2) from the clock centre, in doubled
+// screen units (dx2 = 2*x + 1 - 2*cx for the centre of pixel x; y grows downwards).
+// Tick b is centred on the minute boundary at b*6deg: it covers clockwise angles
+// [b*6deg - 3deg, b*6deg + 3deg) from 12 o'clock, so tick 0 straddles 12 o'clock.
+int cf_tick_of_direction(int32_t dx2, int32_t dy2);
 
 // Number of strip pixels for a w x h screen, and the strip's spans on row y in
 // row-major order: up to two [x0, x1) spans. Returns the span count (0..2).
 int cf_strip_pixel_count(int w, int h);
 int cf_strip_row_spans(int y, int w, int h, int x0[2], int x1[2]);
 
-// Strip shade of minute m: 0 = white, 1..3 = 25/50/75% black dither, 4 = black.
-static inline int cf_strip_shade(int minute) { return minute % 5; }
+// Strip shade of tick b: (b - 1) mod 5, so every 5th tick (the minute marks, 0 =
+// 12 o'clock included) is black, then white, 25%, 50%, 50%.
+// Shades: 0 = white, 1 = 25% black dither, 2 and 3 = 50% (checkerboard), 4 = black.
+static inline int cf_strip_shade(int tick) { return (tick + 4) % 5; }
 
 // True when pixel (x, y) of `shade` is black. The dither patterns use absolute
 // coordinates (as in mathewreiss/dithering) so neighbouring blocks tile seamlessly.

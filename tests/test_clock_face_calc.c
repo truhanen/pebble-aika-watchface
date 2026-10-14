@@ -73,21 +73,26 @@ static void test_minute_shoulder_is_minimal_offscreen(void) {
   assert(!shoulders_offscreen(CF_MINUTE_SHOULDER - 1));
 }
 
-static int minute_at_pixel(int x, int y) {
-  return cf_minute_of_direction(2 * x + 1 - 2 * CX, 2 * y + 1 - 2 * CY);
+static int tick_at_pixel(int x, int y) {
+  return cf_tick_of_direction(2 * x + 1 - 2 * CX, 2 * y + 1 - 2 * CY);
 }
 
-static void test_minute_of_direction(void) {
-  // Straight up, just right of the 12 o'clock line: minute 0; just left: 59.
-  assert(cf_minute_of_direction(1, -100) == 0);
-  assert(cf_minute_of_direction(-1, -100) == 59);
-  assert(cf_minute_of_direction(0, -100) == 0);
-  // 3 / 6 / 9 o'clock boundaries belong to the minute that starts there.
-  assert(cf_minute_of_direction(100, 0) == 15);
-  assert(cf_minute_of_direction(100, -1) == 14);
-  assert(cf_minute_of_direction(0, 100) == 30);
-  assert(cf_minute_of_direction(-100, 0) == 45);
-  // Against floating point atan2 for every strip pixel, away from boundaries.
+static void test_tick_of_direction(void) {
+  // Tick 0 straddles 12 o'clock: just right and just left of it both map to 0.
+  assert(cf_tick_of_direction(1, -100) == 0);
+  assert(cf_tick_of_direction(-1, -100) == 0);
+  assert(cf_tick_of_direction(0, -100) == 0);
+  // 3 / 6 / 9 o'clock directions are centred in their ticks (15, 30, 45).
+  assert(cf_tick_of_direction(100, 0) == 15);
+  assert(cf_tick_of_direction(0, 100) == 30);
+  assert(cf_tick_of_direction(-100, 0) == 45);
+  // ... and those ticks, like 12 o'clock, are black.
+  assert(cf_strip_shade(cf_tick_of_direction(0, -100)) == 4);
+  assert(cf_strip_shade(cf_tick_of_direction(100, 0)) == 4);
+  assert(cf_strip_shade(cf_tick_of_direction(0, 100)) == 4);
+  assert(cf_strip_shade(cf_tick_of_direction(-100, 0)) == 4);
+  // Against floating point atan2 for every strip pixel, away from block edges
+  // (at b*6deg - 3deg).
   int checked = 0;
   for (int y = 0; y < H; y++) {
     int x0[2], x1[2];
@@ -97,9 +102,10 @@ static void test_minute_of_direction(void) {
         double dx = x + 0.5 - CX, dy = y + 0.5 - CY;
         double deg = atan2(dx, -dy) * 180.0 / M_PI;
         if (deg < 0) { deg += 360.0; }
-        double frac = fmod(deg, 6.0);
+        double shifted = fmod(deg + 3.0, 360.0);
+        double frac = fmod(shifted, 6.0);
         if (frac < 0.01 || frac > 5.99) { continue; }
-        assert(minute_at_pixel(x, y) == (int)(deg / 6.0));
+        assert(tick_at_pixel(x, y) == (int)(shifted / 6.0));
         checked++;
       }
     }
@@ -132,19 +138,16 @@ static int black_count(int shade) {
 }
 
 static void test_shades(void) {
-  assert(cf_strip_shade(0) == 0 && cf_strip_shade(4) == 4 && cf_strip_shade(5) == 0);
-  assert(cf_strip_shade(59) == 4);
+  // Shade of tick b = (b - 1) mod 5: black on every multiple of 5.
+  const int expect[10] = { 4, 0, 1, 2, 3, 4, 0, 1, 2, 3 };
+  for (int b = 0; b < 10; b++) { assert(cf_strip_shade(b) == expect[b]); }
+  for (int b = 0; b < 60; b += 5) { assert(cf_strip_shade(b) == 4); }
+  assert(cf_strip_shade(59) == 3 && cf_strip_shade(1) == 0);
   assert(black_count(0) == 0);
   assert(black_count(1) == 16);
   assert(black_count(2) == 32);
-  assert(black_count(3) == 48);
+  assert(black_count(3) == 32);
   assert(black_count(4) == 64);
-  // Shades 1 and 3 are exact complements, so an inverted 25% block reads as 75%.
-  for (int y = 0; y < 8; y++) {
-    for (int x = 0; x < 8; x++) {
-      assert(cf_shade_is_black(1, x, y) != cf_shade_is_black(3, x, y));
-    }
-  }
 }
 
 int main(void) {
@@ -152,7 +155,7 @@ int main(void) {
   test_nyquist_twelve_oclock();
   test_nyquist_minute_one();
   test_minute_shoulder_is_minimal_offscreen();
-  test_minute_of_direction();
+  test_tick_of_direction();
   test_strip_spans();
   test_shades();
   printf("test_clock_face_calc: OK\n");

@@ -21,23 +21,25 @@ void cf_hand_pose(float cx, float cy, float sin_a, float cos_a, int shoulder,
                                 cf_snap(outer_y - apex_ext * cos_a) };
 }
 
-// Unit vectors (sin, cos) * 32767 of the minute boundaries k*6deg, k = 0..59,
-// clockwise from 12 o'clock in a y-up frame.
+// Unit vectors (sin, cos) * 32767 of the rays at clockwise angles j*6deg + 3deg,
+// j = 0..59, i.e. the edges between tick blocks (y-up frame). Ray j separates
+// tick j (below) from tick j+1 (above). Generated, not hand-typed:
+//   round(32767 * sin(radians(6*j + 3))), round(32767 * cos(radians(6*j + 3)))
 static const int16_t s_ray_sin[60] = {
-       0,   3425,   6813,  10126,  13328,  16383,  19260,  21925,  24351,  26509,
-   28377,  29934,  31163,  32051,  32587,  32767,  32587,  32051,  31163,  29934,
-   28377,  26509,  24351,  21925,  19260,  16383,  13328,  10126,   6813,   3425,
-       0,  -3425,  -6813, -10126, -13328, -16384, -19260, -21925, -24351, -26509,
-  -28377, -29934, -31163, -32051, -32587, -32767, -32587, -32051, -31163, -29934,
-  -28377, -26509, -24351, -21925, -19260, -16384, -13328, -10126,  -6813,  -3425,
+     1715,   5126,   8481,  11743,  14876,  17846,  20621,  23170,  25465,  27481,
+    29196,  30591,  31650,  32364,  32722,  32722,  32364,  31650,  30591,  29196,
+    27481,  25465,  23170,  20621,  17846,  14876,  11743,   8481,   5126,   1715,
+    -1715,  -5126,  -8481, -11743, -14876, -17846, -20621, -23170, -25465, -27481,
+   -29196, -30591, -31650, -32364, -32722, -32722, -32364, -31650, -30591, -29196,
+   -27481, -25465, -23170, -20621, -17846, -14876, -11743,  -8481,  -5126,  -1715,
 };
 static const int16_t s_ray_cos[60] = {
-   32767,  32587,  32051,  31163,  29934,  28377,  26509,  24351,  21925,  19260,
-   16384,  13328,  10126,   6813,   3425,      0,  -3425,  -6813, -10126, -13328,
-  -16383, -19260, -21925, -24351, -26509, -28377, -29934, -31163, -32051, -32587,
-  -32767, -32587, -32051, -31163, -29934, -28377, -26509, -24351, -21925, -19260,
-  -16384, -13328, -10126,  -6813,  -3425,      0,   3425,   6813,  10126,  13328,
-   16384,  19260,  21925,  24351,  26509,  28377,  29934,  31163,  32051,  32587,
+    32722,  32364,  31650,  30591,  29196,  27481,  25465,  23170,  20621,  17846,
+    14876,  11743,   8481,   5126,   1715,  -1715,  -5126,  -8481, -11743, -14876,
+   -17846, -20621, -23170, -25465, -27481, -29196, -30591, -31650, -32364, -32722,
+   -32722, -32364, -31650, -30591, -29196, -27481, -25465, -23170, -20621, -17846,
+   -14876, -11743,  -8481,  -5126,  -1715,   1715,   5126,   8481,  11743,  14876,
+    17846,  20621,  23170,  25465,  27481,  29196,  30591,  31650,  32364,  32722,
 };
 
 // 0 for clockwise angles in [0, 180), 1 for [180, 360). (sx, sy) is y-up.
@@ -53,15 +55,16 @@ static bool cw_less(int32_t ax, int32_t ay, int32_t bx, int32_t by) {
   return (int64_t)ax * by - (int64_t)ay * bx < 0;
 }
 
-int cf_minute_of_direction(int32_t dx2, int32_t dy2) {
+int cf_tick_of_direction(int32_t dx2, int32_t dy2) {
   int32_t sx = dx2, sy = -dy2;   // to the y-up frame
-  // Binary search for the last boundary k with angle(k) <= angle(v).
-  int lo = 0, hi = 59;
+  // Binary search for the last ray j with angle(j) <= angle(v); -1 if none (< 3deg).
+  int lo = -1, hi = 59;
   while (lo < hi) {
     int mid = (lo + hi + 1) / 2;
     if (cw_less(sx, sy, s_ray_sin[mid], s_ray_cos[mid])) { hi = mid - 1; } else { lo = mid; }
   }
-  return lo;
+  // Past ray j the tick is j + 1; before ray 0 and past ray 59 it is tick 0.
+  return (lo + 1) % 60;
 }
 
 int cf_strip_pixel_count(int w, int h) {
@@ -79,7 +82,7 @@ int cf_strip_row_spans(int y, int w, int h, int x0[2], int x1[2]) {
   return 2;
 }
 
-// Share of black: 25% = two pixels per 4x2 tile, 50% = checkerboard.
+// 25% black: two pixels per 4x2 tile.
 static bool dither_25(int x, int y) {
   return (x % 4 == 0 && y % 2 == 0) || ((x + 2) % 4 == 0 && (y + 1) % 2 == 0);
 }
@@ -88,8 +91,8 @@ bool cf_shade_is_black(int shade, int x, int y) {
   switch (shade) {
     case 0:  return false;
     case 1:  return dither_25(x, y);
-    case 2:  return (x + y) % 2 == 0;
-    case 3:  return !dither_25(x, y);
+    case 2:
+    case 3:  return (x + y) % 2 == 0;   // 50% checkerboard
     default: return true;
   }
 }

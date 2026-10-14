@@ -1,0 +1,75 @@
+#pragma once
+// Pure widget layout maths: font run splitting and the placement of widget values,
+// icons/units and edge columns. Pebble-free (stdint/stdbool only) so
+// tests/test_widget_layout_calc.c can host-compile it.
+#include <stdbool.h>
+#include <stdint.h>
+#include "widget_font_metrics.h"
+
+#define WL_FONT_COUNT 17
+
+// Distance between a widget's value and its icon/unit, whatever the font size.
+#define WL_ICON_GAP 3
+// Distance from the edge strip to the widgets drawn next to it.
+#define WL_EDGE_INSET 2
+// Smallest vertical gap between two widgets of an edge column.
+#define WL_MIN_COLUMN_GAP 5
+// Gap between the parts of a stacked fraction unit and its rule.
+#define WL_FRACTION_GAP 1
+
+typedef enum { WL_LEFT, WL_RIGHT, WL_TOP, WL_BOTTOM } WlPosition;
+
+const WidgetFontMetrics *wl_metrics(int font);
+
+// Decode the UTF-8 code point at s (NUL-safe: returns 0 with *len = 0 at the end).
+uint32_t wl_next_cp(const char *s, int *len);
+// True if the font really has the glyph (space and control characters always count).
+bool wl_font_has(const WidgetFontMetrics *m, uint32_t cp);
+
+// A run of text drawn in one font: the primary one, or m->fallback.
+typedef struct { int16_t start, len; bool fallback; } WlRun;
+// Split text into runs by glyph coverage; returns the run count (<= max_runs, the
+// rest is appended to the last run). Spaces join the preceding run.
+int wl_split_runs(const WidgetFontMetrics *m, const char *text, WlRun *runs, int max_runs);
+
+// Vertical placement of the draw box of a font so its digits' ink starts at ink_top.
+int wl_box_top_for_ink(const WidgetFontMetrics *m, int ink_top);
+// Draw-box top of a run so it shares the baseline of the primary font's box at
+// primary_box_top.
+int wl_run_box_top(const WidgetFontMetrics *primary, const WidgetFontMetrics *run_font,
+                   int primary_box_top);
+
+// --- edge columns ---
+// Top y of each of n items of the given heights, distributed "space-between" over
+// [top, bottom): the first at top, the last ending at bottom; a single item is
+// centred; with no room to spare the items are min_gap apart from the top.
+void wl_column_layout(const int16_t *heights, int n, int top, int bottom, int min_gap,
+                      int16_t *ys);
+// How many of the items (from the first) fit in `inner` px with min_gap between them.
+int wl_column_visible(const int16_t *heights, int n, int inner, int min_gap);
+
+// --- horizontal placement ---
+typedef struct { int16_t value_x, icon_x; } WlHPlace;
+// x of a widget's value and icon/unit boxes. Left/right: the value sits against the
+// edge (strip_w + WL_EDGE_INSET from it) and the icon is next to it towards the
+// centre. Top/bottom: value and icon are centred as one group, icon to the right.
+// icon_w == 0 or value_w == 0 drops the gap.
+void wl_place_h(WlPosition pos, int screen_w, int strip_w, int value_w, int icon_w,
+                WlHPlace *out);
+
+// Offset of an item of height inner_h centred in outer_h (floor; negative when the
+// item is the larger one).
+int wl_center_offset(int outer_h, int inner_h);
+
+// --- stacked fraction unit ("BTC/USD", "c/kWh") ---
+typedef struct {
+  int16_t h;          // total height of the stack
+  int16_t num_base;   // baseline row of the numerator, relative to the stack top
+  int16_t rule_y;     // row of the 1 px rule
+  int16_t den_top;    // top of the denominator's capitals
+} WlFraction;
+// Split "BTC/USD" at the slash into num/den (buffers of cap bytes). Returns false when
+// the label has no slash or an empty half; num then holds the whole label.
+bool wl_split_fraction(const char *label, char *num, char *den, int cap);
+// Layout of a fraction in the unit font m (Gothic 14).
+void wl_fraction_layout(const WidgetFontMetrics *m, WlFraction *out);

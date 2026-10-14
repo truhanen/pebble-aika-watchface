@@ -15,6 +15,7 @@
 #include "warn_border_calc.h"
 #include "battery_days.h"
 #include "test_hooks.h"
+#include "font_specimen.h"
 
 Layer *clock_face_layer;
 
@@ -133,6 +134,9 @@ static void face_update_proc(Layer *l, GContext *ctx) {
   GRect bounds = layer_get_bounds(l);
   GPoint center = GPoint(bounds.size.w / 2, bounds.size.h / 2);
   GColor fg = theme.timeColor, bg = theme.timeBgColor;
+
+  int scene = TestHooks_scene();
+  if (scene > 0) { FontSpecimen_draw(ctx, bounds, scene); return; }
 
   graphics_context_set_fill_color(ctx, bg);
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);

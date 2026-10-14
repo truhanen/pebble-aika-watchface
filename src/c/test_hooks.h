@@ -10,7 +10,8 @@
 // calling the plain SDK names. In a normal build everything here is a no-op.
 
 // Applies any Test* keys in `iter` (TestTopWidget / TestBottomWidget set that centre list
-// to one widget id, -1 clears it; 0 is the Empty widget); returns true if one was present.
+// to one widget id in the position's default font, -1 clears it; 0 is the Empty widget. For
+// anything richer send the payload itself: scripts/emu.sh bytes SettingTopWidgetList=...); returns true if one was present.
 bool TestHooks_handleMessage(DictionaryIterator *iter);
 
 // Overwrites hour/minute in `t` while a TestTime override is active.

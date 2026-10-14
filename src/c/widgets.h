@@ -3,14 +3,14 @@
 
 /*
  * The different types of widgets:
- * we'll give them numbers so that we can index them in settings
+ * we'll give them numbers so that we can index them in settings.
+ * 4 was the old DATE widget; it is retired (see widget_list.h) and the id is unused.
  */
 typedef enum {
   EMPTY                     = 0,
   BLUETOOTH_DISCONNECT      = 1,
   BATTERY_METER             = 2,
   ALT_TIME_ZONE             = 3,
-  DATE                      = 4,
   SECONDS                   = 5,
   WEEK_NUMBER               = 6,
   WEATHER_CURRENT           = 7,
@@ -31,16 +31,29 @@ typedef enum {
   BATTERY_DAYS              = 22,
   TUYA_LEDS                 = 23,
   SLEEP_COMBINED            = 24,
-  SLEEP_DEEP_BAR            = 25
+  SLEEP_DEEP_BAR            = 25,
+  DATE_D_M_DOT              = 26,   // 4.7.
+  DATE_DD_MM_DOT            = 27,   // 04.07.
+  DATE_DD_MM                = 28,   // 04.07
+  DATE_D_M_YYYY             = 29,   // 4.7.2026
+  DATE_WKDAY_DD             = 30,   // Fr 04
+  DATE_WKDAY_D_M            = 31,   // Fr 4.7.
+  DATE_WKDAY                = 32,   // Fr
+  DATE_DD_MON               = 33,   // 04 Jul
+  DATE_ISO                  = 34,   // 2026-07-04
+  DIGITAL_TIME              = 35,
+  BATTERY_ICON              = 36,   // icon only
+  WEATHER_ICON              = 37,   // icon only
+  BLUETOOTH_ICON            = 38    // icon only, connected or disconnected glyph
 } WidgetType;
 
 // Highest valid widget id; bump when appending a widget type. Used for the
 // settings clamp and the config-message bounds checks.
-#define MAX_WIDGET_TYPE SLEEP_DEEP_BAR
+#define MAX_WIDGET_TYPE BLUETOOTH_ICON
 
-// Maximum length of the configurable widget list (storage + protocol buffer). The
-// layer shows as many as fit by height; this only bounds the buffer.
-#define MAX_WIDGET_LIST 32
+// Byte budget of a left / right widget list (storage + protocol buffer). The layer
+// shows as many slots as fit by height; this only bounds the buffer.
+#define MAX_WIDGET_LIST 64
 
 // What the widget layer hands every widget call.
 typedef struct {
@@ -71,3 +84,6 @@ const Widget *Widgets_get(uint8_t id);
 
 void Widgets_init(void);
 void Widgets_deinit(void);
+// The time the date / time widgets show; call whenever the face's time was set (the
+// test-hook time override is already applied to it).
+void Widgets_updateTime(const struct tm *t);

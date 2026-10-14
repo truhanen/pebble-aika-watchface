@@ -49,15 +49,21 @@ static int widget_height(const WidgetSize *s) {
   return s->ink_h > s->icon_h ? s->ink_h : s->icon_h;
 }
 
-static int font_for(int pos, const WidgetSlot *slot, int member) {
+// The font of a member: the test-hook override, else the one in its flags, else the
+// position's default (side widgets Gothic medium, top / bottom Bitham large).
+static int font_for(int pos, uint8_t flags) {
   int forced = TestHooks_font(pos);
-  return forced >= 0 ? forced : Settings_widgetFont(pos, slot->offset[member]);
+  if (forced >= 0) { return forced; }
+  int f = WidgetList_flagFont(flags);
+  if (f != WL_FONT_POS_DEFAULT) { return f; }
+  return (pos == WIDGET_POS_TOP || pos == WIDGET_POS_BOTTOM) ? WIDGET_FONT_DEFAULT_TOP_BOTTOM
+                                                              : WIDGET_FONT_DEFAULT_SIDE;
 }
 
 static void measure_member(int pos, const WidgetSlot *slot, int member, WidgetCtx *ctx, WidgetSize *size) {
   ctx->id = slot->members[member];
-  ctx->font = (uint8_t)font_for(pos, slot, member);
-  ctx->hide_icon = slot->hide[member];
+  ctx->font = (uint8_t)font_for(pos, slot->flags[member]);
+  ctx->hide_icon = WidgetList_flagHidden(slot->flags[member]);
   Widgets_get(ctx->id)->measure(ctx, size);
 }
 
@@ -158,17 +164,22 @@ static void apply_fallback(Active col[2][MAX_WIDGET_SLOTS + 1], int n[2], int in
   }
 }
 
-static void place(const Active *a, int pos, int screen_w, int ink_top) {
+// Place an item whose slot is slot_h high from slot_top. The value's ink is centred in
+// the slot and the icon / unit on the value's ink; a widget without a value (icon
+// only) is centred in the slot as it is.
+static void place(const Active *a, int pos, int screen_w, int slot_top, int slot_h) {
   if (s_placed_count >= MAX_PLACED) { return; }
   WlHPlace hp;
   wl_place_h((WlPosition)pos, screen_w, CF_STRIP_W, a->size.value_w, a->size.icon_w, &hp);
   Placed *p = &s_placed[s_placed_count++];
+  int ink_top = slot_top + wl_center_offset(slot_h, a->size.ink_h);
+  int icon_top = a->size.ink_h > 0 ? ink_top + wl_center_offset(a->size.ink_h, a->size.icon_h)
+                                   : slot_top + wl_center_offset(slot_h, a->size.icon_h);
   p->ctx = a->ctx;
   p->has_value = a->size.value_w > 0;
   p->has_icon = a->size.icon_w > 0;
   p->value_box = GRect(hp.value_x, ink_top, a->size.value_w, a->size.ink_h);
-  p->icon_box = GRect(hp.icon_x, ink_top + wl_center_offset(a->size.ink_h, a->size.icon_h),
-                      a->size.icon_w, a->size.icon_h);
+  p->icon_box = GRect(hp.icon_x, icon_top, a->size.icon_w, a->size.icon_h);
 }
 
 static void place_column(const Active *col, int n, int pos, GRect bounds) {
@@ -179,7 +190,7 @@ static void place_column(const Active *col, int n, int pos, GRect bounds) {
   if (n > 0 && shown == 0) { shown = 1; }
   wl_column_layout(h, n, top, bottom, WL_MIN_COLUMN_GAP, ys);
   for (int i = 0; i < shown; i++) {
-    place(&col[i], pos, bounds.size.w, ys[i] + wl_center_offset(col[i].slot_h, col[i].size.ink_h));
+    place(&col[i], pos, bounds.size.w, ys[i], col[i].slot_h);
   }
 }
 
@@ -203,9 +214,8 @@ void WidgetLayer_prepare(GRect bounds) {
     if (s_slot_count[pos] < 1) { continue; }
     Active a;
     resolve_slot(pos, &s_slots[pos][0], sod, &a);
-    int h = widget_height(&a.size);
-    int top = (pos == WIDGET_POS_TOP) ? edge : bounds.size.h - edge - h;
-    place(&a, pos, bounds.size.w, top + wl_center_offset(h, a.size.ink_h));
+    int top = (pos == WIDGET_POS_TOP) ? edge : bounds.size.h - edge - a.slot_h;
+    place(&a, pos, bounds.size.w, top, a.slot_h);
   }
 }
 

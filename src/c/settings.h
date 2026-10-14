@@ -2,12 +2,11 @@
 #include <pebble.h>
 #include "widgets.h"
 
-#define CURRENT_SETTINGS_VERSION 1
+#define CURRENT_SETTINGS_VERSION 2
 
 // persistent storage keys
 #define SETTINGS_PERSIST_KEY 100
 #define SETTINGS_VERSION_PERSIST_KEY 4
-#define WIDGET_FONTS_PERSIST_KEY 101
 
 // Widget positions. The numbers equal WlPosition (widget_layout_calc.h).
 #define WIDGET_POS_LEFT 0
@@ -41,7 +40,6 @@ typedef struct {
   // widget options
   bool activateDisconnectIcon;
   bool useMetric;
-  bool showBatteryPct;
   bool disableAutobattery;
   uint8_t autoBatteryThreshold;  // auto-battery shows at or below this percent (or while charging)
   char altclockName[8];
@@ -61,13 +59,13 @@ typedef struct {
   int16_t elecCheapFloorCenti;   // cheapBar floor, 0.01 snt
   int16_t elecCheapCeilingCenti; // cheapBar ceiling, 0.01 snt
 
-  // widget lists (see widget_list.h for the byte format)
+  // widget lists (payload v2, see widget_list.h and docs/widget_contract.md; the
+  // per-widget font and hide bits live in the list bytes themselves)
   uint8_t widgetList[MAX_WIDGET_LIST];
   uint8_t widgetCount;
   uint8_t rightWidgetList[MAX_WIDGET_LIST];
   uint8_t rightWidgetCount;
-  // Top / bottom centre lists, same byte format; only the first slot is shown. Nothing
-  // fills them from the phone yet (payload v2), the emulator test hooks do.
+  // Top / bottom centre lists, same byte format, at most one slot (a group counts as one).
   uint8_t topWidgetList[MAX_CENTER_WIDGET_LIST];
   uint8_t topWidgetCount;
   uint8_t bottomWidgetList[MAX_CENTER_WIDGET_LIST];
@@ -101,16 +99,7 @@ typedef struct {
   bool enableAltTimeZone;
 } DynamicSettings;
 
-// Per-widget font (widget_fonts.h index), kept in a persist key of its own: one byte per
-// byte of the position's widget list (the member's offset in it, see WidgetSlot.offset),
-// WIDGET_FONT_UNSET = the position's default.
-#define WIDGET_FONT_UNSET 0xFF
-typedef struct {
-  uint8_t font[WIDGET_POS_COUNT][MAX_WIDGET_LIST];
-} WidgetFonts;
-
 extern Settings settings;
-extern WidgetFonts widgetFonts;
 extern DynamicSettings dynamicSettings;
 
 void Settings_init();
@@ -121,14 +110,12 @@ void Settings_updateDynamicSettings();
 
 // The bytes and length of a position's widget list.
 const uint8_t *Settings_widgetList(int pos, int *count);
-// Font of the widget at byte `offset` of a position's list: the stored one, else the
-// position's default (side widgets Gothic medium, top / bottom Bitham large).
-int Settings_widgetFont(int pos, int offset);
-// Set every font of a position (what a single-font config, or a test, wants).
-void Settings_setWidgetFonts(int pos, uint8_t font);
 // Every drawable widget id in all four lists (group members included).
 void Settings_forEachWidgetId(void (*cb)(uint8_t id, void *ctx), void *ctx);
 // Shortest sub-minute rotation interval over all four lists, or 0.
 int Settings_minSubMinuteIntervalSec(void);
+// Store a received payload as a position's list: sanitized, capped to the position's
+// byte budget and, for top / bottom, to one slot.
+void Settings_setWidgetList(int pos, const uint8_t *bytes, int len);
 // Re-sanitize the lists after they changed.
 void Settings_sanitizeWidgetLists(void);

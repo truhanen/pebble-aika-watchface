@@ -7,7 +7,6 @@
 #include <pebble.h>
 
 Settings settings;
-WidgetFonts widgetFonts;
 DynamicSettings dynamicSettings;
 
 void Settings_init() {
@@ -27,7 +26,6 @@ static void set_defaults(void) {
   settings.pollIntervalMin = 30;
 
   settings.activateDisconnectIcon = true;
-  settings.showBatteryPct = true;
   settings.autoBatteryThreshold = 10;
   strncpy(settings.altclockName, "ALT", sizeof(settings.altclockName));
   settings.decimalSeparator = '.';
@@ -52,7 +50,16 @@ static void set_defaults(void) {
   settings.batteryWarnColor = GColorRed;
   settings.btWarnColor = GColorYellow;
 
-  memset(&widgetFonts, WIDGET_FONT_UNSET, sizeof(widgetFonts));
+  // a fresh install: weather + steps left, battery + heart rate right, "Wkday dd" on
+  // top, an empty bottom slot, every widget in its position's default font
+  static const uint8_t LEFT[] = { WEATHER_CURRENT, WL_FONT_POS_DEFAULT, STEP_COUNTER, WL_FONT_POS_DEFAULT };
+  static const uint8_t RIGHT[] = { BATTERY_METER, WL_FONT_POS_DEFAULT, HEARTRATE, WL_FONT_POS_DEFAULT };
+  static const uint8_t TOP[] = { DATE_WKDAY_DD, WL_FONT_POS_DEFAULT };
+  static const uint8_t BOTTOM[] = { EMPTY, WL_FONT_POS_DEFAULT };
+  Settings_setWidgetList(WIDGET_POS_LEFT, LEFT, sizeof LEFT);
+  Settings_setWidgetList(WIDGET_POS_RIGHT, RIGHT, sizeof RIGHT);
+  Settings_setWidgetList(WIDGET_POS_TOP, TOP, sizeof TOP);
+  Settings_setWidgetList(WIDGET_POS_BOTTOM, BOTTOM, sizeof BOTTOM);
 }
 
 void Settings_loadFromStorage() {
@@ -68,22 +75,7 @@ void Settings_loadFromStorage() {
   // safe default so a garbled blob can never crash every draw.
   if (settings.languageId > LANGUAGE_IW) { settings.languageId = LANGUAGE_EN; }
   if (settings.hourlyVibe > VIBE_EVERY_HALF_HOUR) { settings.hourlyVibe = NO_VIBE; }
-  if (settings.widgetCount > MAX_WIDGET_LIST) { settings.widgetCount = MAX_WIDGET_LIST; }
-  settings.widgetCount = WidgetList_sanitize(settings.widgetList, settings.widgetCount, MAX_WIDGET_LIST);
-  if (settings.rightWidgetCount > MAX_WIDGET_LIST) { settings.rightWidgetCount = MAX_WIDGET_LIST; }
-  settings.rightWidgetCount = WidgetList_sanitize(settings.rightWidgetList, settings.rightWidgetCount, MAX_WIDGET_LIST);
-  if (settings.topWidgetCount > MAX_CENTER_WIDGET_LIST) { settings.topWidgetCount = MAX_CENTER_WIDGET_LIST; }
-  settings.topWidgetCount = WidgetList_sanitize(settings.topWidgetList, settings.topWidgetCount, MAX_CENTER_WIDGET_LIST);
-  if (settings.bottomWidgetCount > MAX_CENTER_WIDGET_LIST) { settings.bottomWidgetCount = MAX_CENTER_WIDGET_LIST; }
-  settings.bottomWidgetCount = WidgetList_sanitize(settings.bottomWidgetList, settings.bottomWidgetCount, MAX_CENTER_WIDGET_LIST);
-  if (persist_get_size(WIDGET_FONTS_PERSIST_KEY) == (int)sizeof(widgetFonts)) {
-    persist_read_data(WIDGET_FONTS_PERSIST_KEY, &widgetFonts, sizeof(widgetFonts));
-  }
-  for (int p = 0; p < WIDGET_POS_COUNT; p++) {
-    for (int i = 0; i < MAX_WIDGET_LIST; i++) {
-      if (widgetFonts.font[p][i] >= WIDGET_FONT_COUNT) { widgetFonts.font[p][i] = WIDGET_FONT_UNSET; }
-    }
-  }
+  Settings_sanitizeWidgetLists();
   if (settings.decimalSeparator != '.' && settings.decimalSeparator != ',') {
     settings.decimalSeparator = '.';
   }
@@ -108,8 +100,12 @@ void Settings_loadFromStorage() {
 #ifdef SCREENSHOT_FIXTURES
   // Appstore screenshot scene config (no phone); not persisted.
   settings.useMetric = true;
-  { uint8_t L[] = {15, 201, 17, 14}; memcpy(settings.widgetList, L, sizeof L); settings.widgetCount = sizeof L; }
-  { uint8_t R[] = {8, 13, 9, 10};    memcpy(settings.rightWidgetList, R, sizeof R); settings.rightWidgetCount = sizeof R; }
+  {
+    static const uint8_t L[] = { 15, 31, 201, 31, 17, 31, ELECTRICITY, 31 };
+    static const uint8_t R[] = { WEATHER_FORECAST_TODAY, 31, WEATHER_UV_INDEX, 31, SLEEP_TIMER, 31, STEP_COUNTER, 31 };
+    Settings_setWidgetList(WIDGET_POS_LEFT, L, sizeof L);
+    Settings_setWidgetList(WIDGET_POS_RIGHT, R, sizeof R);
+  }
 #endif
 
   Settings_updateDynamicSettings();
@@ -126,16 +122,15 @@ void Settings_saveToStorage() {
   // Write the data
   persist_write_data(SETTINGS_PERSIST_KEY, &settings, sizeof(settings));
   persist_write_int(SETTINGS_VERSION_PERSIST_KEY, CURRENT_SETTINGS_VERSION);
-  persist_write_data(WIDGET_FONTS_PERSIST_KEY, &widgetFonts, sizeof(widgetFonts));
 }
 
 static void dyn_scan_cb(uint8_t w, void *ctx) {
   (void)ctx;
-  if (w == WEATHER_CURRENT || w == WEATHER_FORECAST_TODAY || w == WEATHER_UV_INDEX) {
+  if (w == WEATHER_CURRENT || w == WEATHER_FORECAST_TODAY || w == WEATHER_UV_INDEX || w == WEATHER_ICON) {
     dynamicSettings.disableWeather = false;
   }
   if (w == SECONDS) { dynamicSettings.updateScreenEverySecond = true; }
-  if (w == BATTERY_METER) { dynamicSettings.enableAutoBatteryWidget = false; }
+  if (w == BATTERY_METER || w == BATTERY_ICON) { dynamicSettings.enableAutoBatteryWidget = false; }
   if (w == BEATS) { dynamicSettings.enableBeats = true; }
   if (w == ALT_TIME_ZONE) { dynamicSettings.enableAltTimeZone = true; }
 }
@@ -167,18 +162,6 @@ const uint8_t *Settings_widgetList(int pos, int *count) {
   }
 }
 
-int Settings_widgetFont(int pos, int offset) {
-  if (offset >= 0 && offset < MAX_WIDGET_LIST && widgetFonts.font[pos][offset] < WIDGET_FONT_COUNT) {
-    return widgetFonts.font[pos][offset];
-  }
-  return (pos == WIDGET_POS_TOP || pos == WIDGET_POS_BOTTOM) ? WIDGET_FONT_DEFAULT_TOP_BOTTOM
-                                                              : WIDGET_FONT_DEFAULT_SIDE;
-}
-
-void Settings_setWidgetFonts(int pos, uint8_t font) {
-  memset(widgetFonts.font[pos], font < WIDGET_FONT_COUNT ? font : WIDGET_FONT_UNSET, MAX_WIDGET_LIST);
-}
-
 void Settings_forEachWidgetId(void (*cb)(uint8_t id, void *ctx), void *ctx) {
   for (int pos = 0; pos < WIDGET_POS_COUNT; pos++) {
     int n;
@@ -198,9 +181,34 @@ int Settings_minSubMinuteIntervalSec(void) {
   return best;
 }
 
+// A position's list storage: bytes, length, byte budget and slot budget.
+typedef struct { uint8_t *bytes; uint8_t *count; int max_bytes, max_slots; } ListRef;
+
+static ListRef list_ref(int pos) {
+  switch (pos) {
+    case WIDGET_POS_LEFT:
+      return (ListRef){ settings.widgetList, &settings.widgetCount, MAX_WIDGET_LIST, MAX_WIDGET_SLOTS };
+    case WIDGET_POS_RIGHT:
+      return (ListRef){ settings.rightWidgetList, &settings.rightWidgetCount, MAX_WIDGET_LIST, MAX_WIDGET_SLOTS };
+    case WIDGET_POS_TOP:
+      return (ListRef){ settings.topWidgetList, &settings.topWidgetCount, MAX_CENTER_WIDGET_LIST, 1 };
+    default:
+      return (ListRef){ settings.bottomWidgetList, &settings.bottomWidgetCount, MAX_CENTER_WIDGET_LIST, 1 };
+  }
+}
+
+void Settings_setWidgetList(int pos, const uint8_t *bytes, int len) {
+  ListRef r = list_ref(pos);
+  if (len > r.max_bytes) { len = r.max_bytes; }
+  if (len < 0) { len = 0; }
+  memcpy(r.bytes, bytes, len);
+  *r.count = (uint8_t)WidgetList_sanitize(r.bytes, len, r.max_bytes, r.max_slots);
+}
+
 void Settings_sanitizeWidgetLists(void) {
-  settings.widgetCount = WidgetList_sanitize(settings.widgetList, settings.widgetCount, MAX_WIDGET_LIST);
-  settings.rightWidgetCount = WidgetList_sanitize(settings.rightWidgetList, settings.rightWidgetCount, MAX_WIDGET_LIST);
-  settings.topWidgetCount = WidgetList_sanitize(settings.topWidgetList, settings.topWidgetCount, MAX_CENTER_WIDGET_LIST);
-  settings.bottomWidgetCount = WidgetList_sanitize(settings.bottomWidgetList, settings.bottomWidgetCount, MAX_CENTER_WIDGET_LIST);
+  for (int pos = 0; pos < WIDGET_POS_COUNT; pos++) {
+    ListRef r = list_ref(pos);
+    if (*r.count > r.max_bytes) { *r.count = (uint8_t)r.max_bytes; }
+    *r.count = (uint8_t)WidgetList_sanitize(r.bytes, *r.count, r.max_bytes, r.max_slots);
+  }
 }

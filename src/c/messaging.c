@@ -41,6 +41,12 @@ void messaging_init(void (*processed_callback)(void)) {
   app_message_register_inbox_received(inbox_received_callback);
 }
 
+// Store a widget list tuple (a byte array) as the list of a position.
+static void apply_widget_list(const Tuple *t, int pos) {
+  if (t == NULL || t->type != TUPLE_BYTE_ARRAY) { return; }
+  Settings_setWidgetList(pos, t->value->data, t->length);
+}
+
 void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   // Snapshot settings so the save below is gated on an ACTUAL change: this callback
   // runs for every inbound message, including pure data replies.
@@ -189,7 +195,6 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   Tuple *elecCeiling_tuple = dict_find(iterator, MESSAGE_KEY_SettingElecCheapCeilingCenti);
   Tuple *language_tuple = dict_find(iterator, MESSAGE_KEY_SettingLanguageID);
   Tuple *leadingZero_tuple = dict_find(iterator, MESSAGE_KEY_SettingShowLeadingZero);
-  Tuple *batteryPct_tuple = dict_find(iterator, MESSAGE_KEY_SettingShowBatteryPct);
   Tuple *hourlyVibe_tuple = dict_find(iterator, MESSAGE_KEY_SettingHourlyVibe);
 
 
@@ -197,6 +202,8 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
 
   Tuple *widgetList_tuple = dict_find(iterator, MESSAGE_KEY_SettingWidgetList);
   Tuple *rightWidgetList_tuple = dict_find(iterator, MESSAGE_KEY_SettingRightWidgetList);
+  Tuple *topWidgetList_tuple = dict_find(iterator, MESSAGE_KEY_SettingTopWidgetList);
+  Tuple *bottomWidgetList_tuple = dict_find(iterator, MESSAGE_KEY_SettingBottomWidgetList);
 
   Tuple *altclockName_tuple = dict_find(iterator, MESSAGE_KEY_SettingAltClockName);
   Tuple *altclockOffset_tuple = dict_find(iterator, MESSAGE_KEY_SettingAltClockOffset);
@@ -313,10 +320,6 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
     settings.showLeadingZero = (bool)leadingZero_tuple->value->int8;
   }
 
-  if(batteryPct_tuple != NULL) {
-    settings.showBatteryPct = (bool)batteryPct_tuple->value->int8;
-  }
-
   if(autobattery_tuple != NULL) {
     settings.disableAutobattery = (bool)autobattery_tuple->value->int8;
   }
@@ -343,23 +346,12 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
 
 
 
-  // Left widget list (byte format: see widget_list.h). Clamp to the buffer and
-  // sanitize out-of-range ids.
-  if (widgetList_tuple != NULL) {
-    int len = widgetList_tuple->length;
-    if (len > MAX_WIDGET_LIST) { len = MAX_WIDGET_LIST; }
-    memcpy(settings.widgetList, widgetList_tuple->value->data, len);
-    settings.widgetCount = WidgetList_sanitize(settings.widgetList, len, MAX_WIDGET_LIST);
-  }
-
-  // Right widget list, parsed exactly like the left one.
-  if (rightWidgetList_tuple != NULL) {
-    int len = rightWidgetList_tuple->length;
-    if (len > MAX_WIDGET_LIST) { len = MAX_WIDGET_LIST; }
-    memcpy(settings.rightWidgetList, rightWidgetList_tuple->value->data, len);
-    settings.rightWidgetCount = WidgetList_sanitize(settings.rightWidgetList, len, MAX_WIDGET_LIST);
-  }
-
+  // The four widget lists (payload v2, see widget_list.h). Each is clamped to its
+  // position's byte budget and sanitized; top / bottom keep one slot at most.
+  apply_widget_list(widgetList_tuple, WIDGET_POS_LEFT);
+  apply_widget_list(rightWidgetList_tuple, WIDGET_POS_RIGHT);
+  apply_widget_list(topWidgetList_tuple, WIDGET_POS_TOP);
+  apply_widget_list(bottomWidgetList_tuple, WIDGET_POS_BOTTOM);
 
   if(altclockName_tuple != NULL) {
     strncpy(settings.altclockName, altclockName_tuple->value->cstring, sizeof(settings.altclockName));

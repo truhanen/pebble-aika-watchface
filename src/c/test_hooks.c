@@ -4,6 +4,7 @@
 #ifdef TEST_HOOKS
 
 #include "settings.h"
+#include "widget_list.h"
 
 static int32_t s_time = -1;         // HHMM
 static int32_t s_battery = -1;      // percent, +1000 = charging
@@ -39,16 +40,15 @@ bool TestHooks_handleMessage(DictionaryIterator *iter) {
   any |= read_key(iter, MESSAGE_KEY_TestFontBottom, &s_font[WIDGET_POS_BOTTOM]);
   int32_t id;
   if (read_key(iter, MESSAGE_KEY_TestTopWidget, &id)) {
-    settings.topWidgetCount = (id >= 0) ? 1 : 0;
-    settings.topWidgetList[0] = (uint8_t)id;
+    const uint8_t slot[2] = { (uint8_t)id, WL_FONT_POS_DEFAULT };
+    Settings_setWidgetList(WIDGET_POS_TOP, slot, id >= 0 ? 2 : 0);
     any = true;
   }
   if (read_key(iter, MESSAGE_KEY_TestBottomWidget, &id)) {
-    settings.bottomWidgetCount = (id >= 0) ? 1 : 0;
-    settings.bottomWidgetList[0] = (uint8_t)id;
+    const uint8_t slot[2] = { (uint8_t)id, WL_FONT_POS_DEFAULT };
+    Settings_setWidgetList(WIDGET_POS_BOTTOM, slot, id >= 0 ? 2 : 0);
     any = true;
   }
-  Settings_sanitizeWidgetLists();
   return any;
 }
 

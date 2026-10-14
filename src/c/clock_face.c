@@ -1,6 +1,6 @@
 // Clock face: hour + minute hands, centre pivot, the 60 minute-boundary ticks along
-// the screen edges (separate, 5 px long with radial sides, 1 px background shadow, black on every 5th and light gray
-// otherwise) and the widgets (icons below the hands, values above), all on one
+// the screen edges (separate, 5 px long on the outer edge with radial sides, 1 px background shadow, black on
+// every 5th and light gray otherwise) and the widgets (icons below the hands, values above), all on one
 // full-screen layer.
 //
 // Hand dimensions are those of the Nyquist watchface (truhanen/
@@ -81,10 +81,13 @@ static void build_tick_table(int w, int h) {
     float t;
     cf_boundary_hit(w, h, sin_a, cos_a, &edge, &t);
     CfPoint px[CF_TICK_MAX_PIXELS];
-    int count = cf_tick_pixels(w, h, edge, t, px);
-    GColor color = cf_tick_is_black(b) ? GColorBlack : GColorLightGray;
+    // 5-minute ticks are CF_STRIP_W deep; minor ticks are CF_MINOR_TICK_DEPTH deep.
+    int depth = cf_tick_is_black(b) ? CF_STRIP_W : CF_MINOR_TICK_DEPTH;
+    int count = cf_tick_pixels(w, h, edge, t, depth, px);
     for (int i = 0; i < count; i++) {
       all[n] = px[i];
+      // 5-minute ticks are solid black; minor ticks are solid light gray.
+      GColor color = cf_tick_is_black(b) ? GColorBlack : GColorLightGray;
       s_tick_pixels[n++] = (TickPixel){
         (uint8_t)px[i].x, (uint8_t)px[i].y, color.argb };
     }

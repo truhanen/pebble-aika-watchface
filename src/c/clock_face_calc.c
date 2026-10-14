@@ -68,7 +68,7 @@ static void perimeter_point(int w, int h, int P, int *X, int *Y) {
   *X = 1; *Y = 2 * h - 1 - P;
 }
 
-int cf_tick_pixels(int w, int h, int edge, float t, CfPoint out[CF_TICK_MAX_PIXELS]) {
+int cf_tick_pixels(int w, int h, int edge, float t, int depth, CfPoint out[CF_TICK_MAX_PIXELS]) {
   int k = (int)(t + 0.001f);   // floor, tolerant of float error when t is a whole number
   int base[4] = { 0, w - 1, w + h - 2, 2 * w + h - 3 };
   int o = base[edge] + k;
@@ -78,7 +78,7 @@ int cf_tick_pixels(int w, int h, int edge, float t, CfPoint out[CF_TICK_MAX_PIXE
   perimeter_point(w, h, 2 * (o + 2) + 1, &x2, &y2);
   x1 -= w; y1 -= h; x2 -= w; y2 -= h;   // directions from the centre (doubled)
   int n = 0;
-  for (int d = 0; d < CF_STRIP_W; d++) {
+  for (int d = 0; d < depth; d++) {
     // Ring cells of layer d that can be in the tick lie within a window of the
     // outer-ring index (rays slant by at most ~1.2 px per layer, plus corner mitre).
     int start = o - (2 * edge + 1) * d - 12;

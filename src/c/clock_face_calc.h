@@ -25,12 +25,13 @@
 #define CF_OFFSCREEN_MARGIN    5
 
 // Edge ticks: one per minute boundary b = 0..59, CF_TICK_LEN px long on the
-// outermost pixel row, CF_STRIP_W px deep, with sides along rays from the screen
-// centre. Only tick pixels are ever drawn.
-#define CF_STRIP_W      4
-#define CF_TICK_LEN     5
-#define CF_TICK_COUNT  60
-#define CF_TICK_MAX_PIXELS 24   // upper bound on one tick's pixel count (tests check it)
+// outermost pixel row, CF_STRIP_W px deep for 5-minute ticks, CF_MINOR_TICK_DEPTH px
+// deep for others, with sides along rays from the screen centre. Only tick pixels are ever drawn.
+#define CF_STRIP_W           4   // depth of 5-minute (black) ticks
+#define CF_MINOR_TICK_DEPTH  1   // depth of minor (light gray) ticks
+#define CF_TICK_LEN          5
+#define CF_TICK_COUNT       60
+#define CF_TICK_MAX_PIXELS  24   // upper bound on one tick's pixel count (tests check it)
 
 typedef struct { int16_t x, y; } CfPoint;
 
@@ -57,7 +58,8 @@ enum { CF_EDGE_TOP, CF_EDGE_RIGHT, CF_EDGE_BOTTOM, CF_EDGE_LEFT };
 void cf_boundary_hit(int w, int h, float sin_a, float cos_a, int *edge, float *t);
 
 // The pixels of the tick at boundary point (edge, t); returns their count (at most
-// CF_TICK_MAX_PIXELS).
+// CF_TICK_MAX_PIXELS). depth is the inward strip width (CF_STRIP_W for 5-minute ticks,
+// CF_MINOR_TICK_DEPTH for others).
 //
 // Outer ring (the screen's outermost pixels) is walked clockwise from (0,0), each
 // corner pixel once: ring index o = base(edge) + k (top 0, right w-1, bottom w+h-2,
@@ -67,13 +69,13 @@ void cf_boundary_hit(int w, int h, float sin_a, float cos_a, int *edge, float *t
 //
 // Ray rule: the pixel centres of the outer ring form the rectangle [0.5,w-0.5] x
 // [0.5,h-0.5]. E1 and E2 are the points on that rectangle half a cell before cell
-// o-2 and after cell o+2 (a 5 px perimeter span). A strip pixel (within CF_STRIP_W
+// o-2 and after cell o+2 (a 5 px perimeter span). A strip pixel (within depth
 // of the edge) belongs to the tick iff the direction from the centre (w/2,h/2) to
 // its centre lies, clockwise, between the directions to E1 and E2 (ends inclusive).
 // Done in exact integers (doubled coordinates, half-plane via two cross products).
 // So the outer row has exactly 5 pixels, inner rows follow the rays (slanting near
 // corners, where they may hold more or fewer than 5, and bending round corners).
-int cf_tick_pixels(int w, int h, int edge, float t, CfPoint out[CF_TICK_MAX_PIXELS]);
+int cf_tick_pixels(int w, int h, int edge, float t, int depth, CfPoint out[CF_TICK_MAX_PIXELS]);
 
 // Upper bound on the shadow pixels of one tick (tests check it).
 #define CF_SHADOW_MAX_PER_TICK 16
@@ -86,6 +88,6 @@ int cf_tick_pixels(int w, int h, int edge, float t, CfPoint out[CF_TICK_MAX_PIXE
 int cf_shadow_pixels(int w, int h, const CfPoint *ticks, int n, uint8_t *scratch,
                      CfPoint *out, int max);
 
-// True when tick b should be solid black: all 5-minute ticks (0 = 12 o'clock included),
-// others are solid light gray. Only the colour depends on b, not pixel position.
+// True when tick b should be solid black: all 5-minute ticks (0 = 12 o'clock included).
+// Others are solid light gray.
 bool cf_tick_is_black(int b);

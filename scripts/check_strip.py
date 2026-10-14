@@ -3,9 +3,9 @@
 
 Tick b (b = 0..59) sits at the point where the ray from the screen centre at
 b*6 degrees (clockwise from 12 o'clock) meets the screen rectangle. It is 5 px
-long on the outermost row and 4 px deep, its sides following rays from the
-centre; see cf_tick_pixels in src/c/clock_face_calc.h for the exact rule, ported
-here in exact integer arithmetic.
+long on the outermost row, 4 px deep for 5-minute ticks (b%5==0) and 1 px deep
+for others, its sides following rays from the centre; see cf_tick_pixels in
+src/c/clock_face_calc.h for the exact rule, ported here in exact integer arithmetic.
 Every 5th tick (b%5==0) is solid black; the others are solid light gray.
 Every tick pixel's 4-neighbour that is not itself a tick pixel (on screen) is its
 1 px shadow and must show the background colour (--bg R,G,B, default white
@@ -20,6 +20,7 @@ import math, sys
 from PIL import Image
 
 W, H, S, LEN = 200, 228, 4, 5
+MINOR_TICK_DEPTH = 1
 CX, CY = W / 2, H / 2
 
 
@@ -71,8 +72,10 @@ def tick_pixels(b):
     x1, y1 = perimeter_point(2 * (o - 2) - 1)
     x2, y2 = perimeter_point(2 * (o + 2) + 1)
     x1 -= W; y1 -= H; x2 -= W; y2 -= H
+    # 5-minute ticks (b%5==0) are S (4) px deep; minor ticks are MINOR_TICK_DEPTH (1) px deep.
+    depth = S if is_black(b) else MINOR_TICK_DEPTH
     out = []
-    for d in range(S):
+    for d in range(depth):
         start = o - (2 * edge + 1) * d - 12
         for j in range(25):
             x, y = ring_pixel(d, start + j)

@@ -115,7 +115,9 @@ static int tick_of(int b, CfPoint out[CF_TICK_MAX_PIXELS]) {
   int edge;
   float t;
   cf_boundary_hit(W, H, (float)sin(a), (float)cos(a), &edge, &t);
-  return cf_tick_pixels(W, H, edge, t, out);
+  // 5-minute ticks are CF_STRIP_W deep; minor ticks are CF_MINOR_TICK_DEPTH deep.
+  int depth = b % 5 == 0 ? CF_STRIP_W : CF_MINOR_TICK_DEPTH;
+  return cf_tick_pixels(W, H, edge, t, depth, out);
 }
 
 static int g_owner[H][W];
@@ -156,9 +158,10 @@ static void test_ticks_geometry(void) {
     if (n < min_n) { min_n = n; }
     if (n > max_n) { max_n = n; }
     int on_ring0[CF_TICK_MAX_PIXELS], n0 = 0;
+    int depth = b % 5 == 0 ? CF_STRIP_W : CF_MINOR_TICK_DEPTH;
     for (int i = 0; i < n; i++) {
       assert(px[i].x >= 0 && px[i].x < W && px[i].y >= 0 && px[i].y < H);
-      assert(min_edge_dist(px[i]) < CF_STRIP_W);        // inside the strip
+      assert(min_edge_dist(px[i]) < depth);        // inside the tick's depth
       assert(g_owner[px[i].y][px[i].x] == 0);           // none shared
       g_owner[px[i].y][px[i].x] = b + 1;
       if (min_edge_dist(px[i]) == 0) { on_ring0[n0++] = ring0_index(px[i]); }
@@ -186,9 +189,13 @@ static void test_ticks_geometry(void) {
     ring_point(first - 0.5, &e1x, &e1y);
     ring_point(first + CF_TICK_LEN - 0.5, &e2x, &e2y);
     double a1 = cw_angle(e1x, e1y), a2 = cw_angle(e2x, e2y);
+    int max_check_depth = CF_STRIP_W;  // Only check up to max depth when scanning
     for (int y = 0; y < H; y++) {
       for (int x = 0; x < W; x++) {
-        if (min_edge_dist((CfPoint){ (int16_t)x, (int16_t)y }) >= CF_STRIP_W) { continue; }
+        int edge_dist = min_edge_dist((CfPoint){ (int16_t)x, (int16_t)y });
+        if (edge_dist >= max_check_depth) { continue; }
+        // Skip pixels beyond this tick's depth (minor ticks only 2 px deep).
+        if (!cf_tick_is_black(b) && edge_dist >= CF_MINOR_TICK_DEPTH) { continue; }
         int s = in_sector(a1, a2, x, y), member = g_owner[y][x] == b + 1;
         if (s != 0) { assert(member == (s > 0)); }
       }
@@ -229,10 +236,10 @@ static int has_pixel(const CfPoint *p, int n, int x, int y) {
 }
 
 // A tick centred on the top-right corner (cell k = 199, the corner pixel): outer ring
-// cells 197..201 = top x=197,198, the corner, right y=1,2.
+// cells 197..201 = top x=197,198, the corner, right y=1,2. Test with full depth (5-minute tick).
 static void test_corner_wrap(void) {
   CfPoint px[CF_TICK_MAX_PIXELS];
-  int n = cf_tick_pixels(W, H, CF_EDGE_TOP, 199.2f, px);
+  int n = cf_tick_pixels(W, H, CF_EDGE_TOP, 199.2f, CF_STRIP_W, px);
   assert(n <= CF_TICK_MAX_PIXELS);
   assert(has_pixel(px, n, 197, 0) && has_pixel(px, n, 198, 0) && has_pixel(px, n, 199, 0));
   assert(has_pixel(px, n, 199, 1) && has_pixel(px, n, 199, 2));
@@ -241,7 +248,7 @@ static void test_corner_wrap(void) {
   int bases[4][2] = { { CF_EDGE_RIGHT, H - 1 }, { CF_EDGE_BOTTOM, W - 1 }, { CF_EDGE_LEFT, H - 1 },
                       { CF_EDGE_TOP, 0 } };
   for (int c = 0; c < 4; c++) {
-    n = cf_tick_pixels(W, H, bases[c][0], (float)bases[c][1] + 0.5f, px);
+    n = cf_tick_pixels(W, H, bases[c][0], (float)bases[c][1] + 0.5f, CF_STRIP_W, px);
     assert(n > 0 && n <= CF_TICK_MAX_PIXELS);
     int n0 = 0;
     for (int i = 0; i < n; i++) {
@@ -301,7 +308,7 @@ static void test_boundary_hit(void) {
 }
 
 static void test_tick_colour(void) {
-  // Test that colour mapping is correct: b%5==0 → black, otherwise light gray.
+  // Test that colour mapping is correct: b%5==0 → black, others → solid light gray.
   int blacks = 0;
   for (int b = 0; b < CF_TICK_COUNT; b++) {
     if (cf_tick_is_black(b)) {

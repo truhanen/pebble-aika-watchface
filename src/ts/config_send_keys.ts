@@ -11,7 +11,7 @@
 export const STRAIGHT_THROUGH_KEYS: string[] = [
   'SettingLanguageID', 'SettingShowLeadingZero', 'SettingDisconnectIcon',
   'SettingBluetoothVibe', 'SettingHourlyVibe',
-  'SettingUseLargeFonts', 'SettingUseMetric',
+  'SettingUseMetric',
   'SettingShowBatteryPct', 'SettingDisableAutobattery', 'SettingAltClockName', 'SettingAltClockOffset',
   'SettingDecimalSep',
   'SettingPollIntervalMin', 'SettingElecQuietStart', 'SettingElecQuietEnd',
@@ -23,13 +23,11 @@ export const STRAIGHT_THROUGH_KEYS: string[] = [
 ];
 
 // Colour settings, sent on index.ts's own path: Clay yields a 24-bit RGB value which the
-// watch decodes with GColorFromHEX (a negative value means "inherit" for the sidebar
-// backgrounds). Kept here, not inline in index.ts, so config_send_keys.test.js can assert
-// that every Clay colour item is actually sent -- the same class of silent bug the
+// watch decodes with GColorFromHEX. Kept here, not inline in index.ts, so
+// config_send_keys.test.js can assert that every Clay colour item is actually sent -- the same class of silent bug the
 // straight-through coverage test exists for.
 export const COLOR_KEYS: string[] = [
-  'SettingColorTime', 'SettingColorBG', 'SettingColorSidebar', 'SettingSidebarTextColor',
-  'SettingSidebarBgColorLeft', 'SettingSidebarBgColorRight',
+  'SettingColorTime', 'SettingColorBG',
   'SettingBatteryWarnColor', 'SettingBtWarnColor',
   'SettingNightBgColor', 'SettingNightFgColor',
 ];

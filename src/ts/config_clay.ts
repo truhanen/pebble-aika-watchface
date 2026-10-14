@@ -119,17 +119,6 @@ const config = [
         defaultValue: '0x000000', sunlight: false, allowGray: true },
       { type: 'color', messageKey: 'SettingColorBG', label: 'Background color',
         defaultValue: '0xFFFFFF', sunlight: false, allowGray: true },
-      // NOTE: the SettingSidebarBgColor{Left,Right} messageKeys are repurposed as
-      // PRIMARY / SECONDARY sidebar backgrounds (role-based, not physical side).
-      // The keys keep their legacy "Left"/"Right" names so the positional
-      // AppMessage IDs don't drift (see CLAUDE.md). The watch C side maps
-      // Left=primary, Right=secondary regardless of which side the primary is on.
-      { type: 'color', messageKey: 'SettingSidebarBgColorLeft', label: 'Primary sidebar background',
-        defaultValue: '0xAAFFAA', sunlight: false, allowGray: true },
-      { type: 'color', messageKey: 'SettingSidebarBgColorRight', label: 'Secondary sidebar background',
-        defaultValue: '0xAAFFAA', sunlight: false, allowGray: true },
-      { type: 'color', messageKey: 'SettingSidebarTextColor', label: 'Sidebar text color',
-        defaultValue: '0x000000', sunlight: false, allowGray: true },
     ],
   },
 
@@ -163,8 +152,6 @@ const config = [
       { type: 'widgetList', messageKey: 'WidgetList', defaultValue: [12, 15, 17] },
       { type: 'text', defaultValue: '<b>Right sidebar widgets</b>' },
       { type: 'widgetList', messageKey: 'WidgetListRight', defaultValue: [] },
-      { type: 'radiogroup', messageKey: 'SettingUseLargeFonts', label: 'Sidebar font size',
-        defaultValue: '0', options: [{ label: 'Large', value: '1' }, { label: 'Normal', value: '0' }] },
       { type: 'radiogroup', messageKey: 'SettingShowBatteryPct', label: 'Battery meter style',
         defaultValue: '1', options: [{ label: 'Icon & percent', value: '1' }, { label: 'Icon only', value: '0' }] },
       { type: 'radiogroup', messageKey: 'SettingDisableAutobattery', label: 'Auto-show battery meter',

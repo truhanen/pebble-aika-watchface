@@ -63,8 +63,6 @@ void cf_tick_pixels(int w, int h, int edge, float t, CfPoint out[CF_TICK_PIXELS]
   }
 }
 
-bool cf_tick_is_black(int b, int x, int y) {
-  static const uint8_t bayer[4][4] = { { 0, 8, 2, 10 }, { 12, 4, 14, 6 },
-                                       { 3, 11, 1, 9 },  { 15, 7, 13, 5 } };
-  return b % 5 == 0 || bayer[y & 3][x & 3] < 3;
+bool cf_tick_is_black(int b) {
+  return b % 5 == 0;
 }

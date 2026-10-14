@@ -68,7 +68,6 @@ void cf_boundary_hit(int w, int h, float sin_a, float cos_a, int *edge, float *t
 // edge, bent mitre-style round a corner, always 6 x CF_STRIP_W pixels.
 void cf_tick_pixels(int w, int h, int edge, float t, CfPoint out[CF_TICK_PIXELS]);
 
-// True when pixel (x, y) of tick b is black: all of every 5th tick (0 = 12 o'clock
-// included), otherwise the 3/16 level of the 4x4 Bayer matrix (18.75%, black where
-// M[y%4][x%4] < 3), in absolute coordinates so the pattern tiles. The rest is white.
-bool cf_tick_is_black(int b, int x, int y);
+// True when tick b should be solid black: all 5-minute ticks (0 = 12 o'clock included),
+// others are solid light gray. Only the colour depends on b, not pixel position.
+bool cf_tick_is_black(int b);

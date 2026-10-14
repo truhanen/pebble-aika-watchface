@@ -1,5 +1,5 @@
 // Clock face: hour + minute hands, centre pivot, the 60 minute-boundary ticks along
-// the screen edges (separate, equal-length, black on every 5th and 18.75% dithered
+// the screen edges (separate, equal-length, black on every 5th and light gray
 // otherwise) and the widgets (icons below the hands, values above), all on one
 // full-screen layer.
 //
@@ -76,10 +76,10 @@ static void build_tick_table(int w, int h) {
     cf_boundary_hit(w, h, sin_a, cos_a, &edge, &t);
     CfPoint px[CF_TICK_PIXELS];
     cf_tick_pixels(w, h, edge, t, px);
+    GColor color = cf_tick_is_black(b) ? GColorBlack : GColorLightGray;
     for (int i = 0; i < CF_TICK_PIXELS; i++) {
       s_tick_pixels[n++] = (TickPixel){
-        (uint8_t)px[i].x, (uint8_t)px[i].y,
-        cf_tick_is_black(b, px[i].x, px[i].y) ? GColorBlack.argb : GColorWhite.argb };
+        (uint8_t)px[i].x, (uint8_t)px[i].y, color.argb };
     }
   }
 }

@@ -226,27 +226,17 @@ static void test_boundary_hit(void) {
 }
 
 static void test_tick_colour(void) {
+  // Test that colour mapping is correct: b%5==0 → black, otherwise light gray.
   int blacks = 0;
   for (int b = 0; b < CF_TICK_COUNT; b++) {
-    CfPoint px[CF_TICK_PIXELS];
-    tick_of(b, px);
-    int n = 0;
-    for (int i = 0; i < CF_TICK_PIXELS; i++) { n += cf_tick_is_black(b, px[i].x, px[i].y); }
-    if (b % 5 == 0) { assert(n == CF_TICK_PIXELS); blacks++; } else { assert(n < CF_TICK_PIXELS); }
-  }
-  assert(blacks == 12);
-  // 3/16 Bayer: exactly 3 black pixels in every aligned 4x4 block, at the matrix cells.
-  for (int by = 0; by < 4; by++) {
-    for (int bx = 0; bx < 4; bx++) {
-      int n = 0;
-      for (int y = 0; y < 4; y++) { for (int x = 0; x < 4; x++) { n += cf_tick_is_black(1, 4 * bx + x, 4 * by + y); } }
-      assert(n == 3);
+    if (cf_tick_is_black(b)) {
+      assert(b % 5 == 0);
+      blacks++;
+    } else {
+      assert(b % 5 != 0);
     }
   }
-  assert(cf_tick_is_black(1, 0, 0) && cf_tick_is_black(1, 2, 0) && cf_tick_is_black(1, 2, 2));
-  assert(!cf_tick_is_black(1, 1, 0) && !cf_tick_is_black(1, 0, 1) && !cf_tick_is_black(1, 3, 3));
-  assert(cf_tick_is_black(1, 4, 8) && cf_tick_is_black(1, 6, 4));   // absolute coordinates tile
-  assert(cf_tick_is_black(5, 1, 1) && cf_tick_is_black(0, 1, 1) && !cf_tick_is_black(59, 1, 1));
+  assert(blacks == 12);  // 12 five-minute ticks: 0, 5, 10, ..., 55
 }
 
 int main(void) {

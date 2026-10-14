@@ -5,13 +5,12 @@ Tick b (b = 0..59) sits at the point where the ray from the screen centre at
 b*6 degrees (clockwise from 12 o'clock) meets the screen rectangle. It is 6 px
 long along the edge and 4 px deep (24 pixels); see cf_tick_pixels in
 src/c/clock_face_calc.h for the exact cell/corner convention, ported here.
-Every 5th tick is black; the others are black where Bayer4x4[y%4][x%4] < 3
-(3/16 = 18.75%) and white elsewhere. Pixels outside every tick show the face
-and are ignored.
+Every 5th tick (b%5==0) is solid black; the others are solid light gray.
+Pixels outside every tick show the face and are ignored.
 
 Prints the match/mismatch counts and every mismatching pixel (up to 20); exits 1
 on a mismatch. With --out FILE, writes a 4x zoomed map: grey = match, red =
-mismatch, yellow = neither black nor white, the face (non-tick) pixels as
+mismatch, yellow = neither black nor light-gray, the face (non-tick) pixels as
 shot. Usage: check_strip.py shot.png [--out map.png]
 """
 import math, sys
@@ -19,7 +18,6 @@ from PIL import Image
 
 W, H, S, LEN = 200, 228, 4, 6
 CX, CY = W / 2, H / 2
-BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
 
 
 def hit(b):
@@ -58,8 +56,8 @@ def tick_pixels(b):
             for d in range(S) for j in range(LEN)]
 
 
-def is_black(b, x, y):
-    return b % 5 == 0 or BAYER[y % 4][x % 4] < 3
+def is_black(b):
+    return b % 5 == 0
 
 
 def main():
@@ -72,11 +70,12 @@ def main():
     for b in range(60):
         for x, y in tick_pixels(b):
             px = im.getpixel((x, y))
-            expect = is_black(b, x, y)
-            if px not in ((0, 0, 0), (255, 255, 255)):
+            # Black tick: (0,0,0), Light gray tick: (171,171,171) as produced by emulator
+            expected_color = (0, 0, 0) if is_black(b) else (171, 171, 171)
+            if px == expected_color:
+                ok += 1; out.putpixel((x, y), (150, 150, 150))
+            elif px not in ((0, 0, 0), (171, 171, 171)):
                 bad += 1; wrong.append((x, y, b, px)); out.putpixel((x, y), (255, 200, 0))
-            elif (px == (0, 0, 0)) == expect:
-                ok += 1; out.putpixel((x, y), (150, 150, 150) if expect else (230, 230, 230))
             else:
                 bad += 1; wrong.append((x, y, b, px)); out.putpixel((x, y), (220, 0, 0))
     print(f"ticks=60 ok={ok} mismatched={bad}")

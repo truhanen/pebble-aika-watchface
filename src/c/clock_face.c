@@ -1,6 +1,6 @@
 // Clock face: hour + minute hands, centre pivot, the 60 minute-boundary ticks along
 // the screen edges (separate, 5 px long on the outer edge, following the frame's rounded corners (CF_CORNER_R), with radial sides, 2 px background shadow, all in the
-// time text colour: 4 px deep for 5-minute ticks and 1 px deep for 1-minute ticks) and the widgets (icons below
+// time text colour: 4 px deep for 5-minute ticks and 1 px deep and 1 px in from the edge for 1-minute ticks) and the widgets (icons below
 // the hands, values and icon-only widgets above), all on one full-screen layer.
 //
 // Hand dimensions are those of the Nyquist watchface (truhanen/
@@ -83,7 +83,8 @@ static void build_tick_table(int w, int h) {
     // Major (5-minute) ticks are CF_STRIP_W deep; minor ticks are CF_MINOR_TICK_DEPTH deep.
     bool is_major = cf_tick_is_major(b);
     int depth = is_major ? CF_STRIP_W : CF_MINOR_TICK_DEPTH;
-    int count = cf_tick_pixels(w, h, CF_CORNER_R, hx, hy, depth, px);
+    int inset = is_major ? 0 : CF_MINOR_TICK_INSET;
+    int count = cf_tick_pixels(w, h, CF_CORNER_R, hx, hy, depth, inset, px);
     for (int i = 0; i < count; i++) {
       all[n] = px[i];
       // All ticks use the foreground colour (resolved at draw time).

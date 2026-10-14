@@ -6,7 +6,7 @@ b*6 degrees (clockwise from 12 o'clock) meets the visible area's boundary: the s
 rectangle with corners rounded to radius --radius (default CF_CORNER_R from
 src/c/clock_face_calc.h; 0 = plain rectangle; the physical frame hides the corner
 pixels). It is 5 px long on the outermost row (measured along the rounded boundary), 4 px deep for 5-minute ticks (b%5==0) and 1 px deep
-for 1-minute ticks, its sides following rays from the centre; see cf_tick_pixels in
+for 1-minute ticks, which sit 1 px in from the edge (the gap is covered by their shadow), its sides following rays from the centre; see cf_tick_pixels in
 src/c/clock_face_calc.h for the exact rule, ported here in exact integer arithmetic.
 All ticks use the foreground colour (--fg R,G,B, default black 0,0,0).
 Every on-screen pixel within Manhattan distance 2 of a tick pixel (the 12-offset
@@ -23,6 +23,7 @@ from PIL import Image
 
 W, H, S, LEN = 200, 228, 4, 5
 MINOR_TICK_DEPTH = 1
+MINOR_TICK_INSET = 1   # CF_MINOR_TICK_INSET: gap between the edge and a minor tick
 SHADOW_R = 2   # CF_SHADOW_R: Manhattan reach of the shadow
 CX, CY = W / 2, H / 2
 RADIUS = 10   # CF_CORNER_R in src/c/clock_face_calc.h; override with --radius
@@ -38,23 +39,27 @@ def read_c_radius():
         return RADIUS
 
 
-def hit(b, r):
-    """Point where the b*6 degree ray meets the outer boundary (rounded rectangle, radius r)."""
+def hit(b, r, w=None, h=None):
+    """Point where the b*6 degree ray meets the outer boundary (rounded rectangle, radius r),
+    in the shape's own frame (w x h, default the screen); the ray starts at its centre."""
+    w = W if w is None else w
+    h = H if h is None else h
+    cx, cy = w / 2, h / 2
     a = math.radians(b * 6)
     dx, dy = math.sin(a), -math.cos(a)
     tx = ty = 1e30
-    if dx > 1e-6: tx = (W - CX) / dx
-    elif dx < -1e-6: tx = CX / -dx
-    if dy > 1e-6: ty = (H - CY) / dy
-    elif dy < -1e-6: ty = CY / -dy
+    if dx > 1e-6: tx = (w - cx) / dx
+    elif dx < -1e-6: tx = cx / -dx
+    if dy > 1e-6: ty = (h - cy) / dy
+    elif dy < -1e-6: ty = cy / -dy
     t = min(tx, ty)
-    x, y = CX + dx * t, CY + dy * t
-    if r > 0 and (x < r or x > W - r) and (y < r or y > H - r):
-        ax, ay = (r if x < r else W - r), (r if y < r else H - r)
-        px, py = CX - ax, CY - ay
+    x, y = cx + dx * t, cy + dy * t
+    if r > 0 and (x < r or x > w - r) and (y < r or y > h - r):
+        ax, ay = (r if x < r else w - r), (r if y < r else h - r)
+        px, py = cx - ax, cy - ay
         bb = dx * px + dy * py
         t = -bb + math.sqrt(bb * bb - (px * px + py * py - r * r))
-        x, y = CX + dx * t, CY + dy * t
+        x, y = cx + dx * t, cy + dy * t
     return x, y
 
 
@@ -75,18 +80,18 @@ def in_band(r, x, y, depth):
 class Curve:
     """C: the curve of outer-row pixel centres (rounded rect inset 0.5), walked clockwise
     from the start of the top straight by arc length s."""
-    def __init__(self, r):
-        self.r = r
+    def __init__(self, r, w=W, h=H):
+        self.r, self.w, self.h = r, w, h
         self.a = r if r > 0 else 0.5
         self.rc = self.a - 0.5
-        self.lt, self.lr = W - 2 * self.a, H - 2 * self.a
+        self.lt, self.lr = w - 2 * self.a, h - 2 * self.a
         self.q = math.pi / 2 * self.rc
         self.len = 2 * self.lt + 2 * self.lr + 4 * self.q
         self.seg = [self.lt, self.q, self.lr, self.q, self.lt, self.q, self.lr, self.q]
 
     def corner(self, k):
-        ax = W - self.a if k in (0, 1) else self.a
-        ay = H - self.a if k in (1, 2) else self.a
+        ax = self.w - self.a if k in (0, 1) else self.a
+        ay = self.h - self.a if k in (1, 2) else self.a
         sx, sy = ((0, -1), (1, 0), (0, 1), (-1, 0))[k]
         return ax, ay, sx, sy
 
@@ -97,9 +102,9 @@ class Curve:
             s -= self.seg[i]; i += 1
         a = self.a
         if i == 0: return a + s, 0.5
-        if i == 2: return W - 0.5, a + s
-        if i == 4: return W - a - s, H - 0.5
-        if i == 6: return 0.5, H - a - s
+        if i == 2: return self.w - 0.5, a + s
+        if i == 4: return self.w - a - s, self.h - 0.5
+        if i == 6: return 0.5, self.h - a - s
         ax, ay, sx, sy = self.corner(i // 2)
         phi = s / self.rc if self.rc > 0 else 0
         co, si = math.cos(phi), math.sin(phi)
@@ -107,7 +112,7 @@ class Curve:
 
     def centre_s(self, hx, hy):
         r = self.r
-        left, right, top, bot = hx < r, hx > W - r, hy < r, hy > H - r
+        left, right, top, bot = hx < r, hx > self.w - r, hy < r, hy > self.h - r
         if r > 0 and (left or right) and (top or bot):
             k = (0 if top else 1) if right else (2 if bot else 3)
             ax, ay, sx, sy = self.corner(k)
@@ -116,9 +121,9 @@ class Curve:
             start = (self.lt, self.lt + self.q + self.lr, 2 * self.lt + 2 * self.q + self.lr,
                      2 * self.lt + 3 * self.q + 2 * self.lr)[k]
             return start + math.asin(sinp) * self.rc
-        d = [hy, W - hx, H - hy, hx]
+        d = [hy, self.w - hx, self.h - hy, hx]
         edge = d.index(min(d))
-        t = (hx, hy, W - hx, H - hy)[edge]
+        t = (hx, hy, self.w - hx, self.h - hy)[edge]
         k = math.floor(t + 0.001)
         start = (0, self.lt + self.q, self.lt + self.q + self.lr + self.q,
                  2 * self.lt + 2 * self.q + self.lr + self.q)[edge]
@@ -126,11 +131,16 @@ class Curve:
 
 
 def tick_pixels(b, r):
-    c = Curve(r)
-    hx, hy = hit(b, r)
+    """Pixels of tick b. Minor ticks sit MINOR_TICK_INSET px in from the edge: the same
+    construction on the area shrunk by the inset (corner radius r - inset) on the same ray."""
+    inset = 0 if is_major(b) else MINOR_TICK_INSET
+    w2, h2, r2 = W - 2 * inset, H - 2 * inset, max(r - inset, 0)
+    c = Curve(r2, w2, h2)
+    hx, hy = hit(b, r2, w2, h2)
     sc = c.centre_s(hx, hy)
-    fx, fy = c.point(sc)
+    fx, fy = (v + inset for v in c.point(sc))
     def dir16(p):
+        p = (p[0] + inset, p[1] + inset)
         return (int(math.floor((p[0] - W / 2) * 16 + 0.5)) if p[0] >= W / 2 else -int(math.floor((W / 2 - p[0]) * 16 + 0.5)),
                 int(math.floor((p[1] - H / 2) * 16 + 0.5)) if p[1] >= H / 2 else -int(math.floor((H / 2 - p[1]) * 16 + 0.5)))
     x1, y1 = dir16(c.point(sc - LEN / 2))
@@ -140,7 +150,8 @@ def tick_pixels(b, r):
     out = []
     for y in range(int(fy) - 14, int(fy) + 15):
         for x in range(int(fx) - 14, int(fx) + 15):
-            if not in_band(r, x, y, depth): continue
+            if not in_band(r, x, y, inset + depth): continue
+            if inset and in_band(r, x, y, inset): continue
             vx, vy = (2 * x + 1 - W) * 8, (2 * y + 1 - H) * 8
             if x1 * vy - y1 * vx >= 0 and vx * y2 - vy * x2 >= 0:
                 out.append((x, y))

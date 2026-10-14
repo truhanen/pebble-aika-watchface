@@ -84,11 +84,14 @@ static int min_edge_dist(CfPoint p) {
 
 static int depth_of(int b) { return b % 5 == 0 ? CF_STRIP_W : CF_MINOR_TICK_DEPTH; }
 
+// Minor ticks sit CF_MINOR_TICK_INSET px in from the edge; 5-minute ticks start at it.
+static int inset_of(int b) { return b % 5 == 0 ? 0 : CF_MINOR_TICK_INSET; }
+
 static int tick_at(int r, int b, int depth, CfPoint out[CF_TICK_MAX_PIXELS]) {
   double a = rad_of_minute(b);
   float hx, hy;
   cf_boundary_hit(W, H, r, (float)sin(a), (float)cos(a), &hx, &hy);
-  return cf_tick_pixels(W, H, r, hx, hy, depth, out);
+  return cf_tick_pixels(W, H, r, hx, hy, depth, inset_of(b), out);
 }
 
 static int tick_of(int b, CfPoint out[CF_TICK_MAX_PIXELS]) {
@@ -191,24 +194,35 @@ static void test_radius_zero_is_old_geometry(void) {
   int total = 0;
   for (int b = 0; b < CF_TICK_COUNT; b++) {
     CfPoint px[CF_TICK_MAX_PIXELS];
-    int n = tick_at(0, b, depth_of(b), px), nref = ref_tick(b);
-    assert(n == nref);
-    for (int i = 0; i < n; i++) { assert(g_ref[px[i].y][px[i].x] == 1); all[total++] = px[i]; }
+    int n = tick_at(0, b, depth_of(b), px);
+    if (inset_of(b) == 0) {   // 5-minute ticks: exactly the old rule (minor ticks moved inward, see below)
+      int nref = ref_tick(b);
+      assert(n == nref);
+      for (int i = 0; i < n; i++) { assert(g_ref[px[i].y][px[i].x] == 1); }
+    } else {                  // minor ticks: only the inset row, 1 px deep
+      for (int i = 0; i < n; i++) { assert(min_edge_dist(px[i]) == CF_MINOR_TICK_INSET); }
+    }
+    for (int i = 0; i < n; i++) { all[total++] = px[i]; }
   }
   // Exactly 5 outer pixels per tick, as before.
   for (int b = 0; b < CF_TICK_COUNT; b++) {
     CfPoint px[CF_TICK_MAX_PIXELS];
     int n = tick_at(0, b, depth_of(b), px), n0 = 0;
-    for (int i = 0; i < n; i++) { n0 += min_edge_dist(px[i]) == 0; }
+    for (int i = 0; i < n; i++) { n0 += min_edge_dist(px[i]) == inset_of(b); }
     assert(n0 == CF_TICK_LEN);
   }
   // Shadow: on-screen non-tick 4-neighbours (same rule; cf_shadow_pixels is radius-free).
   assert(total > 0);
 }
 
-static int outer_row(int r, const CfPoint *px, int n, CfPoint *row) {
+// The tick's first row (the one nearest the edge): pixels at inset distance `inset` exactly.
+static int outer_row(int r, int inset, const CfPoint *px, int n, CfPoint *row) {
   int k = 0;
-  for (int i = 0; i < n; i++) { if (cf_in_band(W, H, r, px[i].x, px[i].y, 1)) { row[k++] = px[i]; } }
+  for (int i = 0; i < n; i++) {
+    int in_band = cf_in_band(W, H, r, px[i].x, px[i].y, inset + 1);
+    int in_gap = inset > 0 && cf_in_band(W, H, r, px[i].x, px[i].y, inset);
+    if (in_band && !in_gap) { row[k++] = px[i]; }
+  }
   return k;
 }
 
@@ -216,6 +230,12 @@ static int outer_row(int r, const CfPoint *px, int n, CfPoint *row) {
 static int near_corner(int r, int x, int y, int margin) {
   int dx = x < W / 2 ? x : W - 1 - x, dy = y < H / 2 ? y : H - 1 - y;
   return dx < r + margin && dy < r + margin;
+}
+
+// Index of the pixel's ring row: 0 outermost, 1 the next, ... (-1 beyond CF_STRIP_W rows or hidden).
+static int ring_row(int r, int x, int y) {
+  for (int d = 0; d < CF_STRIP_W; d++) { if (cf_in_band(W, H, r, x, y, d + 1)) { return d; } }
+  return -1;
 }
 
 static void test_ticks_geometry_for_radius(int r, int verbose) {
@@ -233,11 +253,11 @@ static void test_ticks_geometry_for_radius(int r, int verbose) {
     for (int i = 0; i < n; i++) {
       double in = inset_f(r, px[i].x, px[i].y);
       assert(in >= 0);                                   // inside the rounded rect: never a hidden corner pixel
-      assert(in < depth);                                // within the depth band
+      assert(in >= inset_of(b) && in < inset_of(b) + depth);   // within the band, past the gap
       assert(g_owner[px[i].y][px[i].x] == 0);            // none shared between ticks
       g_owner[px[i].y][px[i].x] = b + 1;
     }
-    int n0 = outer_row(r, px, n, row0);
+    int n0 = outer_row(r, inset_of(b), px, n, row0);
     if (n0 < min_outer) { min_outer = n0; }
     if (n0 > max_outer) { max_outer = n0; }
     // Outer row: about 5 px of arc, 8-connected, hugging the boundary.
@@ -252,16 +272,18 @@ static void test_ticks_geometry_for_radius(int r, int verbose) {
     // Centre of the outer row vs the float ray intersection with the rounded boundary:
     // the row's centroid lies within 1 px (half a cell along, half a cell across).
     double a = rad_of_minute(b), dx = sin(a), dy = -cos(a);
+    // (a minor tick is centred on the ray's exit from the area shrunk by its inset)
+    int ins = inset_of(b), ri = r > ins ? r - ins : 0, Wi = W - 2 * ins, Hi = H - 2 * ins;
     double tlo = 0, thi = 400;   // bisect the exit of the ray from the rounded rect (float model)
     for (int it = 0; it < 60; it++) {
-      double m = 0.5 * (tlo + thi), qx = CX + dx * m, qy = CY + dy * m;
-      double ax = qx < r ? r : (qx > W - r ? W - r : qx), ay = qy < r ? r : (qy > H - r ? H - r : qy);
-      int inside = qx >= 0 && qx <= W && qy >= 0 && qy <= H &&
-                   ((r == 0) || !((qx < r || qx > W - r) && (qy < r || qy > H - r)) ||
-                    hypot(qx - ax, qy - ay) <= r);
+      double m = 0.5 * (tlo + thi), qx = CX + dx * m - ins, qy = CY + dy * m - ins;
+      double ax = qx < ri ? ri : (qx > Wi - ri ? Wi - ri : qx), ay = qy < ri ? ri : (qy > Hi - ri ? Hi - ri : qy);
+      int inside = qx >= 0 && qx <= Wi && qy >= 0 && qy <= Hi &&
+                   ((ri == 0) || !((qx < ri || qx > Wi - ri) && (qy < ri || qy > Hi - ri)) ||
+                    hypot(qx - ax, qy - ay) <= ri);
       if (inside) { tlo = m; } else { thi = m; }
     }
-    double hx = CX + dx * tlo, hy = CY + dy * tlo, cxm = 0, cym = 0;
+    double hx = CX + dx * tlo, hy = CY + dy * tlo, cxm = 0, cym = 0;   // global coords
     for (int i = 0; i < n0; i++) { cxm += row0[i].x + 0.5; cym += row0[i].y + 0.5; }
     cxm /= n0; cym /= n0;
     double dist = hypot(cxm - hx, cym - hy);
@@ -283,14 +305,16 @@ static void test_ticks_geometry_for_radius(int r, int verbose) {
       near_ticks++;
     }
   }
-  // No touching: outer-row pixels of different ticks are never 8-neighbours.
+  // No touching: pixels of different ticks in the same ring row (outermost row, or the
+  // inset row of the minor ticks) are never 8-neighbours.
   for (int y = 0; y < H; y++) {
     for (int x = 0; x < W; x++) {
-      if (!g_owner[y][x] || !cf_in_band(W, H, r, x, y, 1)) { continue; }
+      if (!g_owner[y][x]) { continue; }
+      int row = ring_row(r, x, y);
       for (int dy = -1; dy <= 1; dy++) {
         for (int dx = -1; dx <= 1; dx++) {
           int nx = x + dx, ny = y + dy;
-          if (nx < 0 || ny < 0 || nx >= W || ny >= H || !cf_in_band(W, H, r, nx, ny, 1)) { continue; }
+          if (nx < 0 || ny < 0 || nx >= W || ny >= H || ring_row(r, nx, ny) != row) { continue; }
           assert(g_owner[ny][nx] == 0 || g_owner[ny][nx] == g_owner[y][x]);
         }
       }
@@ -305,7 +329,29 @@ static void test_ticks_geometry_for_radius(int r, int verbose) {
   }
 }
 
+// Minor ticks: 1 px deep, entirely in the inset row, the outer row under them free of tick pixels
+// of any tick (their shadow covers it); on the straights the row is exactly 5 px (checked at
+// r = 0 above and for off-corner ticks at CF_CORNER_R here).
+static void test_minor_inset(void) {
+  assert(CF_MINOR_TICK_INSET == 1 && CF_MINOR_TICK_DEPTH == 1);
+  int straight = 0;
+  for (int b = 0; b < CF_TICK_COUNT; b++) {
+    if (b % 5 == 0) { continue; }
+    CfPoint px[CF_TICK_MAX_PIXELS];
+    int n = tick_of(b, px), on_straight = 1;
+    for (int i = 0; i < n; i++) {
+      assert(inset_f(CF_CORNER_R, px[i].x, px[i].y) >= CF_MINOR_TICK_INSET);
+      assert(!cf_in_band(W, H, CF_CORNER_R, px[i].x, px[i].y, CF_MINOR_TICK_INSET));   // gap row empty
+      assert(cf_in_band(W, H, CF_CORNER_R, px[i].x, px[i].y, CF_MINOR_TICK_INSET + CF_MINOR_TICK_DEPTH));
+      on_straight &= !near_corner(CF_CORNER_R, px[i].x, px[i].y, 3);
+    }
+    if (on_straight) { assert(n == CF_TICK_LEN); straight++; }
+  }
+  assert(straight >= 30);
+}
+
 static void test_ticks_geometry(void) {
+  test_minor_inset();
   assert(CF_TICK_COUNT == 60 && CF_TICK_LEN == 5);
   for (int r = 0; r <= 20; r++) {
     if (r == 0 || r >= 1) { test_ticks_geometry_for_radius(r, r == CF_CORNER_R); }
@@ -322,7 +368,7 @@ static void test_corner_ticks(void) {
     for (int i = 0; i < n; i++) { near |= near_corner(CF_CORNER_R, px[i].x, px[i].y, 0); }
     if (!near) { continue; }
     seen++;
-    int k = outer_row(CF_CORNER_R, px, n, row);
+    int k = outer_row(CF_CORNER_R, inset_of(b), px, n, row);
     assert(n > 0 && k >= CF_TICK_LEN - 1 && k <= CF_TICK_LEN + 1);
     for (int i = 0; i < n; i++) { assert(inset_f(CF_CORNER_R, px[i].x, px[i].y) >= 0); }
   }

@@ -26,10 +26,12 @@
 
 // Edge ticks: one per minute boundary b = 0..59, CF_TICK_LEN px long on the outermost
 // pixel row, CF_STRIP_W px deep for 5-minute ticks, CF_MINOR_TICK_DEPTH px deep for
-// others, with sides along rays from the screen centre. Only tick pixels are ever drawn.
+// others (which also sit CF_MINOR_TICK_INSET px in from the edge), with sides along
+// rays from the screen centre. Only tick pixels are ever drawn.
 // The ring follows the visible area, a rectangle with rounded corners (see CF_CORNER_R).
 #define CF_STRIP_W           4   // depth of 5-minute (black) ticks
 #define CF_MINOR_TICK_DEPTH  1   // depth of minor (light gray) ticks
+#define CF_MINOR_TICK_INSET  1   // gap between the screen edge and a minor tick (its shadow covers it)
 #define CF_TICK_LEN          5
 #define CF_TICK_COUNT       60
 #define CF_TICK_MAX_PIXELS  24   // upper bound on one tick's pixel count (tests check it)
@@ -72,7 +74,12 @@ bool cf_in_band(int w, int h, int r, int x, int y, int depth);
 
 // The pixels of the tick at boundary point (hx,hy) (from cf_boundary_hit); returns their
 // count (at most CF_TICK_MAX_PIXELS). depth is the inward band width (CF_STRIP_W for
-// 5-minute ticks, CF_MINOR_TICK_DEPTH for others).
+// 5-minute ticks, CF_MINOR_TICK_DEPTH for others) and inset how far the band starts inside
+// the boundary (0 for 5-minute ticks, CF_MINOR_TICK_INSET for others): the tick's pixels
+// have inset distance in [inset, inset + depth), leaving the outer `inset` px free. With
+// an inset the tick lies on the same construction applied to the area shrunk by `inset`
+// on every side (corner radius r - inset), on the same ray from the centre, so on the
+// straights its inset row is 5 px, centred on the ray's crossing.
 //
 // C is the curve of pixel centres of the outermost row (the rounded rectangle inset by
 // half a pixel). The tick centre is the boundary point's position on C; on a straight
@@ -86,7 +93,7 @@ bool cf_in_band(int w, int h, int r, int x, int y, int depth);
 // exact on straights). With r = 0 the outer row is exactly 5 pixels; inner rows follow
 // the rays (slanting near corners, where they hold more or fewer than 5). Near rounded
 // corners the outer row follows the arc and its pixel count varies slightly around 5.
-int cf_tick_pixels(int w, int h, int r, float hx, float hy, int depth, CfPoint out[CF_TICK_MAX_PIXELS]);
+int cf_tick_pixels(int w, int h, int r, float hx, float hy, int depth, int inset, CfPoint out[CF_TICK_MAX_PIXELS]);
 
 // Shadow reach in px: every shadow (ticks, widget values, icon-only widgets) covers the
 // pixels within this Manhattan distance of the shape: all offsets (dx,dy) with

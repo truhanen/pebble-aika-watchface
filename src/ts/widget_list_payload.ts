@@ -21,7 +21,7 @@
 // KEEP IN SYNC with src/c/widget_list.c.
 export const MAX_SIDE_LIST_BYTES = 64;
 export const MAX_CENTER_LIST_BYTES = 16;
-const MAX_WIDGET_TYPE = 38;         // BLUETOOTH_ICON
+const MAX_WIDGET_TYPE = 39;         // BATTERY_PERCENT
 const CRYPTO_WID_BASE = 200;
 const MAX_CRYPTO = 16;
 const CURRENCY_WID_BASE = 216;

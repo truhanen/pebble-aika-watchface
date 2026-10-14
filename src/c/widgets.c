@@ -112,9 +112,28 @@ static uint8_t battery_percent(void) {
   return (st.charge_percent > 0) ? st.charge_percent : 5;
 }
 
+// Widget 2: battery icon + number (no separate % unit)
 static bool value_battery(const WidgetCtx *c, char *buf, size_t n) {
   // the percent sign goes first in Turkish
-  snprintf(buf, n, (settings.languageId == LANGUAGE_TR) ? "%%%d" : "%d%%", battery_percent());
+  snprintf(buf, n, (settings.languageId == LANGUAGE_TR) ? "%%%d" : "%d", battery_percent());
+  return true;
+}
+
+// Widget 39: battery number + % unit
+static bool value_battery_pct(const WidgetCtx *c, char *buf, size_t n) {
+  // Turkish keeps the percent sign as a prefix with no separate unit
+  if (settings.languageId == LANGUAGE_TR) {
+    snprintf(buf, n, "%%%d", battery_percent());
+  } else {
+    snprintf(buf, n, "%d", battery_percent());
+  }
+  return true;
+}
+
+static bool unit_battery_pct(const WidgetCtx *c, char *buf, size_t n) {
+  // Turkish uses value-prefix format, no separate unit
+  if (settings.languageId == LANGUAGE_TR) { return false; }
+  snprintf(buf, n, "%%");
   return true;
 }
 
@@ -415,6 +434,7 @@ static const WidgetDesc DESC_EMPTY = { NULL, ICON_NONE, NULL };
 static const WidgetDesc DESC_BT = { NULL, ICON_BT, NULL };
 static const WidgetDesc DESC_BT_ICON = { NULL, ICON_BT_STATE, NULL };
 static const WidgetDesc DESC_BATTERY = { value_battery, ICON_BATTERY, NULL };
+static const WidgetDesc DESC_BATTERY_PERCENT = { value_battery_pct, ICON_UNIT, unit_battery_pct };
 static const WidgetDesc DESC_BATTERY_DAYS = { value_battery_days, ICON_BATTERY, NULL };
 static const WidgetDesc DESC_BATTERY_ICON = { NULL, ICON_BATTERY, NULL };
 static const WidgetDesc DESC_STEPS = { value_steps, ICON_STEPS, NULL };
@@ -469,6 +489,7 @@ static const WidgetDesc *desc_for(uint8_t id) {
     case BATTERY_ICON:         return &DESC_BATTERY_ICON;
     case WEATHER_ICON:         return &DESC_WEATHER_ICON;
     case BLUETOOTH_ICON:       return &DESC_BT_ICON;
+    case BATTERY_PERCENT:      return &DESC_BATTERY_PERCENT;
     default:                   return NULL;   // unknown id: draws nothing
   }
 }

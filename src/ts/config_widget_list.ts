@@ -41,6 +41,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     if (id === 0 || id === 1 || id === 5 || id === ROTATING) { return false; }
     if (id >= 26 && id <= 34) { return false; }
     if (id >= 36 && id <= 38) { return false; }
+    // 39 (Battery %) is toggleable (hides the % unit)
     return true;
   }
   // Has a font setting: text widgets and Empty (the font sets the slot height), not
@@ -100,9 +101,10 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     { id: 10, label: 'Steps' },
     { id: 21, label: 'Distance' },
     { id: 12, label: 'Heart Rate' },
-    { id: 2, label: 'Battery (icon + %)' },
+    { id: 2, label: 'Battery' },
     { id: 36, label: 'Battery (icon only)' },
     { id: 22, label: 'Battery (days left)' },
+    { id: 39, label: 'Battery %' },
     { id: 38, label: 'Bluetooth (icon only)' },
     { id: 23, label: 'Tuya LEDs' },
   ];

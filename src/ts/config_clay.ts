@@ -169,7 +169,7 @@ const config = [
           { id: 10, hide: false, font: 31 }] },
       { type: 'text', defaultValue: '<b>Right edge</b>' },
       { type: 'widgetList', messageKey: 'WidgetListRight', defaultFont: 5,
-        defaultValue: [{ id: 36, hide: false, font: 31 }, { id: 2, hide: true, font: 31 },
+        defaultValue: [{ id: 36, hide: false, font: 31 }, { id: 39, hide: false, font: 31 },
           emptySlot(), emptySlot(), emptySlot(), emptySlot(), emptySlot(),
           { id: 12, hide: false, font: 31 }] },
       { type: 'text', defaultValue: '<b>Top center</b>' },

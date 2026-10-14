@@ -45,9 +45,10 @@ export const STATIC_WIDGETS: WidgetOption[] = [
   { id: 10, label: 'Steps' },
   { id: 21, label: 'Distance' },
   { id: 12, label: 'Heart Rate' },
-  { id: 2, label: 'Battery (icon + %)' },
+  { id: 2, label: 'Battery' },
   { id: 36, label: 'Battery (icon only)' },
   { id: 22, label: 'Battery (days left)' },
+  { id: 39, label: 'Battery %' },
   { id: 38, label: 'Bluetooth (icon only)' },
   { id: 23, label: 'Tuya LEDs' },
 ];

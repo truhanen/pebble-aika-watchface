@@ -71,7 +71,7 @@ These ids are kept, ported to the new API, and listed on the config page:
 | Id | Widget |
 |---|---|
 | 0 | Empty |
-| 2 | Battery (icon + %) |
+| 2 | Battery |
 | 3 | Alternate time zone |
 | 5 | Seconds |
 | 6 | Week number |
@@ -123,6 +123,7 @@ Other existing ids:
 | 36 | Battery icon only | |
 | 37 | Weather icon only | |
 | 38 | Bluetooth icon only | Shows a connected or disconnected glyph. |
+| 39 | Battery % | Value is the battery percentage; identifier is the `%` unit, inline with the value. Hide flag hides the unit. Turkish: value is `%NN` (percent-prefix) with no separate unit. |
 
 - Weekday and month names are localised (`languages.c`).
-- `MAX_WIDGET_TYPE` becomes 38.
+- `MAX_WIDGET_TYPE` becomes 39.

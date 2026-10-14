@@ -44,12 +44,13 @@ typedef enum {
   DIGITAL_TIME              = 35,
   BATTERY_ICON              = 36,   // icon only
   WEATHER_ICON              = 37,   // icon only
-  BLUETOOTH_ICON            = 38    // icon only, connected or disconnected glyph
+  BLUETOOTH_ICON            = 38,   // icon only, connected or disconnected glyph
+  BATTERY_PERCENT           = 39    // number + % unit
 } WidgetType;
 
 // Highest valid widget id; bump when appending a widget type. Used for the
 // settings clamp and the config-message bounds checks.
-#define MAX_WIDGET_TYPE BLUETOOTH_ICON
+#define MAX_WIDGET_TYPE BATTERY_PERCENT
 
 // Byte budget of a left / right widget list (storage + protocol buffer). The layer
 // shows as many slots as fit by height; this only bounds the buffer.

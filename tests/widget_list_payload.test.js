@@ -66,8 +66,8 @@ test('accepts the dynamic ranges: tuya 128..143, crypto 200..215, currency 216..
   assert.deepStrictEqual(widgetListToPayload(ids.map((id) => w(id))).filter((_, i) => i % 2 === 0), ids);
 });
 
-test('drops ids outside the contract: 1 (internal), 4 (retired), 39+, gaps, 144..199, 223+', () => {
-  [1, 4, 39, 40, 63, 64, 100, 127, 144, 199, 223, 254, 255, 256, -1].forEach((id) => {
+test('drops ids outside the contract: 1 (internal), 4 (retired), 40+, gaps, 144..199, 223+', () => {
+  [1, 4, 40, 63, 64, 100, 127, 144, 199, 223, 254, 255, 256, -1].forEach((id) => {
     assert.deepStrictEqual(widgetListToPayload([w(id)]), [], 'id ' + id + ' must be dropped');
   });
   assert.deepStrictEqual(widgetListToPayload([w(7), w(99), w(10)]), [7, 31, 10, 31]);

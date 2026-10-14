@@ -17,7 +17,7 @@
 // Numeric mirrors -- keep in sync with src/c/widgets.h (MAX_WIDGET_TYPE),
 // src/c/crypto.h (CRYPTO_WID_BASE / MAX_CRYPTO), src/c/tuya.h, src/ts/widget_list_payload.ts,
 // src/ts/config_tuya_list.ts.
-#define WL_MAX_WIDGET_TYPE   38    // BLUETOOTH_ICON
+#define WL_MAX_WIDGET_TYPE   39    // BATTERY_PERCENT
 #define WL_RETIRED_DATE_ID   4     // the old DATE widget, replaced by 26..34
 #define WL_CRYPTO_WID_BASE   200
 #define WL_MAX_CRYPTO        16

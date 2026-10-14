@@ -619,15 +619,15 @@ test('Widgets section: four widgetLists in order, with the expected max/defaults
   assert.strictEqual(lists[3].max, 1);
   const ids = (l) => l.defaultValue.map((e) => e.id);
   assert.deepStrictEqual(ids(lists[0]), [37, 7, 0, 0, 0, 0, 0, 10]);
-  assert.deepStrictEqual(ids(lists[1]), [36, 2, 0, 0, 0, 0, 0, 12]);
+  assert.deepStrictEqual(ids(lists[1]), [36, 39, 0, 0, 0, 0, 0, 12]);
   assert.deepStrictEqual(ids(lists[2]), [30]);
   assert.deepStrictEqual(ids(lists[3]), []);
   lists.forEach((l) => l.defaultValue.forEach((e) => {
     assert.strictEqual(e.font, 31, 'defaults use the position default font');
   }));
-  // the temperature and battery percent show their value only (icon hidden)
+  // the temperature shows its value only (icon hidden); battery shows icon and unit
   assert.deepStrictEqual(lists[0].defaultValue.map((e) => e.hide), [false, true, false, false, false, false, false, false]);
-  assert.deepStrictEqual(lists[1].defaultValue.map((e) => e.hide), [false, true, false, false, false, false, false, false]);
+  assert.deepStrictEqual(lists[1].defaultValue.map((e) => e.hide), [false, false, false, false, false, false, false, false]);
   const labels = items.filter((it) => it.type === 'text' && /^<b>(Left|Right|Top|Bottom) /.test(it.defaultValue))
     .map((it) => it.defaultValue);
   assert.deepStrictEqual(labels,

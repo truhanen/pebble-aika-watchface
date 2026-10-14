@@ -26,14 +26,15 @@ int main(void) {
   assert(WidgetList_isDrawableId(25));      // SLEEP_DEEP_BAR
   assert(WidgetList_isDrawableId(26));      // first new date widget
   assert(WidgetList_isDrawableId(35));      // digital time
-  assert(WidgetList_isDrawableId(38));      // BLUETOOTH_ICON = MAX_WIDGET_TYPE
-  assert(!WidgetList_isDrawableId(39));
+  assert(WidgetList_isDrawableId(38));      // BLUETOOTH_ICON
+  assert(WidgetList_isDrawableId(39));      // BATTERY_PERCENT = MAX_WIDGET_TYPE
+  assert(!WidgetList_isDrawableId(40));
   assert(WidgetList_isDrawableId(128) && WidgetList_isDrawableId(143) && !WidgetList_isDrawableId(144));
   assert(WidgetList_isDrawableId(200) && WidgetList_isDrawableId(215));
   assert(WidgetList_isDrawableId(216) && WidgetList_isDrawableId(222) && !WidgetList_isDrawableId(223));
   assert(!WidgetList_isDrawableId(255));    // the group marker is not an id
-  // the old 0x20 hide-in-id encoding is gone: 7|0x20 = 39 is no widget
-  assert(!WidgetList_isDrawableId(7 | 0x20));
+  // the old 0x20 hide-in-id encoding is gone; legacy format migration happens in TypeScript layer
+  // (7|0x20 = 39 is now a valid widget, but legacy values are filtered by entryFromLegacy)
 
   // --- flags ---
   assert(WidgetList_flagFont(0) == 0 && WidgetList_flagFont(16) == 16);

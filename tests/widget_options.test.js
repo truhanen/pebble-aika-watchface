@@ -27,13 +27,14 @@ test('STATIC_WIDGETS includes the Distance widget (id 21)', () => {
 test('STATIC_WIDGETS offers exactly the contract ids (no 1, no retired 4, no legacy 15/16/17)', () => {
   const ids = STATIC_WIDGETS.map((o) => o.id).sort((a, b) => a - b);
   assert.deepStrictEqual(ids, [0, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 18, 19, 20, 21, 22, 23, 24, 25,
-    26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 255]);
+    26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 255]);
   assert.strictEqual(new Set(ids).size, ids.length, 'ids are unique');
 });
 
 test('STATIC_WIDGETS labels for the Phase 4 widgets', () => {
   const label = (id) => STATIC_WIDGETS.find((o) => o.id === id).label;
-  assert.strictEqual(label(2), 'Battery (icon + %)');
+  assert.strictEqual(label(2), 'Battery');
+  assert.strictEqual(label(39), 'Battery %');
   assert.deepStrictEqual([26, 27, 28, 29, 30, 31, 32, 33, 34].map(label), [
     'Date d.m.', 'Date dd.mm.', 'Date dd.mm', 'Date d.m.yyyy', 'Date Wkday dd',
     'Date Wkday d.m.', 'Date Wkday', 'Date dd Mon', 'Date yyyy-mm-dd']);

@@ -44,9 +44,9 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     return true;
   }
   // Has a font setting: text widgets and Empty (the font sets the slot height), not
-  // the icon-only widgets.
+  // the icon-only widgets nor a rotating group's header (its members have their own).
   function hasFontId(id: number): boolean {
-    return !(id >= 36 && id <= 38);
+    return !(id >= 36 && id <= 38) && id !== ROTATING;
   }
   function hideBtnHtml(id: number, hidden: boolean, cls: string): string {
     if (!isToggleableId(id)) { return hidePlaceholderHtml(); }

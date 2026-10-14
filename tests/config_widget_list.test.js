@@ -74,6 +74,10 @@ test('icon-only widgets have no font control; text widgets in groups do', () => 
   assert.strictEqual(mems[0].querySelectorAll('.wl-fontbox').length, 0);
   assert.strictEqual(mems[1].querySelectorAll('.wl-mmain .wl-fontbox').length, 1);
   assert.strictEqual(rows[4].querySelectorAll('.wl-fontrow').length, 0);
+  // the group header itself has no font control (only its members do)
+  let memberBoxes = 0;
+  mems.forEach((m) => { memberBoxes += m.querySelectorAll('.wl-fontbox').length; });
+  assert.strictEqual(rows[4].querySelectorAll('.wl-fontbox').length, memberBoxes);
 });
 
 test('rotating members with Empty are still dropped by the encoder', () => {

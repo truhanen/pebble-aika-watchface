@@ -21,72 +21,171 @@ void cf_hand_pose(float cx, float cy, float sin_a, float cos_a, int shoulder,
                                 cf_snap(outer_y - apex_ext * cos_a) };
 }
 
-void cf_boundary_hit(int w, int h, float sin_a, float cos_a, int *edge, float *t) {
+// --- rounded-rectangle ring ------------------------------------------------
+// The visible area is the rectangle [0,w] x [0,h] with corners rounded to radius r
+// (pixel-edge coordinates). "C" is the curve of pixel centres of the outermost row:
+// the same shape inset by half a pixel (corner arc radius r - 0.5, centre (a,a) etc.,
+// a = max(r, 0.5)). It is walked clockwise from the start of the top straight by
+// arc length s: top straight, TR arc, right straight, BR arc, bottom, BL arc, left,
+// TL arc. For r = 0 it is the old rectangle of centres and s is the old ring index.
+
+#define PI_F 3.14159265f
+
+static float tsin(float x) {   // Taylor series, |error| < 1e-6 on [0, pi/2]; no libm
+  float x2 = x * x, term = x, sum = x;
+  for (int i = 1; i <= 6; i++) { term *= -x2 / (float)((2 * i) * (2 * i + 1)); sum += term; }
+  return sum;
+}
+static float tcos(float x) {
+  float x2 = x * x, term = 1, sum = 1;
+  for (int i = 1; i <= 6; i++) { term *= -x2 / (float)((2 * i - 1) * (2 * i)); sum += term; }
+  return sum;
+}
+static float tsqrt(float v) {
+  if (v <= 0) { return 0; }
+  float g = v > 1 ? v : 1;
+  for (int i = 0; i < 24; i++) { g = 0.5f * (g + v / g); }
+  return g;
+}
+
+typedef struct { float a, rc, lt, lr, q, len; } CRing;
+
+static CRing c_ring(int w, int h, int r) {
+  CRing c;
+  c.a = r > 0 ? (float)r : 0.5f;
+  c.rc = c.a - 0.5f;
+  c.lt = w - 2 * c.a;
+  c.lr = h - 2 * c.a;
+  c.q = 0.5f * PI_F * c.rc;
+  c.len = 2 * c.lt + 2 * c.lr + 4 * c.q;
+  return c;
+}
+
+// Corner arcs: index 0 = TR, 1 = BR, 2 = BL, 3 = TL. Centre, and the unit vector
+// (sx,sy) from the centre to where the clockwise walk enters the arc; the exit
+// direction is (-sy, sx).
+static void corner_geom(int w, int h, const CRing *c, int k, float *ax, float *ay, int *sx, int *sy) {
+  static const int8_t SX[4] = { 0, 1, 0, -1 }, SY[4] = { -1, 0, 1, 0 };
+  *ax = (k == 0 || k == 1) ? w - c->a : c->a;
+  *ay = (k == 1 || k == 2) ? h - c->a : c->a;
+  *sx = SX[k]; *sy = SY[k];
+}
+
+// Point of C at arc length s (any value, wraps).
+static void c_point(int w, int h, const CRing *c, float s, float *X, float *Y) {
+  while (s < 0) { s += c->len; }
+  while (s >= c->len) { s -= c->len; }
+  float seg[8] = { c->lt, c->q, c->lr, c->q, c->lt, c->q, c->lr, c->q };
+  int i = 0;
+  while (i < 7 && s >= seg[i]) { s -= seg[i]; i++; }
+  switch (i) {
+    case 0: *X = c->a + s;         *Y = 0.5f; return;
+    case 2: *X = w - 0.5f;         *Y = c->a + s; return;
+    case 4: *X = w - c->a - s;     *Y = h - 0.5f; return;
+    case 6: *X = 0.5f;             *Y = h - c->a - s; return;
+    default: break;
+  }
+  int k = i / 2;   // arc 1,3,5,7 -> corner 0,1,2,3
+  float ax, ay, phi = c->rc > 0 ? s / c->rc : 0;
+  int sx, sy;
+  corner_geom(w, h, c, k, &ax, &ay, &sx, &sy);
+  float co = tcos(phi), si = tsin(phi);
+  *X = ax + c->rc * (co * sx - si * sy);
+  *Y = ay + c->rc * (co * sy + si * sx);
+}
+
+void cf_boundary_hit(int w, int h, int r, float sin_a, float cos_a, float *hx, float *hy) {
   float cx = w / 2.0f, cy = h / 2.0f;
   float dx = sin_a, dy = -cos_a;   // screen frame, y grows downwards
   const float big = 1e30f;
   float tx = big, ty = big;
   if (dx > 1e-6f) { tx = (w - cx) / dx; } else if (dx < -1e-6f) { tx = cx / -dx; }
   if (dy > 1e-6f) { ty = (h - cy) / dy; } else if (dy < -1e-6f) { ty = cy / -dy; }
-  if (ty <= tx) {
-    float x = cx + dx * ty;
-    if (dy < 0) { *edge = CF_EDGE_TOP; *t = x; } else { *edge = CF_EDGE_BOTTOM; *t = w - x; }
-  } else {
-    float y = cy + dy * tx;
-    if (dx > 0) { *edge = CF_EDGE_RIGHT; *t = y; } else { *edge = CF_EDGE_LEFT; *t = h - y; }
+  float tt = ty <= tx ? ty : tx;
+  float x = cx + dx * tt, y = cy + dy * tt;
+  if (r > 0) {
+    bool left = x < r, right = x > w - r, top = y < r, bot = y > h - r;
+    if ((left || right) && (top || bot)) {   // rect hit inside a corner square: exit through the arc
+      float ax = left ? (float)r : (float)(w - r), ay = top ? (float)r : (float)(h - r);
+      float px = cx - ax, py = cy - ay;
+      float b = dx * px + dy * py, cc = px * px + py * py - (float)r * r;
+      tt = -b + tsqrt(b * b - cc);
+      x = cx + dx * tt; y = cy + dy * tt;
+    }
   }
+  *hx = x; *hy = y;
 }
 
-// Pixel of layer d's ring (rectangle inset by d, walked clockwise from its top-left
-// corner, each corner pixel once) at ring index i, any integer (wraps).
-static CfPoint ring_pixel(int w, int h, int d, int i) {
-  int a = w - 1 - 2 * d, b = h - 1 - 2 * d, len = 2 * a + 2 * b;
-  i %= len;
-  if (i < 0) { i += len; }
-  if (i < a)         { return (CfPoint){ (int16_t)(d + i), (int16_t)d }; }
-  i -= a;
-  if (i < b)         { return (CfPoint){ (int16_t)(w - 1 - d), (int16_t)(d + i) }; }
-  i -= b;
-  if (i < a)         { return (CfPoint){ (int16_t)(w - 1 - d - i), (int16_t)(h - 1 - d) }; }
-  i -= a;
-  return (CfPoint){ (int16_t)d, (int16_t)(h - 1 - d - i) };
+bool cf_in_band(int w, int h, int r, int x, int y, int depth) {
+  if (x < 0 || y < 0 || x >= w || y >= h) { return false; }
+  int dx2 = 0, dy2 = 0;
+  if (x < r) { dx2 = 2 * x + 1 - 2 * r; } else if (x >= w - r) { dx2 = 2 * x + 1 - 2 * (w - r); }
+  if (y < r) { dy2 = 2 * y + 1 - 2 * r; } else if (y >= h - r) { dy2 = 2 * y + 1 - 2 * (h - r); }
+  if (dx2 != 0 && dy2 != 0) {   // corner square: distance from the arc centre
+    int d = dx2 * dx2 + dy2 * dy2, lo = 2 * r - 2 * depth;
+    return d <= 4 * r * r && !(lo > 0 && d <= lo * lo);
+  }
+  int m = x;
+  if (w - 1 - x < m) { m = w - 1 - x; }
+  if (y < m) { m = y; }
+  if (h - 1 - y < m) { m = h - 1 - y; }
+  return m < depth;
 }
 
-// Point at doubled perimeter position P (any integer, wraps) on the rectangle of
-// outer-ring pixel centres, in doubled coordinates (centre pixel (x,y) is (2x+1,2y+1)),
-// walked clockwise from the top-left centre (1,1).
-static void perimeter_point(int w, int h, int P, int *X, int *Y) {
-  int A = 2 * (w - 1), B = 2 * (h - 1), len = 2 * A + 2 * B;
-  P %= len;
-  if (P < 0) { P += len; }
-  if (P < A)  { *X = 1 + P; *Y = 1; return; }
-  P -= A;
-  if (P < B)  { *X = 2 * w - 1; *Y = 1 + P; return; }
-  P -= B;
-  if (P < A)  { *X = 2 * w - 1 - P; *Y = 2 * h - 1; return; }
-  P -= A;
-  *X = 1; *Y = 2 * h - 1 - P;
+// s of the tick centre for the boundary point (hx,hy): arc length along C.
+static float centre_s(int w, int h, int r, const CRing *c, float hx, float hy) {
+  bool left = hx < r, right = hx > w - r, top = hy < r, bot = hy > h - r;
+  if (r > 0 && (left || right) && (top || bot)) {
+    int k = right ? (top ? 0 : 1) : (bot ? 2 : 3);
+    float ax, ay;
+    int sx, sy;
+    corner_geom(w, h, c, k, &ax, &ay, &sx, &sy);
+    float ux = (hx - ax) / r, uy = (hy - ay) / r;
+    float sinp = ux * -sy + uy * sx;
+    if (sinp < 0) { sinp = 0; }
+    if (sinp > 1) { sinp = 1; }
+    float lo = 0, hi = 0.5f * PI_F;   // bisect phi on sin
+    for (int i = 0; i < 24; i++) {
+      float mid = 0.5f * (lo + hi);
+      if (tsin(mid) < sinp) { lo = mid; } else { hi = mid; }
+    }
+    float arc_start[4] = { c->lt, c->lt + c->q + c->lr, 2 * c->lt + 2 * c->q + c->lr,
+                           2 * c->lt + 3 * c->q + 2 * c->lr };
+    return arc_start[k] + 0.5f * (lo + hi) * c->rc;
+  }
+  // Straight part: nearest edge, quantised to the pixel cell containing the point.
+  float dt = hy, dr = w - hx, db = h - hy, dl = hx;
+  int edge = 0;
+  float best = dt;
+  if (dr < best) { best = dr; edge = 1; }
+  if (db < best) { best = db; edge = 2; }
+  if (dl < best) { edge = 3; }
+  float t = edge == 0 ? hx : edge == 1 ? hy : edge == 2 ? w - hx : h - hy;
+  int k = (int)(t + 0.001f);
+  float start[4] = { 0, c->lt + c->q, c->lt + c->q + c->lr + c->q, 2 * c->lt + 2 * c->q + c->lr + c->q };
+  return start[edge] + (k + 0.5f - c->a);
 }
 
-int cf_tick_pixels(int w, int h, int edge, float t, int depth, CfPoint out[CF_TICK_MAX_PIXELS]) {
-  int k = (int)(t + 0.001f);   // floor, tolerant of float error when t is a whole number
-  int base[4] = { 0, w - 1, w + h - 2, 2 * w + h - 3 };
-  int o = base[edge] + k;
-  int x1, y1, x2, y2;
-  // Cell i spans doubled perimeter [2i-1, 2i+1], so its edges are at 2(o-2)-1, 2(o+2)+1.
-  perimeter_point(w, h, 2 * (o - 2) - 1, &x1, &y1);
-  perimeter_point(w, h, 2 * (o + 2) + 1, &x2, &y2);
-  x1 -= w; y1 -= h; x2 -= w; y2 -= h;   // directions from the centre (doubled)
+int cf_tick_pixels(int w, int h, int r, float hx, float hy, int depth, CfPoint out[CF_TICK_MAX_PIXELS]) {
+  CRing c = c_ring(w, h, r);
+  float sc = centre_s(w, h, r, &c, hx, hy);
+  float fx, fy, ex1, ey1, ex2, ey2;
+  c_point(w, h, &c, sc, &fx, &fy);
+  c_point(w, h, &c, sc - CF_TICK_LEN / 2.0f, &ex1, &ey1);
+  c_point(w, h, &c, sc + CF_TICK_LEN / 2.0f, &ex2, &ey2);
+  // Directions from the clock centre to E1/E2 in 1/16 px (exact on the straights).
+  int x1 = (int)((ex1 - w / 2.0f) * 16 + (ex1 >= w / 2.0f ? 0.5f : -0.5f));
+  int y1 = (int)((ey1 - h / 2.0f) * 16 + (ey1 >= h / 2.0f ? 0.5f : -0.5f));
+  int x2 = (int)((ex2 - w / 2.0f) * 16 + (ex2 >= w / 2.0f ? 0.5f : -0.5f));
+  int y2 = (int)((ey2 - h / 2.0f) * 16 + (ey2 >= h / 2.0f ? 0.5f : -0.5f));
   int n = 0;
-  for (int d = 0; d < depth; d++) {
-    // Ring cells of layer d that can be in the tick lie within a window of the
-    // outer-ring index (rays slant by at most ~1.2 px per layer, plus corner mitre).
-    int start = o - (2 * edge + 1) * d - 12;
-    for (int j = 0; j < 25; j++) {
-      CfPoint p = ring_pixel(w, h, d, start + j);
-      int vx = 2 * p.x + 1 - w, vy = 2 * p.y + 1 - h;
+  int bx = (int)fx, by = (int)fy;
+  for (int y = by - 14; y <= by + 14; y++) {
+    for (int x = bx - 14; x <= bx + 14; x++) {
+      if (!cf_in_band(w, h, r, x, y, depth)) { continue; }
+      int vx = (2 * x + 1 - w) * 8, vy = (2 * y + 1 - h) * 8;
       if (x1 * vy - y1 * vx >= 0 && vx * y2 - vy * x2 >= 0 && n < CF_TICK_MAX_PIXELS) {
-        out[n++] = p;
+        out[n++] = (CfPoint){ (int16_t)x, (int16_t)y };
       }
     }
   }

@@ -1,5 +1,5 @@
 // Clock face: hour + minute hands, centre pivot, the 60 minute-boundary ticks along
-// the screen edges (separate, 5 px long on the outer edge with radial sides, 1 px background shadow, all in the
+// the screen edges (separate, 5 px long on the outer edge, following the frame's rounded corners (CF_CORNER_R), with radial sides, 1 px background shadow, all in the
 // time text colour: 4 px deep for 5-minute ticks and 1 px deep for 1-minute ticks) and the widgets (icons below
 // the hands, values above), all on one full-screen layer.
 //
@@ -77,14 +77,13 @@ static void build_tick_table(int w, int h) {
     int32_t angle = b * TRIG_MAX_ANGLE / CF_TICK_COUNT;
     float sin_a = (float)sin_lookup(angle) / TRIG_MAX_RATIO;
     float cos_a = (float)cos_lookup(angle) / TRIG_MAX_RATIO;
-    int edge;
-    float t;
-    cf_boundary_hit(w, h, sin_a, cos_a, &edge, &t);
+    float hx, hy;
+    cf_boundary_hit(w, h, CF_CORNER_R, sin_a, cos_a, &hx, &hy);
     CfPoint px[CF_TICK_MAX_PIXELS];
     // Major (5-minute) ticks are CF_STRIP_W deep; minor ticks are CF_MINOR_TICK_DEPTH deep.
     bool is_major = cf_tick_is_major(b);
     int depth = is_major ? CF_STRIP_W : CF_MINOR_TICK_DEPTH;
-    int count = cf_tick_pixels(w, h, edge, t, depth, px);
+    int count = cf_tick_pixels(w, h, CF_CORNER_R, hx, hy, depth, px);
     for (int i = 0; i < count; i++) {
       all[n] = px[i];
       // All ticks use the foreground colour (resolved at draw time).

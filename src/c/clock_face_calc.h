@@ -24,14 +24,22 @@
 #define CF_MINUTE_SHOULDER   153
 #define CF_OFFSCREEN_MARGIN    5
 
-// Edge ticks: one per minute boundary b = 0..59, CF_TICK_LEN px long on the
-// outermost pixel row, CF_STRIP_W px deep for 5-minute ticks, CF_MINOR_TICK_DEPTH px
-// deep for others, with sides along rays from the screen centre. Only tick pixels are ever drawn.
+// Edge ticks: one per minute boundary b = 0..59, CF_TICK_LEN px long on the outermost
+// pixel row, CF_STRIP_W px deep for 5-minute ticks, CF_MINOR_TICK_DEPTH px deep for
+// others, with sides along rays from the screen centre. Only tick pixels are ever drawn.
+// The ring follows the visible area, a rectangle with rounded corners (see CF_CORNER_R).
 #define CF_STRIP_W           4   // depth of 5-minute (black) ticks
 #define CF_MINOR_TICK_DEPTH  1   // depth of minor (light gray) ticks
 #define CF_TICK_LEN          5
 #define CF_TICK_COUNT       60
 #define CF_TICK_MAX_PIXELS  24   // upper bound on one tick's pixel count (tests check it)
+
+// Corner radius (px) of the visible area. The Pebble Time 2's physical frame has rounded
+// corners that hide the screen's corner pixels, so the tick ring follows a rounded
+// rectangle instead of the screen rectangle. TUNING VALUE: an estimate for the PT2 frame,
+// to be confirmed on hardware. 0 gives the plain screen rectangle; must be 0 or >= 1,
+// and the geometry is tested for 0..20.
+#define CF_CORNER_R         10
 
 typedef struct { int16_t x, y; } CfPoint;
 
@@ -48,34 +56,37 @@ int cf_snap(float v);
 void cf_hand_pose(float cx, float cy, float sin_a, float cos_a, int shoulder,
                   int width, int apex_ext, int tail, CfHandPose *out);
 
-// Edges, clockwise from the top; the edge-local coordinate t runs clockwise too.
-enum { CF_EDGE_TOP, CF_EDGE_RIGHT, CF_EDGE_BOTTOM, CF_EDGE_LEFT };
-
 // Where the ray from the screen centre (w/2, h/2) at the clockwise angle given by
-// sin_a/cos_a (0 = 12 o'clock) meets the outer border, the rectangle [0,w] x [0,h]
-// in continuous pixel-edge coordinates. t is the distance along that edge from its
-// clockwise start corner: top t = x, right t = y, bottom t = w - x, left t = h - y.
-void cf_boundary_hit(int w, int h, float sin_a, float cos_a, int *edge, float *t);
+// sin_a/cos_a (0 = 12 o'clock) meets the outer boundary of the visible area: the
+// rectangle [0,w] x [0,h] with corners rounded to radius r (r = 0: the plain rectangle),
+// in continuous pixel-edge coordinates.
+void cf_boundary_hit(int w, int h, int r, float sin_a, float cos_a, float *hx, float *hy);
 
-// The pixels of the tick at boundary point (edge, t); returns their count (at most
-// CF_TICK_MAX_PIXELS). depth is the inward strip width (CF_STRIP_W for 5-minute ticks,
-// CF_MINOR_TICK_DEPTH for others).
+// True when pixel (x,y) is in the tick band of the given depth: its centre lies inside
+// the rounded rectangle and its inset distance from the boundary is in [0, depth).
+// On the straights that is the outermost `depth` rows/columns; in a corner it is the
+// pixels whose centre is within `depth` of the arc, measured inward: with d the distance
+// from the arc centre, (r - depth) < d <= r (doubled integer coordinates, exact).
+// Pixels in the hidden corners (outside the rounded rectangle) are never in the band.
+bool cf_in_band(int w, int h, int r, int x, int y, int depth);
+
+// The pixels of the tick at boundary point (hx,hy) (from cf_boundary_hit); returns their
+// count (at most CF_TICK_MAX_PIXELS). depth is the inward band width (CF_STRIP_W for
+// 5-minute ticks, CF_MINOR_TICK_DEPTH for others).
 //
-// Outer ring (the screen's outermost pixels) is walked clockwise from (0,0), each
-// corner pixel once: ring index o = base(edge) + k (top 0, right w-1, bottom w+h-2,
-// left 2w+h-3), where k = floor(t + 0.001) is the edge cell containing the boundary point
-// (k may run past an edge's ends: the ring wraps round the corner). The outer-row
-// tick is the 5 ring cells [o-2, o+2], centred on the cell containing the point.
+// C is the curve of pixel centres of the outermost row (the rounded rectangle inset by
+// half a pixel). The tick centre is the boundary point's position on C; on a straight
+// edge it is quantised to the centre of the pixel cell containing the point, on a corner
+// arc it is exact. E1 and E2 are the points on C 2.5 px (arc length along C) before and
+// after the centre, so the outer row spans 5 px of arc.
 //
-// Ray rule: the pixel centres of the outer ring form the rectangle [0.5,w-0.5] x
-// [0.5,h-0.5]. E1 and E2 are the points on that rectangle half a cell before cell
-// o-2 and after cell o+2 (a 5 px perimeter span). A strip pixel (within depth
-// of the edge) belongs to the tick iff the direction from the centre (w/2,h/2) to
-// its centre lies, clockwise, between the directions to E1 and E2 (ends inclusive).
-// Done in exact integers (doubled coordinates, half-plane via two cross products).
-// So the outer row has exactly 5 pixels, inner rows follow the rays (slanting near
-// corners, where they may hold more or fewer than 5, and bending round corners).
-int cf_tick_pixels(int w, int h, int edge, float t, int depth, CfPoint out[CF_TICK_MAX_PIXELS]);
+// Ray rule: a band pixel belongs to the tick iff the direction from the centre (w/2,h/2)
+// to its centre lies, clockwise, between the directions to E1 and E2 (ends inclusive).
+// Done in exact integers (1/16 px units, half-plane via two cross products; E1/E2 are
+// exact on straights). With r = 0 the outer row is exactly 5 pixels; inner rows follow
+// the rays (slanting near corners, where they hold more or fewer than 5). Near rounded
+// corners the outer row follows the arc and its pixel count varies slightly around 5.
+int cf_tick_pixels(int w, int h, int r, float hx, float hy, int depth, CfPoint out[CF_TICK_MAX_PIXELS]);
 
 // Upper bound on the shadow pixels of one tick (tests check it).
 #define CF_SHADOW_MAX_PER_TICK 16

@@ -2,11 +2,19 @@
 // Copyright (c) 2026 Tuomas Airaksinen
 
 /* Clay custom component "widgetList": a reorderable list of widget slots. Each row
-   is either a plain widget <select>, or a "Rotating" group (main <select> == 255)
-   that expands into an interval <select> + a member sub-list. The component value is
-   a flat marker-encoded int array: a plain slot is one id; a rotating slot is
-   255, count, interval_code, member_1.. member_count (see widget_list_payload.ts +
-   src/c/widget_list.c). Clay serializes this object via toSource() and re-evals it in
+   is either a plain widget (a widget <select> plus a font <select>), or a "Rotating"
+   group (main <select> == 255) that expands into an interval <select> + a member
+   sub-list, each member with its own widget + font selects. The component value is
+   an array of slot objects:
+     { id, hide, font }                                   plain widget
+     { rotating: true, interval, members: [{id, hide, font}, ...] }
+   `font` is 0..16 (widget_options.ts FONT_OPTIONS) or 31 = the position's default
+   font. Older stored values (a flat marker-encoded int array: 255, count, interval,
+   members..., hide flag as 0x20 in the id, no font) are still parsed (valueToSlots).
+   The optional `max` config option caps the number of top-level rows (top / bottom
+   centre lists use 1; "+ Add widget" is hidden when full). See also
+   widget_list_payload.ts + src/c/widget_list.c and docs/widget_contract.md.
+   Clay serializes this object via toSource() and re-evals it in
    the config webview, so EVERY function here MUST be self-contained: no module-scope
    helper, no import at runtime, no TS downlevel helper (__spreadArray/_this), no
    spread/destructuring. Native DOM + native array methods only.
@@ -15,36 +23,55 @@
 function widgetListInitialize(this: any, _minified: any, clayConfig: any): void {
   const self = this;
   const root: HTMLElement = self.$element[0];
-  const MAX = 16;                 // max top-level rows (matches MAX_WIDGET_LIST bytes-ish)
+  const cfgMax = parseInt(self.config && self.config.max, 10);
+  const MAX = (cfgMax > 0 && cfgMax < 16) ? cfgMax : 16;   // max top-level rows
   const ROTATING = 255;
   const MAX_MEMBERS = 6;
   const DEFAULT_INTERVAL = 3;     // 1 min
-  const HIDE_FLAG = 0x20;       // bit set on an id => identifier hidden (see widget_list.h)
-  // Toggleable = has an icon or a title label to hide. No-op for Empty(0),
-  // Bluetooth(1), Today's Date(4), Seconds(5), and the Rotating head(255).
-  function isToggleableId(base: number): boolean {
-    return base !== 0 && base !== 1 && base !== 4 && base !== 5 && base !== ROTATING;
+  const FONT_DEFAULT = 31;        // "position default" (the watch picks per list)
+  const MAX_FONT = 16;
+  const LEGACY_HIDE_FLAG = 0x20;  // old stored values: hide flag OR-ed into the id
+  // Toggleable = has an icon or a unit to hide. No-op for Empty(0), Bluetooth(1),
+  // Seconds(5), the date widgets (26..34), the icon-only widgets (36..38) and the
+  // Rotating head(255).
+  function isToggleableId(id: number): boolean {
+    if (id === 0 || id === 1 || id === 5 || id === ROTATING) { return false; }
+    if (id >= 26 && id <= 34) { return false; }
+    if (id >= 36 && id <= 38) { return false; }
+    return true;
   }
-  function hideBtnHtml(encoded: number, cls: string): string {
-    const base = encoded & 0xdf;
-    if (!isToggleableId(base)) { return ''; }
-    const hidden = (encoded & HIDE_FLAG) !== 0;
+  // Has a text value drawn in a font: not Empty, not the icon-only widgets.
+  function hasFontId(id: number): boolean {
+    return id !== 0 && !(id >= 36 && id <= 38);
+  }
+  function hideBtnHtml(id: number, hidden: boolean, cls: string): string {
+    if (!isToggleableId(id)) { return ''; }
     return '<button type="button" class="' + cls + (hidden ? ' wl-hidden' : '') +
-      '" title="Show/hide icon or title">' + (hidden ? '⊘' : '◉') + '</button>';
+      '" title="Show/hide icon or unit">' + (hidden ? '⊘' : '◉') + '</button>';
   }
 
   // Static widget options. KEEP IN SYNC with src/ts/widget_options.ts STATIC_WIDGETS
-  // and src/c/sidebar_widgets.c. Includes Empty(0) + Rotating(255) for the MAIN
+  // and src/c/widgets.h. Includes Empty(0) + Rotating(255) for the MAIN
   // select; member selects filter those two out (memberOptionsHtml).
   const STATIC_OPTIONS: { id: number; label: string }[] = [
     { id: 0, label: 'Empty' },
     { id: 255, label: '🔁 Rotating' },
+    { id: 35, label: 'Digital time' },
+    { id: 26, label: 'Date d.m.' },
+    { id: 27, label: 'Date dd.mm.' },
+    { id: 28, label: 'Date dd.mm' },
+    { id: 29, label: 'Date d.m.yyyy' },
+    { id: 30, label: 'Date Wkday dd' },
+    { id: 31, label: 'Date Wkday d.m.' },
+    { id: 32, label: 'Date Wkday' },
+    { id: 33, label: 'Date dd Mon' },
+    { id: 34, label: 'Date yyyy-mm-dd' },
     { id: 3, label: 'Alternate Time Zone' },
     { id: 5, label: 'Seconds' },
     { id: 11, label: 'Swatch Internet Time' },
-    { id: 4, label: "Today's Date" },
     { id: 6, label: 'Week Number' },
     { id: 7, label: 'Current Weather' },
+    { id: 37, label: 'Weather (icon only)' },
     { id: 8, label: "Today's Forecast" },
     { id: 13, label: 'UV Index' },
     { id: 14, label: 'Electricity price' },
@@ -57,9 +84,33 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     { id: 10, label: 'Steps' },
     { id: 21, label: 'Distance' },
     { id: 12, label: 'Heart Rate' },
-    { id: 2, label: 'Battery' },
+    { id: 2, label: 'Battery (icon + %)' },
+    { id: 36, label: 'Battery (icon only)' },
     { id: 22, label: 'Battery (days left)' },
+    { id: 38, label: 'Bluetooth (icon only)' },
     { id: 23, label: 'Tuya LEDs' },
+  ];
+
+  // Font choices; index == font index in the payload. KEEP IN SYNC with
+  // src/ts/widget_options.ts FONT_OPTIONS and docs/widget_contract.md.
+  const FONT_OPTIONS: string[] = [
+    'Gothic 3x-small (14)',
+    'Gothic 2x-small (14 bold)',
+    'Gothic x-small (18 bold)',
+    'Gothic small (24 bold)',
+    'Roboto small (21 condensed)',
+    'Gothic medium (28 bold)',
+    'Leco medium (20 bold)',
+    'Bitham large (30 black)',
+    'Droid serif large (28 bold)',
+    'Leco large (26 bold)',
+    'Leco x-large (32 bold)',
+    'Bitham 2x-large (42 bold)',
+    'Leco 2x-large (36 bold)',
+    'Leco 2x-large (38 bold)',
+    'Leco 3x-large (42)',
+    'Leco 4x-large (60)',
+    'Leco 5x-large (60 bold)',
   ];
 
   const INTERVAL_OPTIONS: { code: number; label: string }[] = [
@@ -211,18 +262,53 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     return html;
   }
 
-  // ---- slot model: {id} (plain) | {rotating:true, interval, members:[]} ----
+  // ---- slot model: {id,hide,font} (plain) | {rotating:true, interval, members:[{id,hide,font}]}
 
-  function memberHtml(encoded: number): string {
-    const base = encoded & 0xdf;
+  function normFont(raw: any): number {
+    const f = parseInt(raw, 10);
+    return (!isNaN(f) && ((f >= 0 && f <= MAX_FONT) || f === FONT_DEFAULT)) ? f : FONT_DEFAULT;
+  }
+
+  // Stored entry -> {id, hide, font}. Accepts an entry object or a legacy int (hide
+  // flag in 0x20; stored ids 33..57 can only be hidden ids 1..25 there).
+  function normEntry(raw: any): { id: number; hide: boolean; font: number } {
+    if (raw && typeof raw === 'object') {
+      return { id: parseInt(raw.id, 10) || 0, hide: !!raw.hide, font: normFont(raw.font) };
+    }
+    const v = parseInt(raw, 10) || 0;
+    if (v > LEGACY_HIDE_FLAG && v <= (LEGACY_HIDE_FLAG | 25)) {
+      return { id: v - LEGACY_HIDE_FLAG, hide: true, font: FONT_DEFAULT };
+    }
+    return { id: v, hide: false, font: FONT_DEFAULT };
+  }
+
+  function fontOptionsHtml(selected: number): string {
+    let html = '<option value="' + FONT_DEFAULT + '"' + (selected === FONT_DEFAULT ? ' selected' : '') +
+      '>Default</option>';
+    for (let i = 0; i < FONT_OPTIONS.length; i++) {
+      html += '<option value="' + i + '"' + (i === selected ? ' selected' : '') + '>' + FONT_OPTIONS[i] + '</option>';
+    }
+    return html;
+  }
+
+  function fontRowHtml(id: number, font: number, cls: string): string {
+    if (!hasFontId(id)) { return ''; }
+    return '<div class="wl-fontrow"><span class="wl-fontlbl">Font</span>' +
+      '<select class="' + cls + '">' + fontOptionsHtml(font) + '</select></div>';
+  }
+
+  function memberHtml(raw: any): string {
+    const e = normEntry(raw);
     return '<div class="wl-mem">' +
-      '<select class="wl-msel">' + memberOptionsHtml(base) + '</select>' +
-      hideBtnHtml(encoded, 'wl-mhide') +
+      '<div class="wl-mmain">' +
+      '<select class="wl-msel">' + memberOptionsHtml(e.id) + '</select>' +
+      hideBtnHtml(e.id, e.hide, 'wl-mhide') +
       '<button type="button" class="wl-mdel" title="Remove member">&#10005;</button>' +
+      '</div>' + fontRowHtml(e.id, e.font, 'wl-mfont') +
       '</div>';
   }
 
-  function groupHtml(interval: number, members: number[]): string {
+  function groupHtml(interval: number, members: any[]): string {
     let mem = '';
     for (let i = 0; i < members.length; i++) { mem += memberHtml(members[i]); }
     return '<div class="wl-group">' +
@@ -235,12 +321,12 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
 
   function rowHtml(slot: any): string {
     const isRot = !!slot.rotating;
-    const mainSel = isRot ? ROTATING : (parseInt(slot.id, 10) || 0);
-    const encoded = (!isRot && slot.hide) ? (mainSel | HIDE_FLAG) : mainSel;
+    const e = normEntry(isRot ? 0 : slot);
+    const mainSel = isRot ? ROTATING : e.id;
     let html = '<div class="wl-row">' +
       '<div class="wl-main">' +
       '<select class="wl-sel">' + mainOptionsHtml(mainSel) + '</select>' +
-      (isRot ? '' : hideBtnHtml(encoded, 'wl-hide')) +
+      (isRot ? '' : hideBtnHtml(e.id, e.hide, 'wl-hide')) +
       '<button type="button" class="wl-up" title="Move up">&#9650;</button>' +
       '<button type="button" class="wl-down" title="Move down">&#9660;</button>' +
       '<button type="button" class="wl-del" title="Remove">&#10005;</button>' +
@@ -249,6 +335,8 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
       const iv = (typeof slot.interval === 'number') ? slot.interval : DEFAULT_INTERVAL;
       const mems = Array.isArray(slot.members) ? slot.members : [];
       html += groupHtml(iv, mems);
+    } else {
+      html += fontRowHtml(e.id, e.font, 'wl-font');
     }
     return html + '</div>';
   }
@@ -268,76 +356,103 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
         // NaN check, not `||`.
         let interval = DEFAULT_INTERVAL;
         if (intSel) { const ivCode = parseInt(intSel.value, 10); if (!isNaN(ivCode)) { interval = ivCode; } }
-        const members: number[] = [];
+        const members: any[] = [];
         const memEls = row.querySelectorAll('.wl-mems .wl-mem');
         for (let m = 0; m < memEls.length; m++) {
           const mEl = memEls[m] as HTMLElement;
           const msel = mEl.querySelector('.wl-msel') as HTMLSelectElement;
           const base = msel ? (parseInt(msel.value, 10) || 0) : 0;
           const mhb = mEl.querySelector('.wl-mhide') as HTMLButtonElement;
-          const mh = !!(mhb && mhb.classList.contains('wl-hidden'));
-          members.push(mh ? (base | HIDE_FLAG) : base);
+          const mfont = mEl.querySelector('.wl-mfont') as HTMLSelectElement;
+          members.push({ id: base, hide: !!(mhb && mhb.classList.contains('wl-hidden')),
+            font: mfont ? normFont(mfont.value) : FONT_DEFAULT });
         }
         slots.push({ rotating: true, interval: interval, members: members });
       } else {
         const hb = row.querySelector('.wl-main .wl-hide') as HTMLButtonElement;
-        const hidden = !!(hb && hb.classList.contains('wl-hidden'));
-        slots.push({ id: mainVal, hide: hidden });
+        const font = row.querySelector('.wl-font') as HTMLSelectElement;
+        slots.push({ id: mainVal, hide: !!(hb && hb.classList.contains('wl-hidden')),
+          font: font ? normFont(font.value) : FONT_DEFAULT });
       }
     }
     return slots;
   }
 
-  // slot objects -> flat marker-encoded value array.
-  function slotsToValue(slots: any[]): number[] {
-    const out: number[] = [];
-    for (let i = 0; i < slots.length; i++) {
+  // slot objects -> the component value (normalized slot objects).
+  function slotsToValue(slots: any[]): any[] {
+    const out: any[] = [];
+    for (let i = 0; i < slots.length && out.length < MAX; i++) {
       const s = slots[i];
       if (s && s.rotating) {
-        const mems: number[] = [];
+        const mems: any[] = [];
         const arr = Array.isArray(s.members) ? s.members : [];
         for (let m = 0; m < arr.length && mems.length < MAX_MEMBERS; m++) {
-          const raw = parseInt(arr[m], 10);
-          const base = raw & 0xdf;
-          if (!isNaN(raw) && base !== 0 && base !== ROTATING) { mems.push(raw); }
+          const e = normEntry(arr[m]);
+          if (e.id !== 0 && e.id !== ROTATING) {
+            mems.push({ id: e.id, hide: e.hide && isToggleableId(e.id), font: e.font });
+          }
         }
         const iv = (s.interval >= 0 && s.interval <= 5) ? s.interval : DEFAULT_INTERVAL;
         if (mems.length >= 2) {
-          out.push(ROTATING, mems.length, iv);
-          for (let m = 0; m < mems.length; m++) { out.push(mems[m]); }
+          out.push({ rotating: true, interval: iv, members: mems });
         } else if (mems.length === 1) {
           out.push(mems[0]);
         }
       } else if (s) {
-        const id = parseInt(s.id, 10) || 0;
-        out.push((s.hide && isToggleableId(id & 0xdf)) ? (id | HIDE_FLAG) : id);
+        const e = normEntry(s);
+        if (e.id !== ROTATING) {
+          out.push({ id: e.id, hide: e.hide && isToggleableId(e.id), font: e.font });
+        }
       }
     }
     return out;
   }
 
-  // flat marker-encoded value array -> slot objects (for rebuild).
-  function valueToSlots(value: number[]): any[] {
+  // stored value (slot objects, or an older flat marker-encoded int array) -> slot
+  // objects (for rebuild). Retired/internal ids 1 and 4 are dropped.
+  function valueToSlots(value: any[]): any[] {
     const slots: any[] = [];
     let i = 0;
     while (i < value.length && slots.length < MAX) {
-      const head = parseInt(value[i] as any, 10);
+      const el: any = value[i];
+      if (el && typeof el === 'object') {
+        i += 1;
+        if (el.rotating) {
+          const members: any[] = [];
+          const src = Array.isArray(el.members) ? el.members : [];
+          for (let m = 0; m < src.length && m < MAX_MEMBERS; m++) {
+            const e = normEntry(src[m]);
+            if (e.id !== 1 && e.id !== 4) { members.push(e); }
+          }
+          const iv = parseInt(el.interval, 10);
+          slots.push({ rotating: true,
+            interval: (iv >= 0 && iv <= 5) ? iv : DEFAULT_INTERVAL, members: members });
+        } else {
+          const e = normEntry(el);
+          if (e.id !== 1 && e.id !== 4) { slots.push(e); }
+        }
+        continue;
+      }
+      const head = parseInt(el, 10);
       if (head === ROTATING) {
         const count = parseInt(value[i + 1] as any, 10);
         const interval = parseInt(value[i + 2] as any, 10);
         if (isNaN(count) || isNaN(interval)) { break; }
-        const members: number[] = [];
+        const members: any[] = [];
         for (let m = 0; m < count && m < MAX_MEMBERS; m++) {
-          const id = parseInt(value[i + 3 + m] as any, 10);
-          if (!isNaN(id)) { members.push(id); }
+          const raw = parseInt(value[i + 3 + m] as any, 10);
+          if (!isNaN(raw)) {
+            const e = normEntry(raw);
+            if (e.id !== 1 && e.id !== 4) { members.push(e); }
+          }
         }
         i = i + 3 + count;
         slots.push({ rotating: true,
           interval: (interval >= 0 && interval <= 5) ? interval : DEFAULT_INTERVAL,
           members: members });
       } else {
-        const v = isNaN(head) ? 0 : head;
-        slots.push({ id: v & 0xdf, hide: (v & HIDE_FLAG) !== 0 });
+        const e = normEntry(isNaN(head) ? 0 : head);
+        if (e.id !== 1 && e.id !== 4) { slots.push(e); }
         i += 1;
       }
     }
@@ -355,8 +470,12 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   function updateButtons(): void {
     const rows = root.querySelectorAll('.wl-row');
     for (let i = 0; i < rows.length; i++) {
-      (rows[i].querySelector('.wl-up') as HTMLButtonElement).disabled = (i === 0);
-      (rows[i].querySelector('.wl-down') as HTMLButtonElement).disabled = (i === rows.length - 1);
+      const up = rows[i].querySelector('.wl-up') as HTMLButtonElement;
+      const down = rows[i].querySelector('.wl-down') as HTMLButtonElement;
+      up.disabled = (i === 0);
+      down.disabled = (i === rows.length - 1);
+      // A single-slot list (top / bottom centre) has nothing to reorder.
+      up.style.display = down.style.display = (MAX === 1) ? 'none' : '';
       // Member delete is never disabled: deleting the 2nd-to-last member collapses the
       // whole group to a plain widget (a rotating group with 1 member == a plain widget),
       // so a group in the DOM always has >= 2 members. See the wl-mdel handler.
@@ -369,8 +488,8 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   }
 
   // expose for the manipulator (set runs after initialize)
-  self._wlGetValue = function(): number[] { return slotsToValue(readSlots()); };
-  self._wlRebuild = function(value: number[]): void { renderSlots(valueToSlots(value)); };
+  self._wlGetValue = function(): any[] { return slotsToValue(readSlots()); };
+  self._wlRebuild = function(value: any[]): void { renderSlots(valueToSlots(value)); };
 
   function rowIndexOf(node: Node | null): number {
     const rows = root.querySelectorAll('.wl-row');
@@ -393,7 +512,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
 
     if (target.classList.contains('wl-add')) {
       const slots = readSlots();
-      if (slots.length < MAX) { slots.push({ id: 0 }); renderSlots(slots); self.trigger('change'); }
+      if (slots.length < MAX) { slots.push({ id: 0, hide: false, font: FONT_DEFAULT }); renderSlots(slots); self.trigger('change'); }
       return;
     }
 
@@ -422,13 +541,13 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     } else if (target.classList.contains('wl-madd')) {
       const s = slots[idx];
       if (s && s.rotating && s.members.length < MAX_MEMBERS) {
-        s.members.push(firstMemberId()); renderSlots(slots); self.trigger('change');
+        s.members.push({ id: firstMemberId(), hide: false, font: FONT_DEFAULT }); renderSlots(slots); self.trigger('change');
       }
     } else if (target.classList.contains('wl-mdel')) {
       const s = slots[idx];
       if (s && s.rotating && s.members.length >= 2) {
         // which member?
-        const memEl = target.parentNode as HTMLElement;       // .wl-mem
+        const memEl = target.closest('.wl-mem') as HTMLElement;   // .wl-mem
         const memsWrap = memEl.parentNode as HTMLElement;      // .wl-mems
         const mems = memsWrap.querySelectorAll('.wl-mem');
         let mi = -1;
@@ -439,8 +558,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
           // collapse the row to a plain slot (mirrors slotsToValue / the C sanitizer)
           // rather than leaving a lone member with a disabled delete button.
           if (s.members.length === 1) {
-            const raw = parseInt(s.members[0], 10) || 0;
-            slots[idx] = { id: raw & 0xdf, hide: (raw & HIDE_FLAG) !== 0 };
+            slots[idx] = normEntry(s.members[0]);
           }
           renderSlots(slots); self.trigger('change');
         }
@@ -461,10 +579,10 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
         if (newVal === ROTATING) {
           if (!slots[idx].rotating) {
             const a = firstMemberId();
-            slots[idx] = { rotating: true, interval: DEFAULT_INTERVAL, members: [a, a] };
+            slots[idx] = { rotating: true, interval: DEFAULT_INTERVAL, members: [{ id: a, hide: false, font: FONT_DEFAULT }, { id: a, hide: false, font: FONT_DEFAULT }] };
           }
         } else {
-          slots[idx] = { id: newVal, hide: false };
+          slots[idx] = { id: newVal, hide: false, font: slots[idx].rotating ? FONT_DEFAULT : slots[idx].font };
         }
         renderSlots(slots);
       }
@@ -522,14 +640,19 @@ const widgetListComponent = {
     '.wl-intlbl{margin:0 8px 0 0;color:#fff}' +
     '.wl-group .wl-int{flex:1 1 auto;min-width:0;height:2.6rem;background-color:#767676;color:#fff;' +
       'border:none;border-radius:0.3rem;padding:0 0.5rem;color-scheme:dark}' +
-    '.wl-mem{display:flex;align-items:center;margin:0 0 6px 0}' +
+    '.wl-fontrow{display:flex;align-items:center;margin:4px 0 0 12px}' +
+    '.wl-fontlbl{margin:0 8px 0 0;color:#fff;font-size:.85em}' +
+    '.wl-fontrow select{flex:1 1 auto;min-width:0;height:2.4rem;margin:0;background-color:#767676;color:#fff;' +
+      'border:none;border-radius:0.3rem;padding:0 0.5rem;color-scheme:dark}' +
+    '.wl-mem{margin:0 0 8px 0}' +
+    '.wl-mmain{display:flex;align-items:center}' +
     '.wl-mem .wl-msel{flex:1 1 auto;min-width:0;height:2.6rem;background-color:#767676;color:#fff;' +
       'border:none;border-radius:0.3rem;padding:0 0.5rem;color-scheme:dark}' +
     '.wl-mem .wl-mdel{flex:0 0 auto;min-width:0;width:2.6rem;height:2.6rem;margin:0 0 0 6px;padding:0}' +
     '.wl-madd{min-width:0;margin:2px 0 4px 0}' +
     '.wl-add{margin:8px 0 10px 0}',
   manipulator: {
-    get: function(this: any): number[] {
+    get: function(this: any): any[] {
       return this._wlGetValue ? this._wlGetValue() : [];
     },
     set: function(this: any, value: any) {

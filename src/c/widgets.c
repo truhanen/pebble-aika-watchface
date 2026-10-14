@@ -30,7 +30,7 @@
 #include <string.h>
 
 typedef enum {
-  ICON_NONE, ICON_BATTERY, ICON_BT, ICON_BT_STATE, ICON_STEPS, ICON_HEART, ICON_WEATHER,
+  ICON_NONE, ICON_BATTERY, ICON_BT_OFF, ICON_BT_STATE, ICON_STEPS, ICON_HEART, ICON_WEATHER,
   ICON_FORECAST, ICON_SLEEP, ICON_DEEP_SLEEP, ICON_SLEEP_BAR, ICON_LEDS, ICON_UNIT
 } IconKind;
 
@@ -41,7 +41,7 @@ typedef struct {
   bool (*unit)(const WidgetCtx *c, char *buf, size_t n);    // ICON_UNIT label; false = none
 } WidgetDesc;
 
-static GDrawCommandImage *s_bt_image, *s_steps_image, *s_heart_image, *s_sleep_image, *s_deep_sleep_image;
+static GDrawCommandImage *s_steps_image, *s_heart_image, *s_sleep_image, *s_deep_sleep_image;
 
 // The time the date / time widgets show: the face's own, test-hook override included.
 static struct tm s_tm;
@@ -86,7 +86,6 @@ static void hr_health_handler(HealthEventType event, void *context) {
 }
 
 void Widgets_init(void) {
-  s_bt_image = icon_image_create_with_resource(RESOURCE_ID_DISCONNECTED);
   s_steps_image = icon_image_create_with_resource(RESOURCE_ID_HEALTH_STEPS);
   s_heart_image = icon_image_create_with_resource(RESOURCE_ID_HEALTH_HEART);
   s_sleep_image = icon_image_create_with_resource(RESOURCE_ID_HEALTH_SLEEP);
@@ -96,7 +95,6 @@ void Widgets_init(void) {
 }
 
 void Widgets_deinit(void) {
-  gdraw_command_image_destroy(s_bt_image);
   gdraw_command_image_destroy(s_steps_image);
   gdraw_command_image_destroy(s_heart_image);
   gdraw_command_image_destroy(s_sleep_image);
@@ -431,7 +429,7 @@ static bool unit_slot(const WidgetCtx *c, char *buf, size_t n) {
 /********** descriptors **********/
 
 static const WidgetDesc DESC_EMPTY = { NULL, ICON_NONE, NULL };
-static const WidgetDesc DESC_BT = { NULL, ICON_BT, NULL };
+static const WidgetDesc DESC_BT = { NULL, ICON_BT_OFF, NULL };
 static const WidgetDesc DESC_BT_ICON = { NULL, ICON_BT_STATE, NULL };
 static const WidgetDesc DESC_BATTERY = { value_battery, ICON_BATTERY, NULL };
 static const WidgetDesc DESC_BATTERY_PERCENT = { value_battery_pct, ICON_UNIT, unit_battery_pct };
@@ -509,8 +507,9 @@ static const WidgetDesc *desc_for(uint8_t id) {
 #define BATTERY_W BATTERY_ICON_WIDTH
 #define BATTERY_H (BATTERY_ICON_NUB_HEIGHT + BATTERY_ICON_HEIGHT)   // == WL_ICON_H
 
-// The Bluetooth rune (icon-only Bluetooth widget), same box connected or not.
-#define BT_RUNE_W 11
+// The Bluetooth rune (2 px strokes; icon-only Bluetooth widget and the disconnect fallback),
+// same box connected or not.
+#define BT_RUNE_W 12
 #define BT_RUNE_H WL_ICON_H
 
 // Share bar of the sleep + deep widget: a vertical gauge like the battery body.
@@ -523,7 +522,6 @@ static const WidgetDesc *desc_for(uint8_t id) {
 
 static GDrawCommandImage *icon_image(IconKind kind) {
   switch (kind) {
-    case ICON_BT:       return s_bt_image;
     case ICON_STEPS:    return s_steps_image;
     case ICON_HEART:    return s_heart_image;
     case ICON_SLEEP:    return s_sleep_image;
@@ -585,36 +583,47 @@ static void draw_battery(GContext *g, GRect box, GColor fg, GColor bg) {
   }
 }
 
-// The rune's strokes (and, disconnected, the slash across) in one colour.
-static void draw_bt_slash(GContext *g, GRect box, GColor color, uint8_t width) {
-  graphics_context_set_antialiased(g, false);
+// The rune is drawn with 2 px strokes. graphics_context_set_stroke_width only honours odd
+// widths, so each stroke is two 1 px lines one pixel apart in x. Every segment is steep
+// (|dy| > |dx|), so each row holds exactly one pixel per line: a clean 2 px run per row.
+static void draw_stroke2(GContext *g, int x0, int y0, int x1, int y1, GColor color) {
   graphics_context_set_stroke_color(g, color);
-  graphics_context_set_stroke_width(g, width);
-  graphics_draw_line(g, GPoint(box.origin.x, box.origin.y + BT_RUNE_H - 1),
-                     GPoint(box.origin.x + BT_RUNE_W - 1, box.origin.y));
-  graphics_context_set_antialiased(g, true);
+  graphics_draw_line(g, GPoint(x0, y0), GPoint(x1, y1));
+  graphics_draw_line(g, GPoint(x0 + 1, y0), GPoint(x1 + 1, y1));
 }
 
+// The slash across a disconnected rune, from the bottom left to the top right (start
+// and end chosen so the halo leaves the fewest 1 px slivers of the rune's strokes).
+static void draw_bt_slash(GContext *g, GRect box, GColor color) {
+  draw_stroke2(g, box.origin.x + 2, box.origin.y + BT_RUNE_H - 1, box.origin.x + BT_RUNE_W - 2, box.origin.y, color);
+}
+
+// The rune's strokes (and, disconnected, the slash) in one colour.
 static void draw_bt_strokes(GContext *g, GRect box, bool connected, GColor color) {
-  static const int8_t P[6][2] = { { 1, 6 }, { 9, 16 }, { 5, 22 }, { 5, 0 }, { 9, 6 }, { 1, 16 } };
+  static const int8_t P[6][2] = { { 0, 6 }, { 10, 16 }, { 5, 22 }, { 5, 0 }, { 10, 6 }, { 0, 16 } };
   int x = box.origin.x, y = box.origin.y;
   graphics_context_set_antialiased(g, false);
-  graphics_context_set_stroke_color(g, color);
   graphics_context_set_stroke_width(g, 1);
   for (int i = 0; i < 5; i++) {
-    graphics_draw_line(g, GPoint(x + P[i][0], y + P[i][1]), GPoint(x + P[i + 1][0], y + P[i + 1][1]));
+    draw_stroke2(g, x + P[i][0], y + P[i][1], x + P[i + 1][0], y + P[i + 1][1], color);
   }
+  if (!connected) { draw_bt_slash(g, box, color); }
   graphics_context_set_antialiased(g, true);
-  if (!connected) { draw_bt_slash(g, box, color, 1); }
 }
 
-// The rune is 1 px lines inside its box; disconnected it gets a slash across, with a
-// bg halo so the slash reads over the rune.
+// Disconnected, the slash carries a 1 px bg gap on each side so it reads over the rune.
 static void draw_bt_rune(GContext *g, GRect box, bool connected, GColor fg, GColor bg) {
   draw_bt_strokes(g, box, true, fg);
   if (!connected) {
-    draw_bt_slash(g, box, bg, 3);
-    draw_bt_slash(g, box, fg, 1);
+    graphics_context_set_antialiased(g, false);
+    graphics_context_set_stroke_width(g, 1);
+    for (int dx = -1; dx <= 1; dx++) {
+      GRect b = box;
+      b.origin.x += dx;
+      draw_bt_slash(g, b, bg);
+    }
+    draw_bt_slash(g, box, fg);
+    graphics_context_set_antialiased(g, true);
   }
 }
 
@@ -681,10 +690,10 @@ static void measure(const WidgetCtx *c, WidgetSize *out) {
       out->icon_h = BATTERY_H;
       break;
     case ICON_BT_STATE:
+    case ICON_BT_OFF:
       out->icon_w = BT_RUNE_W;
       out->icon_h = BT_RUNE_H;
       break;
-    case ICON_BT:
     case ICON_STEPS: case ICON_HEART: case ICON_WEATHER: case ICON_FORECAST:
     case ICON_SLEEP: case ICON_DEEP_SLEEP: {
       GDrawCommandImage *img = icon_image(d->icon);
@@ -729,6 +738,7 @@ static void draw_icon_silhouette(GContext *g, const WidgetCtx *c, GRect box, GCo
   const WidgetDesc *d = desc_for(c->id);
   switch (d->icon) {
     case ICON_BT_STATE: draw_bt_strokes(g, box, bluetooth_connection_service_peek(), color); break;
+    case ICON_BT_OFF:   draw_bt_strokes(g, box, false, color); break;
     case ICON_BATTERY:  draw_battery_silhouette(g, box, color); break;
     case ICON_LEDS:     draw_leds_silhouette(g, box, color); break;
     default: {
@@ -760,6 +770,7 @@ static void draw_icon(GContext *g, const WidgetCtx *c, GRect box) {
   switch (kind) {
     case ICON_NONE:      break;
     case ICON_BT_STATE:  draw_bt_rune(g, box, bluetooth_connection_service_peek(), fg, bg); break;
+    case ICON_BT_OFF:    draw_bt_rune(g, box, false, fg, bg); break;
     case ICON_BATTERY:   draw_battery(g, box, fg, bg); break;
     case ICON_SLEEP_BAR: draw_sleep_bar(g, box, fg); break;
     case ICON_LEDS:      draw_leds(g, box, fg); break;

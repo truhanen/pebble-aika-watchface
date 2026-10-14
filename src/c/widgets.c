@@ -653,6 +653,7 @@ static void measure(const WidgetCtx *c, WidgetSize *out) {
         WidgetUnit_measure(buf, &w, &h);
         out->icon_w = (int16_t)w;
         out->icon_h = (int16_t)h;
+        out->unit_inline = WidgetUnit_isInline(buf);
       }
       break;
   }

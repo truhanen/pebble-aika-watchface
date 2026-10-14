@@ -70,6 +70,11 @@ void WidgetText_drawValue(GContext *ctx, const char *text, int font, int x, int 
   WidgetText_draw(ctx, text, font, x, ink_top);
 }
 
+bool WidgetUnit_isInline(const char *label) {
+  char num[UNIT_PART_LEN], den[UNIT_PART_LEN];
+  return !wl_split_fraction(label, num, den, UNIT_PART_LEN);
+}
+
 void WidgetUnit_measure(const char *label, int *w, int *h) {
   char num[UNIT_PART_LEN], den[UNIT_PART_LEN];
   if (wl_split_fraction(label, num, den, UNIT_PART_LEN)) {

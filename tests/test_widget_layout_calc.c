@@ -74,6 +74,26 @@ static void test_vertical(void) {
   assert(wl_center_offset(10, 10) == 0);
 }
 
+static void test_inline_unit_baseline(void) {
+  const WidgetFontMetrics *u = wl_metrics(0);
+  static const int fonts[] = { 0, 2, 5, 7, 11, 15 };
+  for (unsigned i = 0; i < sizeof(fonts) / sizeof(fonts[0]); i++) {
+    const WidgetFontMetrics *v = wl_metrics(fonts[i]);
+    int ink_top = 37;
+    int unit_ink_top = wl_inline_unit_ink_top(v, ink_top, u);
+    int value_baseline = wl_box_top_for_ink(v, ink_top) + v->base;
+    int unit_baseline = (unit_ink_top - u->digit_top) + u->base;   // unit draw-box top + base
+    assert(unit_baseline == value_baseline);
+    // the unit's ink stays inside the value's ink rows: it cannot poke out of the slot
+    assert(unit_ink_top >= ink_top);
+    assert(unit_ink_top + u->digit_h <= ink_top + v->digit_h + 1);
+  }
+  // same font: the unit simply coincides with the value's ink
+  assert(wl_inline_unit_ink_top(u, 10, u) == 10);
+  // Bitham 42: digit ink 30 high, unit's 9 rows end on the same row
+  assert(wl_inline_unit_ink_top(wl_metrics(11), 0, u) + u->digit_h == 30);
+}
+
 static void test_icon_fit(void) {
   // a 25 px view whose ink spans raw 4..188 (1/8 px), 2 px stroke, to WL_ICON_H
   WlIconScale s = wl_icon_scale(184, 8, 2, WL_ICON_H);
@@ -168,6 +188,7 @@ int main(void) {
   test_columns();
   test_horizontal();
   test_fraction();
+  test_inline_unit_baseline();
   puts("widget_layout_calc tests passed");
   return 0;
 }

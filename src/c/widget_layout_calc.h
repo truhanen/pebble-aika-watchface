@@ -44,6 +44,13 @@ int wl_box_top_for_ink(const WidgetFontMetrics *m, int ink_top);
 int wl_run_box_top(const WidgetFontMetrics *primary, const WidgetFontMetrics *run_font,
                    int primary_box_top);
 
+// Top of the ink (digit rows) of an inline, one-line unit in font `unit` so that the unit
+// sits on the same baseline as a value in font `value` whose digit ink starts at
+// value_ink_top: baseline = value draw-box top + base(value); unit draw-box top =
+// baseline - base(unit); its ink top is that box top + digit_top(unit).
+int wl_inline_unit_ink_top(const WidgetFontMetrics *value, int value_ink_top,
+                           const WidgetFontMetrics *unit);
+
 // --- edge columns ---
 // Top y of each of n items of the given heights, distributed "space-between" over
 // [top, bottom): the first at top, the last ending at bottom; a single item is

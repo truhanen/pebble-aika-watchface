@@ -20,6 +20,8 @@ void WidgetText_drawValue(GContext *ctx, const char *text, int font, int x, int 
 
 // Unit label in GOTHIC_14: "A/B" is a stacked fraction (numerator, a 1 px rule as
 // wide as the wider part, denominator), anything else one inline line.
+// True if the label is drawn as one inline line (no stacked fraction).
+bool WidgetUnit_isInline(const char *label);
 void WidgetUnit_measure(const char *label, int *w, int *h);
 // Draw the unit in `fg` (no shadow) into box (the size WidgetUnit_measure returned).
 void WidgetUnit_draw(GContext *ctx, const char *label, GRect box, GColor fg);

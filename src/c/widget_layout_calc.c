@@ -64,6 +64,13 @@ int wl_run_box_top(const WidgetFontMetrics *primary, const WidgetFontMetrics *ru
   return primary_box_top + primary->base - run_font->base;
 }
 
+int wl_inline_unit_ink_top(const WidgetFontMetrics *value, int value_ink_top,
+                           const WidgetFontMetrics *unit) {
+  int value_box_top = wl_box_top_for_ink(value, value_ink_top);
+  int unit_box_top = value_box_top + value->base - unit->base;
+  return unit_box_top + unit->digit_top;
+}
+
 int wl_column_visible(const int16_t *heights, int n, int inner, int min_gap) {
   int y = 0, visible = 0;
   for (int i = 0; i < n; i++) {

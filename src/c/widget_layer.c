@@ -165,7 +165,7 @@ static void apply_fallback(Active col[2][MAX_WIDGET_SLOTS + 1], int n[2], int in
 }
 
 // Place an item whose slot is slot_h high from slot_top. The value's ink is centred in
-// the slot and the icon / unit on the value's ink; a widget without a value (icon
+// the slot and the icon / fraction unit on the value's ink, an inline unit on the value's baseline; a widget without a value (icon
 // only) is centred in the slot as it is.
 static void place(const Active *a, int pos, int screen_w, int slot_top, int slot_h) {
   if (s_placed_count >= MAX_PLACED) { return; }
@@ -175,6 +175,10 @@ static void place(const Active *a, int pos, int screen_w, int slot_top, int slot
   int ink_top = slot_top + wl_center_offset(slot_h, a->size.ink_h);
   int icon_top = a->size.ink_h > 0 ? ink_top + wl_center_offset(a->size.ink_h, a->size.icon_h)
                                    : slot_top + wl_center_offset(slot_h, a->size.icon_h);
+  if (a->size.unit_inline && a->size.value_w > 0 && a->size.ink_h > 0) {
+    // an inline unit is written on the value's line: same baseline
+    icon_top = wl_inline_unit_ink_top(wl_metrics(a->ctx.font), ink_top, wl_metrics(WIDGET_FONT_UNIT));
+  }
   p->ctx = a->ctx;
   p->has_value = a->size.value_w > 0;
   p->has_icon = a->size.icon_w > 0;

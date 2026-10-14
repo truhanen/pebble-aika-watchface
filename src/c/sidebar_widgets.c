@@ -26,9 +26,7 @@ GDrawCommandImage *dateImage;
 GDrawCommandImage *disconnectImage;
 GDrawCommandImage *batteryImage;
 GDrawCommandImage *batteryChargeImage;
-#if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
 GDrawCommandImage *dateLgImage;
-#endif
 
 // fonts
 GFont smSidebarFont;
@@ -171,7 +169,6 @@ SidebarWidget uvIndexWidget;
 int UVIndex_getHeight();
 void UVIndex_draw(GContext *ctx, int yPosition);
 
-#ifdef PBL_HEALTH
 GDrawCommandImage *sleepImage;
 GDrawCommandImage *stepsImage;
 GDrawCommandImage *heartImage;
@@ -246,26 +243,17 @@ static void hr_health_handler(HealthEventType event, void *context) {
     Sidebar_redraw();
   }
 }
-#endif
 
 void SidebarWidgets_init() {
 // load fonts
-#if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
   smSidebarFont = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   mdSidebarFont = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
   lgSidebarFont = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
-#else
-  smSidebarFont = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
-  mdSidebarFont = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
-  lgSidebarFont = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
-#endif
 
   // load the sidebar graphics
   dateImage = gdraw_command_image_create_with_resource(RESOURCE_ID_DATE_BG);
-#if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
   dateLgImage =
       gdraw_command_image_create_with_resource(RESOURCE_ID_DATE_BG_LG);
-#endif
   disconnectImage =
       gdraw_command_image_create_with_resource(RESOURCE_ID_DISCONNECTED);
   batteryImage =
@@ -273,7 +261,6 @@ void SidebarWidgets_init() {
   batteryChargeImage =
       gdraw_command_image_create_with_resource(RESOURCE_ID_BATTERY_CHARGE);
 
-#ifdef PBL_HEALTH
   sleepImage =
       gdraw_command_image_create_with_resource(RESOURCE_ID_HEALTH_SLEEP);
   stepsImage =
@@ -282,7 +269,6 @@ void SidebarWidgets_init() {
       gdraw_command_image_create_with_resource(RESOURCE_ID_HEALTH_HEART);
   deepSleepImage =
       gdraw_command_image_create_with_resource(RESOURCE_ID_HEALTH_DEEP_SLEEP);
-#endif
 
   // set up widgets' function pointers correctly
   batteryMeterWidget.getHeight = BatteryMeter_getHeight;
@@ -318,7 +304,6 @@ void SidebarWidgets_init() {
   uvIndexWidget.getHeight = UVIndex_getHeight;
   uvIndexWidget.draw = UVIndex_draw;
 
-#ifdef PBL_HEALTH
   stepCounterWidget.getHeight = StepCounter_getHeight;
   stepCounterWidget.draw = StepCounter_draw;
 
@@ -342,7 +327,6 @@ void SidebarWidgets_init() {
 
   health_service_events_subscribe(hr_health_handler, NULL);
   hr_seed_from_history();
-#endif
 
   beatsWidget.getHeight = Beats_getHeight;
   beatsWidget.draw = Beats_draw;
@@ -367,21 +351,17 @@ void SidebarWidgets_init() {
 
 void SidebarWidgets_deinit() {
   gdraw_command_image_destroy(dateImage);
-#if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
   gdraw_command_image_destroy(dateLgImage);
-#endif
   gdraw_command_image_destroy(disconnectImage);
   gdraw_command_image_destroy(batteryImage);
   gdraw_command_image_destroy(batteryChargeImage);
 
-#ifdef PBL_HEALTH
   gdraw_command_image_destroy(stepsImage);
   gdraw_command_image_destroy(sleepImage);
   gdraw_command_image_destroy(heartImage);
   gdraw_command_image_destroy(deepSleepImage);
 
   health_service_events_unsubscribe();
-#endif
   gpath_destroy(electricityBoltPath);
 }
 
@@ -496,7 +476,6 @@ void SidebarWidgets_updateFonts() {
     };
   }
 
-#if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
   // Larger fonts on these platforms — override layout values.
   // These start from the standard large-font values as a baseline; tune as
   // needed.
@@ -595,7 +574,6 @@ void SidebarWidgets_updateFonts() {
     layout.tuyaLedDiameter = 11;
     layout.tuyaLedGap = 3;
   }
-#endif
 }
 
 // c can't do true modulus on negative numbers, apparently
@@ -705,7 +683,6 @@ SidebarWidget getSidebarWidgetByType(SidebarWidgetType type) {
     return cheapestHourWidget;
   case TUYA_LEDS:
     return tuyaLedsWidget;
-#ifdef PBL_HEALTH
   case STEP_COUNTER:
     return stepCounterWidget;
   case DISTANCE:
@@ -720,7 +697,6 @@ SidebarWidget getSidebarWidgetByType(SidebarWidgetType type) {
     return sleepDeepBarWidget;
   case HEARTRATE:
     return heartRateWidget;
-#endif
   case BEATS:
     return beatsWidget;
   default:
@@ -783,11 +759,9 @@ void BatteryMeter_draw(GContext *ctx, int yPosition) {
 
       graphics_context_set_fill_color(ctx, theme.iconStrokeColor);
 
-#ifdef PBL_COLOR
       if (battery_percent <= 20) {
         graphics_context_set_fill_color(ctx, GColorRed);
       }
-#endif
 
       graphics_fill_rect(
           ctx, GRect(6 + SidebarWidgets_xOffset, 8 + batteryPositionY, width, 8),
@@ -861,11 +835,9 @@ void BatteryDays_draw(GContext *ctx, int yPosition) {
     } else {
       int width = roundf(18 * battery_percent / 100.0f);
       graphics_context_set_fill_color(ctx, theme.iconStrokeColor);
-#ifdef PBL_COLOR
       if (battery_percent <= 20) {
         graphics_context_set_fill_color(ctx, GColorRed);
       }
-#endif
       graphics_fill_rect(
           ctx, GRect(6 + SidebarWidgets_xOffset, 8 + batteryPositionY, width, 8),
           0, GCornerNone);
@@ -912,11 +884,7 @@ void DateWidget_draw(GContext *ctx, int yPosition) {
   // next, draw the date background
   // (an image in normal mode, a rectangle in large font mode)
   if (!settings.useLargeFonts) {
-#if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
     GDrawCommandImage *activeDateImage = dateLgImage;
-#else
-    GDrawCommandImage *activeDateImage = dateImage;
-#endif
     if (activeDateImage) {
       gdraw_command_image_recolor(activeDateImage,
                                   theme.iconFillColor,
@@ -1216,7 +1184,6 @@ void UVIndex_draw(GContext *ctx, int yPosition) {
   draw_basic_widget(ctx, yPosition, "UV", uvString, layout.basicWidgetY);
 }
 
-#ifdef PBL_HEALTH
 
 /***** Step Counter / Distance Widgets *****/
 
@@ -1521,7 +1488,6 @@ void HeartRate_draw(GContext *ctx, int yPosition) {
                      GTextOverflowModeFill, GTextAlignmentCenter, NULL);
 }
 
-#endif
 
 /***** Beats (Swatch Internet Time) widget *****/
 
@@ -1778,7 +1744,6 @@ void TuyaLeds_drawWidget(GContext *ctx, int yPosition) {
     for (uint8_t c = 0; c < cols; c++, i++) {
       uint8_t state = noData ? TUYA_LED_UNKNOWN : TuyaLeds_states[i];
       GPoint p = GPoint(x, y + r);
-#ifdef PBL_COLOR
       if (state == TUYA_LED_ON || state == TUYA_LED_OFF) {
         graphics_context_set_fill_color(ctx, (state == TUYA_LED_ON) ? GColorGreen : GColorRed);
         graphics_fill_circle(ctx, p, r);
@@ -1787,17 +1752,6 @@ void TuyaLeds_drawWidget(GContext *ctx, int yPosition) {
       // background, and IS the whole indicator for the unknown state.
       graphics_context_set_stroke_color(ctx, theme.sidebarTextColor);
       graphics_draw_circle(ctx, p, r);
-#else
-      // Black & white: on = filled, off = outline only, unknown = outline + centre dot.
-      graphics_context_set_stroke_color(ctx, theme.sidebarTextColor);
-      graphics_context_set_fill_color(ctx, theme.sidebarTextColor);
-      if (state == TUYA_LED_ON) {
-        graphics_fill_circle(ctx, p, r);
-      } else if (state == TUYA_LED_UNKNOWN) {
-        graphics_fill_circle(ctx, p, 1);
-      }
-      graphics_draw_circle(ctx, p, r);
-#endif
       x += d + gap;
     }
     y += d + gap;

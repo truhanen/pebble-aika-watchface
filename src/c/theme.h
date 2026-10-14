@@ -18,9 +18,6 @@ typedef struct {
   GColor sidebarTextColor;
   GColor sidebarBgColorLeft;   // GColorClear = inherit sidebarColor
   GColor sidebarBgColorRight;  // GColorClear = inherit sidebarColor
-  GColor dateBgColor;          // GColorClear = inherit timeBgColor
-  GColor twtStatusBgColor;     // GColorClear = inherit timeBgColor
-  GColor twtFlashColor;        // NOT night-mapped: a one-shot signal, not palette
   GColor iconFillColor;        // derived from the resolved primary sidebar background
   GColor iconStrokeColor;
 } Theme;

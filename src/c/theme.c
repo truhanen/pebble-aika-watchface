@@ -24,11 +24,6 @@ void Theme_update(bool nightActive) {
   theme.sidebarTextColor   = mapc(settings.sidebarTextColor, false, nightActive);
   theme.sidebarBgColorLeft = mapc(settings.sidebarBgColorLeft, true, nightActive);
   theme.sidebarBgColorRight = mapc(settings.sidebarBgColorRight, true, nightActive);
-  theme.dateBgColor        = mapc(settings.dateBgColor, true, nightActive);
-  theme.twtStatusBgColor   = mapc(settings.twtStatusBgColor, true, nightActive);
-  // Deliberately NOT night-mapped: the flash marks a work-time target being reached and
-  // has to stand out from the palette, at night as much as by day.
-  theme.twtFlashColor      = settings.twtFlashColor;
 
   // Sidebar icons follow the RESOLVED sidebar background, not the configured one, so at
   // night they invert with the text around them. Same rule as the version that used to

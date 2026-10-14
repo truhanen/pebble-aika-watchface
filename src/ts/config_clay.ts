@@ -95,43 +95,18 @@ const config = [
     type: 'section',
     items: [
       { type: 'heading', defaultValue: 'Clock' },
-      { type: 'radiogroup', messageKey: 'SettingClockStyle', label: 'Clock style',
-        defaultValue: '0', options: [{ label: 'Digital', value: '0' }, { label: 'Analog', value: '1' }] },
       { type: 'radiogroup', messageKey: 'SettingAnalogTicks', label: 'Analog hour marks',
         defaultValue: '2', options: [
           { label: 'Hide', value: '0' },
           { label: 'Normal', value: '1' },
           { label: 'Bold', value: '2' },
         ] },
-      { type: 'toggle', messageKey: 'SettingAnalogDigitalClock',
-        label: 'Digital time below clock', defaultValue: false },
-      { type: 'toggle', messageKey: 'SettingStatusClockDigital',
-        label: 'Digital clock when status strip covers the time', defaultValue: false },
       { type: 'text', id: 'analog-credit', defaultValue:
-        'The <b>Analog</b> clock face is ported from the <b>Nyquist</b> watchface ' +
+        'The clock face is based on the <b>Nyquist</b> watchface ' +
         'by truhanen, used under the GPL-3.0 license.<br>' +
         'github.com/truhanen/pebble-nyquist-watchface' },
-      { type: 'radiogroup', messageKey: 'SettingShowLeadingZero', label: 'Leading zero',
+      { type: 'radiogroup', messageKey: 'SettingShowLeadingZero', label: 'Leading zero in times',
         defaultValue: '0', options: [{ label: 'No', value: '0' }, { label: 'Yes', value: '1' }] },
-      { type: 'radiogroup', messageKey: 'SettingClockFontId', label: 'Clock font',
-        defaultValue: '1', options: [
-          { label: 'Default', value: '0' },
-          { label: 'LECO', value: '1' },
-          { label: 'Bold', value: '2' },
-          { label: 'Bold Hour', value: '3' },
-          { label: 'Bold Minute', value: '4' },
-          { label: 'Bitham', value: '5' },
-        ] },
-      { type: 'radiogroup', messageKey: 'SettingBigDate', label: 'Large date above clock',
-        defaultValue: '1', options: [{ label: 'None', value: '0' }, { label: 'Show', value: '1' }] },
-      { type: 'radiogroup', messageKey: 'SettingBigDateMonth', label: 'Show month in large date',
-        defaultValue: '1', options: [{ label: 'Hide', value: '0' }, { label: 'Show', value: '1' }] },
-      { type: 'radiogroup', messageKey: 'SettingBigDateFont', label: 'Large date font',
-        defaultValue: '0', options: [
-          { label: 'Bold (Bitham)', value: '0' },
-          { label: 'System (Gothic)', value: '1' },
-          { label: 'Serif', value: '2' },
-        ] },
       { type: 'radiogroup', messageKey: 'SettingHourlyVibe', label: 'Periodic vibration',
         defaultValue: '0', options: [
           { label: 'No vibration', value: '0' },
@@ -150,10 +125,6 @@ const config = [
         defaultValue: '0x000000', sunlight: false, allowGray: true },
       { type: 'color', messageKey: 'SettingColorBG', label: 'Background color',
         defaultValue: '0xFFFFFF', sunlight: false, allowGray: true },
-      { type: 'color', messageKey: 'SettingDateBgColor', label: 'Date background',
-        defaultValue: '0xAAFFAA', sunlight: false, allowGray: true },
-      { type: 'color', messageKey: 'SettingTwtStatusBgColor', label: 'Status area background',
-        defaultValue: '0xAAFFAA', sunlight: false, allowGray: true },
       // NOTE: the SettingSidebarBgColor{Left,Right} messageKeys are repurposed as
       // PRIMARY / SECONDARY sidebar backgrounds (role-based, not physical side).
       // The keys keep their legacy "Left"/"Right" names so the positional
@@ -173,8 +144,6 @@ const config = [
     type: 'section',
     items: [
       { type: 'heading', defaultValue: 'Sidebar widgets' },
-      { type: 'toggle', messageKey: 'SettingStatusStripFullWidth',
-        label: 'Status strip full width (shorten widget columns)', defaultValue: false },
       { type: 'text', id: 'widgets-help', defaultValue:
         'Each row is one widget. Pick the widget from the dropdown, reorder with ' +
         '▲ / ▼, remove with ✕, and add more with “+ Add widget”.<br><br>' +
@@ -368,34 +337,6 @@ const config = [
         'Switches can also be shown as a compact row of coloured LEDs — add them below, ' +
         'then place the <b>Tuya LEDs</b> widget in a sidebar slot.' },
       { type: 'tuyaLedList', messageKey: 'TuyaLedList', defaultValue: [] },
-    ],
-  },
-
-  // ------------------------------------------------------------- Work time
-  {
-    type: 'section',
-    items: [
-      { type: 'heading', defaultValue: 'Work time' },
-      { type: 'radiogroup', messageKey: 'SettingTwtShowRemaining', label: 'Work time display',
-        defaultValue: '0', options: [{ label: 'Worked', value: '0' }, { label: 'Remaining', value: '1' }] },
-      { type: 'radiogroup', messageKey: 'SettingTwtTargetVibe', label: 'Vibrate and flash when daily target reached',
-        defaultValue: '0', options: [{ label: 'None', value: '0' }, { label: 'Vibrate', value: '1' }] },
-      { type: 'radiogroup', messageKey: 'SettingTwtBudgetVibe', label: 'Vibrate and flash when budget target reached',
-        defaultValue: '0', options: [{ label: 'None', value: '0' }, { label: 'Vibrate', value: '1' }] },
-      { type: 'color', messageKey: 'SettingTwtFlashColor', label: 'Status flash color',
-        defaultValue: '0xFF0000', sunlight: false, allowGray: true },
-    ],
-  },
-
-  // ----------------------------------------------------------- MIDI recorder
-  {
-    type: 'section',
-    items: [
-      { type: 'heading', defaultValue: 'MIDI recorder' },
-      { type: 'radiogroup', messageKey: 'SettingMidiVibe', label: 'Vibrate on recording start/stop',
-        defaultValue: '0', options: [{ label: 'Vibrate', value: '1' }, { label: 'None', value: '0' }] },
-      { type: 'radiogroup', messageKey: 'SettingMidiSecondPrecision', label: 'Show recording timer',
-        defaultValue: '0', options: [{ label: 'Off', value: '0' }, { label: 'Seconds', value: '1' }] },
     ],
   },
 

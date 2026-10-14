@@ -87,7 +87,7 @@ function makeDocument() {
 }
 
 // widgetVals: left-list widget IDs. opts: {locMode, autoBatteryDisabled, rightVals,
-// fallbackColumn, clockStyle, bigDate}
+// fallbackColumn}
 function makeClay(widgetVals, opts) {
   opts = opts || {};
   const items = flattenConfig(configArr).map(makeItem);
@@ -102,9 +102,6 @@ function makeClay(widgetVals, opts) {
   byKey['weather_loc_mode'].value = opts.locMode || 'auto';
   byKey['SettingDisableAutobattery'].value = String(opts.autoBatteryDisabled ? 1 : 0);
   byKey['SettingFallbackColumn'].value = String(opts.fallbackColumn !== undefined ? opts.fallbackColumn : 0);
-  byKey['SettingClockStyle'].value = String(opts.clockStyle !== undefined ? opts.clockStyle : 0);
-  byKey['SettingBigDate'].value = String(opts.bigDate !== undefined ? opts.bigDate : 1);
-  byKey['SettingAnalogDigitalClock'].value = opts.analogDigital !== undefined ? opts.analogDigital : false;
   byKey['SettingBatteryWarnPct'].value = String(opts.batteryWarnPct !== undefined ? opts.batteryWarnPct : 0);
   byKey['SettingBatteryWarnDays'].value = String(opts.batteryWarnDays !== undefined ? opts.batteryWarnDays : 0);
   byKey['SettingBtWarnBorder'].value = opts.btWarnBorder !== undefined ? opts.btWarnBorder : false;
@@ -362,71 +359,6 @@ test('floating save: AFTER_BUILD injects a fixed-position style once (idempotent
   }
 });
 
-test('digital clock style: analog rows hidden', () => {
-  const c = render([], { clockStyle: 0 });
-  openSectionFor(c, 'SettingClockStyle');
-  assert.strictEqual(c.byKey['SettingAnalogDigitalClock'].shown, false);
-  assert.strictEqual(c.byKey['SettingAnalogTicks'].shown, false);
-  assert.strictEqual(c.byId['analog-credit'].shown, false);
-});
-
-test('analog clock style: analog rows shown', () => {
-  const c = render([], { clockStyle: 1 });
-  openSectionFor(c, 'SettingClockStyle');
-  assert.strictEqual(c.byKey['SettingAnalogDigitalClock'].shown, true);
-  assert.strictEqual(c.byKey['SettingAnalogTicks'].shown, true);
-  assert.strictEqual(c.byId['analog-credit'].shown, true);
-});
-
-test('live change: switching to analog reveals the analog rows', () => {
-  const c = render([], { clockStyle: 0 });
-  openSectionFor(c, 'SettingClockStyle');
-  assert.strictEqual(c.byKey['SettingAnalogDigitalClock'].shown, false);
-  c.byKey['SettingClockStyle'].value = '1';
-  c.byKey['SettingClockStyle'].changeHandlers.forEach((fn) => fn());
-  assert.strictEqual(c.byKey['SettingAnalogDigitalClock'].shown, true);
-  assert.strictEqual(c.byKey['SettingAnalogTicks'].shown, true);
-});
-
-test('status digital toggle hidden in digital clock mode', () => {
-  const c = render([], { clockStyle: 0, analogDigital: true });
-  openSectionFor(c, 'SettingStatusClockDigital');
-  assert.strictEqual(c.byKey['SettingStatusClockDigital'].shown, false);
-});
-
-test('status digital toggle hidden in analog mode when below-digi is off', () => {
-  const c = render([], { clockStyle: 1, analogDigital: false });
-  openSectionFor(c, 'SettingStatusClockDigital');
-  assert.strictEqual(c.byKey['SettingStatusClockDigital'].shown, false);
-});
-
-test('status digital toggle shown in analog mode when below-digi is on', () => {
-  const c = render([], { clockStyle: 1, analogDigital: true });
-  openSectionFor(c, 'SettingStatusClockDigital');
-  assert.strictEqual(c.byKey['SettingStatusClockDigital'].shown, true);
-});
-
-test('live change: turning below-digi on reveals the status digital toggle', () => {
-  const c = render([], { clockStyle: 1, analogDigital: false });
-  openSectionFor(c, 'SettingStatusClockDigital');
-  assert.strictEqual(c.byKey['SettingStatusClockDigital'].shown, false);
-  c.byKey['SettingAnalogDigitalClock'].value = true;
-  c.byKey['SettingAnalogDigitalClock'].changeHandlers.forEach((fn) => fn());
-  assert.strictEqual(c.byKey['SettingStatusClockDigital'].shown, true);
-});
-
-test('big date shown: month toggle visible', () => {
-  const c = render([], { bigDate: 1 });
-  openSectionFor(c, 'SettingBigDateMonth');
-  assert.strictEqual(c.byKey['SettingBigDateMonth'].shown, true);
-});
-
-test('big date none: month toggle hidden', () => {
-  const c = render([], { bigDate: 0 });
-  openSectionFor(c, 'SettingBigDateMonth');
-  assert.strictEqual(c.byKey['SettingBigDateMonth'].shown, false);
-});
-
 // Regression guard: the Crypto and Currency section headings must ALWAYS be
 // visible, because each section is the ONLY place to create its widget type.
 // Gating them on placement (fb27e08 / 5553520) deadlocked adding the first
@@ -441,27 +373,6 @@ test('currency heading always shown (only place to add a pair)', () => {
 test('crypto heading always shown (only place to add a coin)', () => {
   assert.strictEqual(render([]).byId['heading-crypto'].shown, true);
   assert.strictEqual(render([7]).byId['heading-crypto'].shown, true);
-});
-
-test('live change: turning the big date off hides the month toggle', () => {
-  const c = render([], { bigDate: 1 });
-  openSectionFor(c, 'SettingBigDateMonth');
-  assert.strictEqual(c.byKey['SettingBigDateMonth'].shown, true);
-  c.byKey['SettingBigDate'].value = '0';
-  c.byKey['SettingBigDate'].changeHandlers.forEach((fn) => fn());
-  assert.strictEqual(c.byKey['SettingBigDateMonth'].shown, false);
-});
-
-test('big date shown: font picker visible', () => {
-  const c = render([], { bigDate: 1 });
-  openSectionFor(c, 'SettingBigDateFont');
-  assert.strictEqual(c.byKey['SettingBigDateFont'].shown, true);
-});
-
-test('big date none: font picker hidden', () => {
-  const c = render([], { bigDate: 0 });
-  openSectionFor(c, 'SettingBigDateFont');
-  assert.strictEqual(c.byKey['SettingBigDateFont'].shown, false);
 });
 
 // ---------------------------------------------------------------- Accordion
@@ -491,15 +402,15 @@ test('accordion: clicking a heading opens only that section', () => {
   const c = render([7]);
   openSectionFor(c, 'SettingUseMetric');   // opens Weather
   assert.strictEqual(c.byKey['SettingUseMetric'].shown, true, 'opened section item shown');
-  assert.strictEqual(c.byKey['SettingClockStyle'].shown, false, 'other section stays collapsed');
+  assert.strictEqual(c.byKey['SettingHourlyVibe'].shown, false, 'other section stays collapsed');
 });
 
 test('accordion: opening a second section closes the first (one open at a time)', () => {
   const c = render([7]);
   openSectionFor(c, 'SettingUseMetric');    // Weather open
   assert.strictEqual(c.byKey['SettingUseMetric'].shown, true);
-  openSectionFor(c, 'SettingClockStyle');   // Clock open -> Weather closes
-  assert.strictEqual(c.byKey['SettingClockStyle'].shown, true);
+  openSectionFor(c, 'SettingHourlyVibe');   // Clock open -> Weather closes
+  assert.strictEqual(c.byKey['SettingHourlyVibe'].shown, true);
   assert.strictEqual(c.byKey['SettingUseMetric'].shown, false, 'previously-open section closed');
 });
 
@@ -529,16 +440,16 @@ test('accordion: gated-off section cannot be opened (heading hidden, items stay 
 test('accordion: chevron flips ▸ -> ▾ when a section opens', () => {
   const c = render([7]);
   const w = c.byId['heading-weather'];
-  openSectionFor(c, 'SettingClockStyle');  // Weather collapsed
+  openSectionFor(c, 'SettingHourlyVibe');  // Weather collapsed
   assert.match(w.$manipulatorTarget.innerHTML, /▸/, 'collapsed shows ▸');
   openSectionFor(c, 'SettingUseMetric');   // Weather open
   assert.match(w.$manipulatorTarget.innerHTML, /▾/, 'open shows ▾');
 });
 
-test('accordion: Sidebar widgets is a single group (15 rows, not split by sub-labels)', () => {
+test('accordion: Sidebar widgets is a single group (13 rows, not split by sub-labels)', () => {
   const c = render([]);
   const headings = c.getAllItems().filter((it) => it.config.type === 'heading');
-  assert.strictEqual(headings.length, 15, 'exactly 15 accordion heading rows (15 sections 1:1)');
+  assert.strictEqual(headings.length, 13, 'exactly 13 accordion heading rows (13 sections 1:1)');
   const head = openSectionFor(c, 'SettingShowBatteryPct');
   assert.strictEqual(head.config.defaultValue, 'Sidebar widgets',
     'battery setting opens under the "Sidebar widgets" heading, not a sub-label');
@@ -566,7 +477,7 @@ test('accordion: custom-component sections collapse (widgetList/cryptoList/... h
   // Sidebar widgets contains widgetList — a custom component whose manipulator is a
   // bare {get,set} with no hide/show. The old code called it.hide() and threw here,
   // aborting applyVisibility so every section after Sidebar widgets stayed visible.
-  openSectionFor(c, 'SettingClockStyle');   // open Clock -> all other sections collapsed
+  openSectionFor(c, 'SettingHourlyVibe');   // open Clock -> all other sections collapsed
   assert.strictEqual(c.byKey['WidgetList'].shown, false, 'widgetList hidden when collapsed');
   assert.strictEqual(c.byKey['WidgetListRight'].shown, false);
   assert.strictEqual(c.byKey['CryptoList'].shown, false);
@@ -575,7 +486,6 @@ test('accordion: custom-component sections collapse (widgetList/cryptoList/... h
   // Sections AFTER the first custom component must also collapse (the abort left
   // Weather..Data Refresh stuck visible).
   assert.strictEqual(c.byKey['weather_datasource'].shown, false, 'Weather collapses (after widgetList)');
-  assert.strictEqual(c.byKey['SettingMidiVibe'].shown, false, 'MIDI collapses');
   assert.strictEqual(c.byKey['SettingPollIntervalMin'].shown, false, 'Data Refresh collapses');
 });
 

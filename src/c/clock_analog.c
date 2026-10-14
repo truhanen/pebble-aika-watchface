@@ -16,7 +16,7 @@
 // corner) instead of baking per-board tables, so the face stays bounds-scalable.
 // See docs/superpowers/specs/2026-07-04-timestyle-analog-nearest-pixel-hands-design.md
 // (in the superrepo).
-#ifndef PBL_PLATFORM_APLITE
+
 #include <pebble.h>
 #include "clock_analog.h"
 
@@ -205,4 +205,4 @@ void ClockAnalog_draw(GContext *ctx, GRect bounds, int hours, int minutes,
     draw_all_ticks(ctx, center, tick_r, tick_len, tick_halo_w, tick_w, bg, fg);
   }
 }
-#endif  // !PBL_PLATFORM_APLITE
+

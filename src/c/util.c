@@ -37,7 +37,6 @@ int time_get_beats(const struct tm *tm) {
   return beats % 1000;
 }
 
-#ifdef PBL_HEALTH
 bool is_health_metric_accessible(HealthMetric metric) {
   time_t start = time_start_of_today();
   time_t end = time(NULL);
@@ -69,4 +68,3 @@ bool is_user_sleeping() {
   //    return false;
   //  }
 }
-#endif

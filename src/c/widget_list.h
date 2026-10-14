@@ -7,7 +7,7 @@
 
 /* Marker-encoded widget-list format, shared by the watch (sidebar/settings/
    messaging/main) and host-compiled for tests/test_widget_list.c. Pebble-free
-   (stdint/stdbool only), same pattern as twt_calc.c.
+   (stdint/stdbool only).
 
    A "list" is a byte array; each slot is either ONE plain widget id, or a rotating
    group: WIDGET_ROTATING_MARKER, count, interval_code, member_1 .. member_count.

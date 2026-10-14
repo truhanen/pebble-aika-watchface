@@ -18,7 +18,6 @@ import clayConfig from './config_clay';
 import clayConfigCustom from './config_clay_custom';
 import widgetListComponent from './config_widget_list';
 import { widgetListToPayload } from './widget_list_payload';
-import { slotsToList, splitListByPosition } from './widget_slots';
 import { isWatchPollRequest, isColdPollRequest } from './poll_request';
 import { toAppMessageValue } from './app_message_value';
 import { STRAIGHT_THROUGH_KEYS, COLOR_KEYS } from './config_send_keys';
@@ -67,10 +66,7 @@ Pebble.addEventListener('ready', () => {
 Pebble.addEventListener('appmessage', (msg) => {
   console.log('Recieved message: ' + JSON.stringify(msg.payload));
 
-  // Companion Android apps (trackworktime, MIDI Recorder) push their status to
-  // THIS watchface's UUID, so those messages are delivered here too. Only the
-  // watch's own (empty) data-poll request should trigger a phone fetch -- else a
-  // tracking toggle would hit the rate-limited crypto API and blank the widgets.
+  // Only the watch's own data-poll request (dummy key "0") triggers a phone fetch.
   if (!isWatchPollRequest(msg.payload)) {
     return;
   }
@@ -91,33 +87,6 @@ Pebble.addEventListener('appmessage', (msg) => {
   tuya.updateTuya(cold);
 });
 
-// One-time migration: the old config saved 6 separate SettingWidget*ID keys to
-// Clay's `clay-settings` store; the new single `widgetList` component reads
-// `WidgetList`. Without this, opening the new config shows the default 3 widgets
-// (ignoring the user's real slots) and saving would clobber slots 4-6. Seed
-// `WidgetList` from the legacy slots once, before Clay bakes settings into the URL.
-function migrateWidgetListSettings() {
-  let stored: Record<string, any>;
-  try {
-    stored = JSON.parse(window.localStorage.getItem('clay-settings') || '{}') || {};
-  } catch (e) {
-    return;
-  }
-  // Step 1: legacy 6 SettingWidget*ID slots -> single WidgetList (if not present).
-  if (stored.WidgetList === undefined) {
-    const list = slotsToList(stored);
-    if (list) { stored.WidgetList = list; }
-  }
-  // Step 2: single WidgetList -> left/right per legacy SettingSidebarOnLeft, once.
-  if (stored.WidgetListRight === undefined) {
-    const single = Array.isArray(stored.WidgetList) ? stored.WidgetList : [];
-    const split = splitListByPosition(single, stored.SettingSidebarOnLeft);
-    stored.WidgetList = split.left;
-    stored.WidgetListRight = split.right;
-  }
-  window.localStorage.setItem('clay-settings', JSON.stringify(stored));
-}
-
 // Bake the discovered Tuya catalog + a default (empty) sensor list into clay-settings
 // so the config page's custom components can read them (the config webview has no
 // localStorage). Mirrors PebbleTuyaControl's seedConfigData.
@@ -132,7 +101,6 @@ function seedTuyaCatalog() {
 }
 
 Pebble.addEventListener('showConfiguration', () => {
-  migrateWidgetListSettings();
   migrateCryptoList();
   let opened = false;
   const openConfig = () => {

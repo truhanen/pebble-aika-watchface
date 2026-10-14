@@ -1,26 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (c) 2026 Tuomas Airaksinen
 
-/* Tells a genuine watch data-poll request apart from a status push that merely
-   shares this watchface's AppMessage channel.
-
-   The watch asks the phone for fresh weather/electricity/crypto data with an
-   otherwise-empty message (messaging_requestNewWeatherData -> dict_write_uint32
-   key 0). But a companion Android app (trackworktime, MIDI Recorder) sends its
-   status to THIS watchface's UUID too, so those pushes are delivered to the same
-   `appmessage` listener. Treating them as poll requests made every tracking
-   toggle hit the rate-limited crypto API, which blanked the widgets to "--".
-
-   So: only the empty poll message (or a payload whose only key is the dummy "0")
-   counts as a poll request; anything carrying named data keys (TWT_ / MIDI_ ...)
-   does not. Pure + no globals, so unit-testable with `node --test`. */
+/* Recognizes the watch's data-poll request: an otherwise-empty message carrying
+   only the dummy key "0" (messaging_requestNewWeatherData -> dict_write_uint32
+   key 0). Any message carrying other keys is not a poll request. Pure + no
+   globals, so unit-testable with `node --test`. */
 
 export function isWatchPollRequest(payload: any): boolean {
   if (!payload || typeof payload !== 'object') { return false; }
   const keys = Object.keys(payload);
   for (let i = 0; i < keys.length; i++) {
-    // the watch's poll carries only the dummy key "0"; any other key means this
-    // is a status push relayed from a companion app, not a data request.
+    // the watch's poll carries only the dummy key "0"
     if (keys[i] !== '0') { return false; }
   }
   return true;

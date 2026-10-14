@@ -67,11 +67,6 @@ test('the night-rotation settings reach the watch', () => {
     });
 });
 
-test('SettingStatusClockDigital reaches the watch', () => {
-  assert.ok(STRAIGHT_THROUGH_KEYS.indexOf('SettingStatusClockDigital') !== -1,
-    'SettingStatusClockDigital must be sent so the status-strip digital-clock swap works on a real watch');
-});
-
 // Colours were exempt from the coverage tests above because index.ts sends them on its
 // own path (24-bit RGB ints, not scalars) with the key list inlined in index.ts. That
 // inline list is exactly as forgettable as STRAIGHT_THROUGH_KEYS was: a colour missing

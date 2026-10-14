@@ -14,17 +14,12 @@ test('an empty payload is treated as a poll request', () => {
   assert.strictEqual(isWatchPollRequest({}), true);
 });
 
-test('a twt_status push relayed from the Android app is NOT a poll request', () => {
-  // a tracking toggle carries TWT_* keys and must not trigger a phone fetch
-  assert.strictEqual(isWatchPollRequest({ TWT_IS_TRACKING: 1, TWT_TASK_ID: 4 }), false);
-});
-
-test('a midi_status push is NOT a poll request', () => {
-  assert.strictEqual(isWatchPollRequest({ MIDI_IS_RECORDING: 1 }), false);
+test('a message carrying data keys is NOT a poll request', () => {
+  assert.strictEqual(isWatchPollRequest({ WeatherTemperature: 12 }), false);
 });
 
 test('a mixed message (poll key + data key) is NOT a poll request', () => {
-  assert.strictEqual(isWatchPollRequest({ '0': 0, TWT_IS_TRACKING: 1 }), false);
+  assert.strictEqual(isWatchPollRequest({ '0': 0, WeatherTemperature: 12 }), false);
 });
 
 test('null / undefined payloads are not poll requests', () => {
@@ -44,9 +39,9 @@ test('a normal poll request is not cold', () => {
   assert.strictEqual(isColdPollRequest({}), false);
 });
 
-test('a companion-app push is never a cold poll request', () => {
-  assert.strictEqual(isColdPollRequest({ TWT_IS_TRACKING: 1 }), false);
-  assert.strictEqual(isColdPollRequest({ '0': 1, TWT_IS_TRACKING: 1 }), false);
+test('a data message is never a cold poll request', () => {
+  assert.strictEqual(isColdPollRequest({ WeatherTemperature: 12 }), false);
+  assert.strictEqual(isColdPollRequest({ '0': 1, WeatherTemperature: 12 }), false);
 });
 
 test('a string-valued cold flag still counts (AppMessage type coercion)', () => {

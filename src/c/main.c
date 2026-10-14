@@ -5,9 +5,6 @@
 #include "weather.h"
 #include "sidebar.h"
 #include "util.h"
-#include "twt_status.h"
-#include "midi_status.h"
-#include "date_header.h"
 #include "electricity.h"
 #include "crypto.h"
 #include "currency.h"
@@ -79,17 +76,12 @@ static void poll_state_save(void) {
   PollStateBlob b = { (int32_t)lastDataRequest, (int32_t)lastColdRequest, coldBackoffLevel };
   persist_write_data(POLL_STATE_PERSIST_KEY, &b, sizeof(b));
 }
-static bool twtTargetAlerted = false;   // already vibrated for the current daily-target crossing
-static bool twtTargetInit = false;      // have we seeded twtTargetAlerted since launch?
-static bool twtBudgetAlerted = false;   // already vibrated for the current task's budget crossing
-static bool twtBudgetInit = false;      // have we seeded twtBudgetAlerted since launch?
-static int32_t twtBudgetLastCtx = 0;    // context key (isTracking?taskId:-1) of the last seed
 
 void update_clock();
 void redrawScreen();
 void tick_handler(struct tm *tick_time, TimeUnits units_changed);
 void bluetoothStateChanged(bool newConnectionState);
-static void apply_twt_layout();
+static void apply_layout(void);
 static void schedule_rotation_timer(void);
 
 
@@ -115,119 +107,34 @@ void update_clock() {
 
   ClockArea_update_time(timeInfo);
   Sidebar_updateTime(timeInfo);
-  DateHeader_updateTime(timeInfo);
 }
 
-// Apply the TrackWorkTime layout. While tracking, shrink the clock to make room for the
-// status line and show it. When not tracking, restore the original full-size clock and hide
-// the line, so the watchface looks exactly as it did before the integration.
-static void apply_twt_layout() {
-  if (!TwtStatus_isSupported()) return;  // rect, non-aplite only
-
-  // The system timeline-peek banner (upcoming calendar event) eats screen
-  // space. Rather than cram the bottom status strip into what's left, drop it
-  // entirely while obstructed and give the clock + date header the full
-  // unobstructed area. Detected by comparing the unobstructed bounds (what we
-  // get to draw in) against the full screen bounds.
+// Lay out the sidebar columns and the clock between them. A column is shown iff its
+// list is non-empty.
+static void apply_layout(void) {
   Layer *root_layer = window_get_root_layer(mainWindow);
-  GRect full = layer_get_bounds(root_layer);
-  GRect root = layer_get_unobstructed_bounds(root_layer);
-  bool obstructed = root.size.h < full.size.h;
+  GRect root = layer_get_bounds(root_layer);
 
-  // Generic "active bottom status" resolution: {visible, height}. MIDI wins over
-  // TWT when both active. A future status display adds another case here; the
-  // panel/status geometry below is status-type agnostic.
-  bool showMidi = !obstructed && midi_status.isRecording;
-  bool showTwt  = !obstructed && !showMidi && twt_status.isTracking;
-  bool statusVisible = showMidi || showTwt;
-  // All status displays reserve the SAME fixed height (the 2-line TWT height), so
-  // the clock stays the same size regardless of which status is showing. A
-  // single-line status (MIDI) is vertically centered within this area by its own
-  // setFrame.
-  int statusHeight = statusVisible ? TWT_STATUS_HEIGHT_2LINE : 0;
-
-  int topReserved = settings.showBigDate ? BIG_DATE_HEIGHT : 0;
-  int statusTop = root.size.h - statusHeight;   // == root.size.h when no status
-
-  // Column inner height available for widgets. With the strip full-width, columns
-  // shorten to the strip top; otherwise (default) they stay full height and the
-  // strip is inset between them.
-  bool stripFullWidth = settings.statusStripFullWidth;
-  int columnFrameHeight = (statusVisible && stripFullWidth) ? statusTop : root.size.h;
-
-  // Two independent lists: left column = widgetList, right column = rightWidgetList.
-  // A column is shown iff its list is non-empty (no priority cursor / overflow
-  // between columns; each list is drawn in full and clipped if it overflows).
   int primaryCount, secondaryCount;
   Sidebar_distributeWidgets(&primaryCount, &secondaryCount);
   bool showPrimary = primaryCount > 0;
   bool showSecondary = secondaryCount > 0;
 
-  // Left (primary) column, always on the left.
-  if (showPrimary) {
-    Sidebar_setPrimaryFrame(GRect(0, 0, sidebarWidth, columnFrameHeight));
-    Sidebar_setPrimaryHidden(false);
-  } else {
-    Sidebar_setPrimaryHidden(true);
-  }
+  Sidebar_setPrimaryFrame(GRect(0, 0, sidebarWidth, root.size.h));
+  Sidebar_setPrimaryHidden(!showPrimary);
+  Sidebar_setSecondaryFrame(GRect(root.size.w - sidebarWidth, 0, sidebarWidth, root.size.h));
+  Sidebar_setSecondaryHidden(!showSecondary);
 
-  // Right (secondary) column, always on the right.
-  if (showSecondary) {
-    Sidebar_setSecondaryFrame(GRect(root.size.w - sidebarWidth, 0, sidebarWidth, columnFrameHeight));
-    Sidebar_setSecondaryHidden(false);
-  } else {
-    Sidebar_setSecondaryHidden(true);
-  }
-
-  // Horizontal insets for the clock/date: inset each side that shows a column.
   int leftInset = showPrimary ? sidebarWidth : 0;
   int rightInset = showSecondary ? sidebarWidth : 0;
-  int contentX = leftInset;
-  int contentW = root.size.w - leftInset - rightInset;
-
-  // Clock between the panels, between the top strip and the status strip.
   layer_set_frame(clock_area_layer,
-      GRect(contentX, topReserved, contentW, statusTop - topReserved));
-
-  // Date header in the top strip, between the panels.
-  if (topReserved) {
-    DateHeader_setFrame(GRect(contentX, 0, contentW, BIG_DATE_HEIGHT));
-    DateHeader_setHidden(false);
-    DateHeader_redraw();
-  } else {
-    DateHeader_setHidden(true);
-  }
-
-  // Status strip span: full width when stripFullWidth, otherwise inset between the
-  // sidebars (same horizontal band as the clock).
-  if (statusVisible) {
-    int statusLeft  = stripFullWidth ? 0 : contentX;
-    int statusWidth = stripFullWidth ? root.size.w : contentW;
-    GRect statusFrame = GRect(statusLeft, statusTop, statusWidth, statusHeight);
-
-    if (showMidi) {
-      MidiStatus_setFrame(statusFrame);
-      MidiStatus_setHidden(false); MidiStatus_redraw();
-      TwtStatus_setHidden(true);
-    } else {
-      TwtStatus_setFrame(statusFrame);
-      TwtStatus_setHidden(false); TwtStatus_redraw();
-      MidiStatus_setHidden(true);
-    }
-  } else {
-    TwtStatus_setHidden(true);
-    MidiStatus_setHidden(true);
-  }
-
-  ClockArea_setStatusVisible(statusVisible);
+      GRect(leftInset, 0, root.size.w - leftInset - rightInset, root.size.h));
   layer_mark_dirty(clock_area_layer);
 }
 
-// Recompute the layout the instant the timeline-peek banner slides in/out, so
-// the bottom status strip never lingers hidden behind it (tick-driven relayout
-// alone can lag up to a minute in MINUTE_UNIT mode).
+// Recompute the layout the instant the timeline-peek banner slides in/out.
 static void unobstructed_did_change(void *context) {
-  apply_twt_layout();
+  apply_layout();
 }
 
 static void rotation_timer_cb(void *data) {
@@ -286,8 +193,7 @@ static void schedule_rotation_timer(void) {
 void redrawScreen() {
 
   // check if the tick handler frequency should be changed
-  bool wantEverySecond = dynamicSettings.updateScreenEverySecond
-      || (midi_status.isRecording && settings.midiSecondPrecision);
+  bool wantEverySecond = dynamicSettings.updateScreenEverySecond;
   if(wantEverySecond != updatingEverySecond) {
     tick_timer_service_unsubscribe();
 
@@ -313,7 +219,7 @@ void redrawScreen() {
 
   ClockArea_redraw();
 
-  apply_twt_layout();
+  apply_layout();
 
   schedule_rotation_timer();   // re-evaluate after any settings change / tick-mode change
 }
@@ -326,26 +232,11 @@ static void main_window_load(Window *window) {
 
   ClockArea_init(window);
 
-  if (TwtStatus_isSupported()) {
-    GRect root = layer_get_bounds(window_get_root_layer(window));
-    // Initial frames; apply_twt_layout() resets them per-mode before unhiding.
-    GRect twtFrame = GRect(0, root.size.h - TWT_STATUS_HEIGHT_2LINE, root.size.w, TWT_STATUS_HEIGHT_2LINE);
-    GRect midiFrame = GRect(0, root.size.h - TWT_STATUS_HEIGHT, root.size.w, TWT_STATUS_HEIGHT);
-    TwtStatus_initLayer(window_get_root_layer(window), twtFrame);   // created hidden
-    MidiStatus_initLayer(window_get_root_layer(window), midiFrame); // created hidden
-    // Date header lives in the top strip; created hidden, apply_twt_layout() shows it per setting.
-    GRect dateFrame = GRect(0, 0, root.size.w, BIG_DATE_HEIGHT);
-    DateHeader_initLayer(window_get_root_layer(window), dateFrame);
-  }
-
-  redrawScreen(); // calls apply_twt_layout() -> sets clock size + line visibility per tracking
+  redrawScreen();
 }
 
 static void main_window_unload(Window *window) {
   ClockArea_deinit();
-  TwtStatus_deinitLayer();
-  MidiStatus_deinitLayer();
-  DateHeader_deinitLayer();
   Sidebar_deinit();
 }
 
@@ -497,61 +388,11 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     }
   }
 
-  // Daily work-time target reached: vibrate once, on the rising edge, the minute
-  // the worked total first hits the configured target. running is whole-minutes,
-  // so the crossing is minute-granular and the MINUTE_UNIT tick lands on it.
-  bool twtReached = twt_status.isTracking && twt_status.dailyTargetMin > 0
-      && TwtStatus_workedTotalMin() >= twt_status.dailyTargetMin;
-  if (!twtTargetInit) {
-    twtTargetAlerted = twtReached;   // seed at launch: already-over-target -> no spurious vibe
-    twtTargetInit = true;
-  } else if (!twtReached) {
-    twtTargetAlerted = false;        // reset for next day / target raised / tracking stopped
-  } else if (!twtTargetAlerted) {
-    twtTargetAlerted = true;
-    if (settings.twtTargetVibe && !quiet_time_is_active()) {
-      // distinct ascending pattern: short - short - long ("day complete")
-      static const uint32_t segs[] = { 100, 80, 100, 80, 300 };
-      VibePattern pat = { .durations = segs, .num_segments = ARRAY_LENGTH(segs) };
-      vibes_enqueue_custom_pattern(pat);
-      TwtStatus_startFlash();
-      light_enable_interaction();   // briefly light the backlight, per the user's watch light settings
-    }
-  }
-
-  // Task budget reached: vibrate once on the rising edge while tracking THAT task.
-  // Context key isTracking?taskId:-1 re-seeds the alerted flag on task-switch and
-  // stop/restart, so switching to an already-over task does NOT re-vibrate (only a
-  // genuine crossing while tracking does). Budget measure = task all-time total
-  // (matches the strip + Android list).
-  int32_t budgetCtx = twt_status.isTracking ? twt_status.taskId : -1;
-  bool budgetReached = twt_status.isTracking && twt_status.taskBudgetMin > 0
-      && TwtStatus_taskTotalMin() >= twt_status.taskBudgetMin;
-  if (!twtBudgetInit || budgetCtx != twtBudgetLastCtx) {
-    twtBudgetAlerted = budgetReached;   // seed: already-over (or no budget) -> no spurious vibe
-    twtBudgetLastCtx = budgetCtx;
-    twtBudgetInit = true;
-  } else if (!budgetReached) {
-    twtBudgetAlerted = false;
-  } else if (!twtBudgetAlerted) {
-    twtBudgetAlerted = true;
-    if (settings.twtBudgetVibe && !quiet_time_is_active()) {
-      static const uint32_t segs[] = { 100, 80, 100, 80, 300 };  // same as daily target
-      VibePattern pat = { .durations = segs, .num_segments = ARRAY_LENGTH(segs) };
-      vibes_enqueue_custom_pattern(pat);
-      TwtStatus_startFlash();
-      light_enable_interaction();   // briefly light the backlight, per the user's watch light settings
-    }
-  }
-
   update_clock();
 
   // redraw all screen
   Sidebar_redraw();
   ClockArea_redraw();
-  TwtStatus_redraw();
-  MidiStatus_redraw();
-  DateHeader_redraw();
 }
 
 void bluetoothStateChanged(bool newConnectionState) {
@@ -590,14 +431,14 @@ void bluetoothStateChanged(bool newConnectionState) {
   isPhoneConnected = newConnectionState;
 
   Sidebar_redraw();
-  if (TwtStatus_isSupported()) { apply_twt_layout(); }
+  apply_layout();
 }
 
 // force the sidebar to redraw any time the battery state changes
 void batteryStateChanged(BatteryChargeState charge_state) {
   BatteryDays_onBattery(charge_state);
   Sidebar_redraw();
-  if (TwtStatus_isSupported()) { apply_twt_layout(); }
+  apply_layout();
 }
 
 // fixes for disappearing elements after notifications
@@ -630,8 +471,6 @@ static void init() {
   // Restore the poll clock (see poll_state_load): a relaunch must NOT restart it.
   poll_state_load();
 
-  TwtStatus_load();
-  MidiStatus_load();
   BatteryDays_init();
 
   // init weather system
@@ -676,7 +515,7 @@ static void init() {
   // (it requires the previous state to be connected).
   isPhoneConnected = bluetooth_connection_service_peek();
   Sidebar_redraw();
-  if (TwtStatus_isSupported()) { apply_twt_layout(); }
+  apply_layout();
   bluetooth_connection_service_subscribe(bluetoothStateChanged);
 
   // register with battery service
@@ -688,12 +527,10 @@ static void init() {
     .will_focus = app_focus_changing
   });
 
-  // relayout the bottom status strip when the timeline-peek banner appears
-  if (TwtStatus_isSupported()) {
-    unobstructed_area_service_subscribe((UnobstructedAreaHandlers){
-      .did_change = unobstructed_did_change
-    }, NULL);
-  }
+  // relayout when the timeline-peek banner appears
+  unobstructed_area_service_subscribe((UnobstructedAreaHandlers){
+    .did_change = unobstructed_did_change
+  }, NULL);
 }
 
 static void deinit() {
@@ -710,9 +547,7 @@ static void deinit() {
   if (rotationTimer) { app_timer_cancel(rotationTimer); rotationTimer = NULL; }
   bluetooth_connection_service_unsubscribe();
   battery_state_service_unsubscribe();
-  if (TwtStatus_isSupported()) {
-    unobstructed_area_service_unsubscribe();
-  }
+  unobstructed_area_service_unsubscribe();
 }
 
 int main(void) {

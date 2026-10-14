@@ -4,141 +4,51 @@
 #include "theme.h"
 #include "sidebar_widgets.h"
 #include "weather.h"
-#include "twt_status.h"
 #include "crypto.h"
 #include "widget_list.h"
-#include <ctype.h>
-#include <math.h>
 #include <pebble.h>
 
 GRect screen_rect;
 int sidebarWidth;
 
 static void update_sidebar_width() {
-#if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
   sidebarWidth = settings.useLargeFonts ? 39 : 34;
-#else
-  sidebarWidth = 30;
-#endif
 }
 
-// "private" functions
-// layer update callbacks
-#ifndef PBL_ROUND
 void updateRectSidebar(Layer *l, GContext *ctx);
 void updateRectSecondarySidebar(Layer *l, GContext *ctx);
-#else
-
-void updateRoundSidebarLeft(Layer *l, GContext *ctx);
-void updateRoundSidebarRight(Layer *l, GContext *ctx);
-
-// shared drawing stuff between all layers
-void drawRoundSidebar(GContext *ctx, GRect bgBounds,
-                      SidebarWidgetType widgetType, int widgetXOffset);
-#endif
 
 Layer *sidebarLayer;
-
-#ifndef PBL_ROUND
 Layer *secondarySidebarLayer;   // right column; shown when rightWidgetList is non-empty
-#endif
-
-#ifdef PBL_ROUND
-Layer *sidebarLayer2;
-#endif
 
 void Sidebar_init(Window *window) {
   update_sidebar_width();
-  // init the sidebar layer
   screen_rect = layer_get_bounds(window_get_root_layer(window));
-  GRect bounds;
 
-#ifdef PBL_ROUND
-  GRect bounds2;
-  bounds = GRect(0, 0, 40, screen_rect.size.h);
-  bounds2 = GRect(screen_rect.size.w - 40, 0, 40, screen_rect.size.h);
-#else
-  if (!settings.sidebarOnLeft) {
-    bounds = GRect(screen_rect.size.w - sidebarWidth, 0, sidebarWidth,
-                   screen_rect.size.h);
-  } else {
-    bounds = GRect(0, 0, sidebarWidth, screen_rect.size.h);
-  }
-#endif
-
-  // init the widgets
   SidebarWidgets_init();
 
-  sidebarLayer = layer_create(bounds);
+  // Both columns are created hidden; main.c positions and shows them.
+  sidebarLayer = layer_create(GRect(0, 0, sidebarWidth, screen_rect.size.h));
+  layer_set_update_proc(sidebarLayer, updateRectSidebar);
+  layer_set_hidden(sidebarLayer, true);
   layer_add_child(window_get_root_layer(window), sidebarLayer);
 
-#ifdef PBL_ROUND
-  layer_set_update_proc(sidebarLayer, updateRoundSidebarLeft);
-#else
-  layer_set_update_proc(sidebarLayer, updateRectSidebar);
-#endif
-
-#ifndef PBL_ROUND
-  // Secondary panel: created hidden; main.c positions/shows it while a status
-  // display is visible. Only meaningful where the status layout runs (rect,
-  // non-aplite), but creating it hidden everywhere rect is harmless.
   secondarySidebarLayer = layer_create(GRect(0, 0, sidebarWidth, screen_rect.size.h));
   layer_set_update_proc(secondarySidebarLayer, updateRectSecondarySidebar);
   layer_set_hidden(secondarySidebarLayer, true);
   layer_add_child(window_get_root_layer(window), secondarySidebarLayer);
-#endif
-
-#ifdef PBL_ROUND
-  sidebarLayer2 = layer_create(bounds2);
-  layer_add_child(window_get_root_layer(window), sidebarLayer2);
-  layer_set_update_proc(sidebarLayer2, updateRoundSidebarRight);
-#endif
 }
 
 void Sidebar_deinit() {
   layer_destroy(sidebarLayer);
-
-#ifndef PBL_ROUND
   layer_destroy(secondarySidebarLayer);
-#endif
-
-#ifdef PBL_ROUND
-  layer_destroy(sidebarLayer2);
-#endif
-
   SidebarWidgets_deinit();
 }
 
 void Sidebar_redraw() {
   update_sidebar_width();
-#ifndef PBL_ROUND
-  // On platforms where the status layout runs, main.c owns the panel frames
-  // (apply_twt_layout); don't fight it here. Elsewhere, keep positioning the
-  // primary ourselves.
-  if (!TwtStatus_isSupported()) {
-    // No status layout here (aplite): single sidebar = the LEFT (primary) list,
-    // drawn in full (overflow clipped). The secondary panel stays hidden.
-    // Known limitation: aplite has no right column, so an upgrade user whose list
-    // was migrated to the right (sidebarOnLeft==false) sees an empty sidebar until
-    // they reconfigure. Aplite is a legacy/non-goal platform; accepted.
-    Sidebar_distributeWidgets(NULL, NULL);
-    if (!settings.sidebarOnLeft) {
-      layer_set_frame(sidebarLayer, GRect(screen_rect.size.w - sidebarWidth, 0,
-                                          sidebarWidth, screen_rect.size.h));
-    } else {
-      layer_set_frame(sidebarLayer,
-                      GRect(0, 0, sidebarWidth, screen_rect.size.h));
-    }
-  }
   layer_mark_dirty(secondarySidebarLayer);
-#endif
-
-  // redraw the layer
   layer_mark_dirty(sidebarLayer);
-
-#ifdef PBL_ROUND
-  layer_mark_dirty(sidebarLayer2);
-#endif
 }
 
 void Sidebar_updateTime(struct tm *timeInfo) {
@@ -159,40 +69,6 @@ bool isAutoBatteryShown() {
   return false;
 }
 
-#ifdef PBL_ROUND
-
-// returns the best candidate widget for replacement by the auto battery
-// or the disconnection icon
-int getReplacableWidget() {
-  if (settings.widgets[0] == EMPTY) {
-    return 0;
-  } else if (settings.widgets[2] == EMPTY) {
-    return 2;
-  }
-
-  if (settings.widgets[0] == WEATHER_CURRENT ||
-      settings.widgets[0] == WEATHER_FORECAST_TODAY) {
-    return 0;
-  } else if (settings.widgets[2] == WEATHER_CURRENT ||
-             settings.widgets[2] == WEATHER_FORECAST_TODAY) {
-    return 2;
-  }
-
-  // if we don't have any of those things, just replace the left widget
-  return 0;
-}
-
-// Which round slot (0=left, 2=right) the fallback occupies. Manual settings pin a
-// side; Automatic (0) keeps the legacy weather/empty heuristic. Position is N/A on
-// round (one slot per side).
-static int roundFallbackSlot() {
-  if (settings.fallbackColumn == 1) { return 0; }
-  if (settings.fallbackColumn == 2) { return 2; }
-  return getReplacableWidget();
-}
-
-#else
-
 // Best slot for the auto-battery / disconnect-icon substitution. A rotating group is
 // opaque (only a PLAIN weather slot is a preferred target); EMPTY slots no longer
 // exist (WidgetList_parse drops them).
@@ -205,83 +81,6 @@ static int getReplacableWidget(const WidgetSlot slots[], int count) {
   }
   return (count > 0) ? (count - 1) : 0;
 }
-
-#endif
-
-#ifdef PBL_ROUND
-
-void updateRoundSidebarRight(Layer *l, GContext *ctx) {
-  GRect bounds = layer_get_bounds(l);
-  GRect bgBounds = GRect(bounds.origin.x, bounds.size.h / -2, bounds.size.h * 2,
-                         bounds.size.h * 2);
-
-  bool showDisconnectIcon = !bluetooth_connection_service_peek();
-  bool showAutoBattery = isAutoBatteryShown();
-
-  SidebarWidgetType displayWidget = settings.widgets[2];
-
-  if ((showAutoBattery || showDisconnectIcon) && roundFallbackSlot() == 2) {
-    if (showAutoBattery) {
-      displayWidget = BATTERY_METER;
-    } else if (showDisconnectIcon) {
-      displayWidget = BLUETOOTH_DISCONNECT;
-    }
-  }
-
-  drawRoundSidebar(ctx, bgBounds, displayWidget, 3);
-}
-
-void updateRoundSidebarLeft(Layer *l, GContext *ctx) {
-  GRect bounds = layer_get_bounds(l);
-  GRect bgBounds =
-      GRect(bounds.origin.x - bounds.size.h * 2 + bounds.size.w,
-            bounds.size.h / -2, bounds.size.h * 2, bounds.size.h * 2);
-
-  bool showDisconnectIcon = !bluetooth_connection_service_peek();
-  bool showAutoBattery = isAutoBatteryShown();
-  SidebarWidgetType displayWidget = settings.widgets[0];
-
-  if ((showAutoBattery || showDisconnectIcon) && roundFallbackSlot() == 0) {
-    if (showAutoBattery) {
-      displayWidget = BATTERY_METER;
-    } else if (showDisconnectIcon) {
-      displayWidget = BLUETOOTH_DISCONNECT;
-    }
-  }
-
-  drawRoundSidebar(ctx, bgBounds, displayWidget, 7);
-}
-
-void Sidebar_distributeWidgets(int *primaryCountOut, int *secondaryCountOut) {
-  // Round keeps its fixed two-widget rendering (settings.widgets[0]/[2]).
-  if (primaryCountOut) { *primaryCountOut = 0; }
-  if (secondaryCountOut) { *secondaryCountOut = 0; }
-}
-
-void drawRoundSidebar(GContext *ctx, GRect bgBounds,
-                      SidebarWidgetType widgetType, int widgetXOffset) {
-  SidebarWidgets_updateFonts();
-
-  // Round has a single continuous sidebar -> use the primary background color
-  // (legacy key sidebarBgColorLeft); GColorClear = inherit theme.sidebarColor.
-  GColor roundBg = gcolor_equal(theme.sidebarBgColorLeft, GColorClear)
-      ? theme.sidebarColor : theme.sidebarBgColorLeft;
-  graphics_context_set_fill_color(ctx, roundBg);
-
-  graphics_fill_radial(ctx, bgBounds, GOvalScaleModeFillCircle, 100,
-                       DEG_TO_TRIGANGLE(0), TRIG_MAX_ANGLE);
-
-  SidebarWidgets_xOffset = widgetXOffset;
-  SidebarWidget widget = getSidebarWidgetByType(widgetType);
-
-  // calculate center position of the widget
-  int widgetPosition = bgBounds.size.h / 4 - widget.getHeight() / 2;
-  SidebarWidgets_currentWidgetType = (uint8_t)widgetType;
-  SidebarWidgets_hideIdentifier = false;   // round shows a single widget; toggle is a no-op
-  widget.draw(ctx, widgetPosition);
-}
-
-#else
 
 // Display columns computed from settings.widgetList by Sidebar_distributeWidgets();
 // the rect update procs draw these instead of reading the settings arrays.
@@ -346,7 +145,7 @@ static void drawWidgetColumn(Layer *l, GContext *ctx,
                              bool allowReplacement, bool isPrimary) {
   GRect bounds = layer_get_unobstructed_bounds(l);
 
-  SidebarWidgets_xOffset = (sidebarWidth - 30) / 2;   // zero on every rect platform besides emery
+  SidebarWidgets_xOffset = (sidebarWidth - 30) / 2;
   SidebarWidgets_updateFonts();
 
   GColor sidebarBg = isPrimary ? theme.sidebarBgColorLeft : theme.sidebarBgColorRight;
@@ -456,30 +255,18 @@ void updateRectSecondarySidebar(Layer *l, GContext *ctx) {
   drawWidgetColumn(l, ctx, secondaryColumn, secondaryColumnCount, /*allowReplacement=*/true, /*isPrimary=*/false);
 }
 
-#endif
-
-// Frame setters: rect implementations move the real layers; no-ops on round so
-// the shared header stays simple and main.c links on every platform.
 void Sidebar_setPrimaryFrame(GRect frame) {
-#ifndef PBL_ROUND
   layer_set_frame(sidebarLayer, frame);
-#endif
 }
 
 void Sidebar_setPrimaryHidden(bool hidden) {
-#ifndef PBL_ROUND
   layer_set_hidden(sidebarLayer, hidden);
-#endif
 }
 
 void Sidebar_setSecondaryFrame(GRect frame) {
-#ifndef PBL_ROUND
   layer_set_frame(secondarySidebarLayer, frame);
-#endif
 }
 
 void Sidebar_setSecondaryHidden(bool hidden) {
-#ifndef PBL_ROUND
   layer_set_hidden(secondarySidebarLayer, hidden);
-#endif
 }

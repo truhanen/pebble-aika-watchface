@@ -14,7 +14,6 @@ extern void gdraw_command_image_recolor(GDrawCommandImage *img, GColor fill_colo
  */
 extern int time_get_beats(const struct tm *tm);
 
-#ifdef PBL_HEALTH
   /*
    * Checks if any of the specified health activites exist in the specified time range
    */
@@ -24,4 +23,3 @@ extern int time_get_beats(const struct tm *tm);
    * Returns true if the user is sleeping, false otherwise
    */
   extern bool is_user_sleeping();
-#endif

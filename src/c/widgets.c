@@ -84,11 +84,11 @@ static void hr_health_handler(HealthEventType event, void *context) {
 }
 
 void Widgets_init(void) {
-  s_bt_image = gdraw_command_image_create_with_resource(RESOURCE_ID_DISCONNECTED);
-  s_steps_image = gdraw_command_image_create_with_resource(RESOURCE_ID_HEALTH_STEPS);
-  s_heart_image = gdraw_command_image_create_with_resource(RESOURCE_ID_HEALTH_HEART);
-  s_sleep_image = gdraw_command_image_create_with_resource(RESOURCE_ID_HEALTH_SLEEP);
-  s_deep_sleep_image = gdraw_command_image_create_with_resource(RESOURCE_ID_HEALTH_DEEP_SLEEP);
+  s_bt_image = icon_image_create_with_resource(RESOURCE_ID_DISCONNECTED);
+  s_steps_image = icon_image_create_with_resource(RESOURCE_ID_HEALTH_STEPS);
+  s_heart_image = icon_image_create_with_resource(RESOURCE_ID_HEALTH_HEART);
+  s_sleep_image = icon_image_create_with_resource(RESOURCE_ID_HEALTH_SLEEP);
+  s_deep_sleep_image = icon_image_create_with_resource(RESOURCE_ID_HEALTH_DEEP_SLEEP);
   health_service_events_subscribe(hr_health_handler, NULL);
   hr_seed_from_history();
 }
@@ -468,21 +468,29 @@ static const WidgetDesc *desc_for(uint8_t id) {
 
 /********** icons **********/
 
-// The battery is drawn horizontally from primitives: body outline, nub on the right,
-// a fill bar by percent and, while charging, a bolt with a bg halo so it reads over
-// both the filled and the empty part.
-#define BATTERY_W 22
-#define BATTERY_H 11
-#define BATTERY_INNER_W 16
+// The battery is the vertical one of the original Nyquist watchface (GPL-3.0, same
+// geometry and drawing): a nub on top of a rounded body, the fill growing upwards by
+// percent, red at 20 % or less on colour watches. While charging it is filled solid with a
+// bg-coloured bolt over it (Nyquist fills solid alone, which looks like 100 %).
+#define BATTERY_ICON_WIDTH        14   // outer width of the battery icon
+#define BATTERY_ICON_HEIGHT       20   // outer height of the body
+#define BATTERY_ICON_NUB_WIDTH     6   // width of the battery nub
+#define BATTERY_ICON_NUB_HEIGHT    3   // height of the battery nub
+#define BATTERY_ICON_BORDER        2   // border thickness inside the icon
+#define BATTERY_ICON_FILL_GAP      2   // inset gap around the fill inside the icon
+#define BATTERY_W BATTERY_ICON_WIDTH
+#define BATTERY_H (BATTERY_ICON_NUB_HEIGHT + BATTERY_ICON_HEIGHT)   // == WL_ICON_H
 
 // The Bluetooth rune (icon-only Bluetooth widget), same box connected or not.
 #define BT_RUNE_W 11
-#define BT_RUNE_H 17
+#define BT_RUNE_H WL_ICON_H
 
-// Share bar of the sleep + deep widget, and the Tuya LED row.
-#define SLEEP_BAR_W 24
-#define SLEEP_BAR_H 7
-#define LED_D 9
+// Share bar of the sleep + deep widget: a vertical gauge like the battery body.
+#define SLEEP_BAR_W 12
+#define SLEEP_BAR_H WL_ICON_H
+
+// The Tuya LED row: LEDs LED_D wide in a row WL_ICON_H high.
+#define LED_D 14
 #define LED_GAP 2
 
 static GDrawCommandImage *icon_image(IconKind kind) {
@@ -502,35 +510,48 @@ static uint8_t led_count(void) { return TuyaLeds_count == 0 ? 1 : TuyaLeds_count
 
 static void draw_battery(GContext *g, GRect box, GColor fg, GColor bg) {
   BatteryChargeState st = battery_state_service_peek();
+  uint8_t pct = battery_percent();
   int x = box.origin.x, y = box.origin.y;
-  graphics_context_set_stroke_color(g, fg);
-  graphics_context_set_stroke_width(g, 1);
-  graphics_draw_rect(g, GRect(x, y, BATTERY_W - 2, BATTERY_H));
+  int body_y = y + BATTERY_ICON_NUB_HEIGHT;
+  int inset = BATTERY_ICON_BORDER + BATTERY_ICON_FILL_GAP;
+  int fill_x = x + inset, fill_w = BATTERY_ICON_WIDTH - 2 * inset;
+  int fill_inner_h = BATTERY_ICON_HEIGHT - 2 * inset;
+  int fill_h = fill_inner_h * pct / 100;
+  int fill_y = body_y + inset + (fill_inner_h - fill_h);
+
   graphics_context_set_fill_color(g, fg);
-  graphics_fill_rect(g, GRect(x + BATTERY_W - 2, y + 3, 2, BATTERY_H - 6), 0, GCornerNone);
-  int fill = (BATTERY_INNER_W * battery_percent() + 50) / 100;
-  if (fill < 1) { fill = 1; }
-  graphics_fill_rect(g, GRect(x + 2, y + 2, fill, BATTERY_H - 4), 0, GCornerNone);
+  graphics_fill_rect(g, GRect(x + (BATTERY_ICON_WIDTH - BATTERY_ICON_NUB_WIDTH) / 2, y,
+                              BATTERY_ICON_NUB_WIDTH, BATTERY_ICON_NUB_HEIGHT), 0, GCornerNone);
+  graphics_fill_rect(g, GRect(x, body_y, BATTERY_ICON_WIDTH, BATTERY_ICON_HEIGHT), 2, GCornersAll);
+  graphics_context_set_fill_color(g, bg);
+  graphics_fill_rect(g, GRect(x + BATTERY_ICON_BORDER, body_y + BATTERY_ICON_BORDER,
+                              BATTERY_ICON_WIDTH - 2 * BATTERY_ICON_BORDER,
+                              BATTERY_ICON_HEIGHT - 2 * BATTERY_ICON_BORDER), 1, GCornersAll);
+#ifdef PBL_COLOR
+  graphics_context_set_fill_color(g, pct <= 20 ? GColorRed : fg);
+#else
+  graphics_context_set_fill_color(g, fg);
+#endif
   if (st.is_charging) {
-    // a zig-zag bolt with a bg halo, so it reads over the filled and the empty part
-    static const int8_t BOLT[4][2] = { { 13, 2 }, { 9, 5 }, { 13, 5 }, { 9, 8 } };
-    static const int8_t DIRS[5][2] = { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 }, { 0, 0 } };
-    graphics_context_set_antialiased(g, false);   // keep the 1 px diagonals crisp
-    for (int d = 0; d < 5; d++) {
-      graphics_context_set_stroke_color(g, d < 4 ? bg : fg);
-      for (int i = 0; i < 3; i++) {
-        graphics_draw_line(g, GPoint(x + BOLT[i][0] + DIRS[d][0], y + BOLT[i][1] + DIRS[d][1]),
-                           GPoint(x + BOLT[i + 1][0] + DIRS[d][0], y + BOLT[i + 1][1] + DIRS[d][1]));
-      }
-    }
+    graphics_fill_rect(g, GRect(fill_x, body_y + inset, fill_w, fill_inner_h), 0, GCornerNone);
+    // the bolt: a bg zig-zag across the solid fill
+    graphics_context_set_antialiased(g, false);
+    graphics_context_set_stroke_color(g, bg);
+    graphics_context_set_stroke_width(g, 1);
+    int bx = fill_x, by = body_y + inset;
+    graphics_draw_line(g, GPoint(bx + 4, by), GPoint(bx + 1, by + 6));
+    graphics_draw_line(g, GPoint(bx + 1, by + 6), GPoint(bx + 4, by + 6));
+    graphics_draw_line(g, GPoint(bx + 4, by + 6), GPoint(bx + 1, by + fill_inner_h - 1));
     graphics_context_set_antialiased(g, true);
+  } else {
+    graphics_fill_rect(g, GRect(fill_x, fill_y, fill_w, fill_h), 0, GCornerNone);
   }
 }
 
 // The rune is 1 px lines inside its box; disconnected it gets a slash across, with a
 // bg halo so the slash reads over the rune.
 static void draw_bt_rune(GContext *g, GRect box, bool connected, GColor fg, GColor bg) {
-  static const int8_t P[6][2] = { { 1, 5 }, { 9, 11 }, { 5, 15 }, { 5, 1 }, { 9, 5 }, { 1, 11 } };
+  static const int8_t P[6][2] = { { 1, 6 }, { 9, 16 }, { 5, 22 }, { 5, 0 }, { 9, 6 }, { 1, 16 } };
   int x = box.origin.x, y = box.origin.y;
   graphics_context_set_antialiased(g, false);
   graphics_context_set_stroke_color(g, fg);
@@ -557,10 +578,11 @@ static void draw_sleep_bar(GContext *g, GRect box, GColor fg) {
   graphics_context_set_stroke_color(g, fg);
   graphics_context_set_stroke_width(g, 1);
   graphics_draw_rect(g, GRect(box.origin.x, box.origin.y, SLEEP_BAR_W, SLEEP_BAR_H));
-  int fill = sleep_bar_fill_px(total, deep, SLEEP_BAR_W - 2);
+  int fill = sleep_bar_fill_px(total, deep, SLEEP_BAR_H - 2);
   if (fill > 0) {
     graphics_context_set_fill_color(g, fg);
-    graphics_fill_rect(g, GRect(box.origin.x + 1, box.origin.y + 1, fill, SLEEP_BAR_H - 2), 0, GCornerNone);
+    graphics_fill_rect(g, GRect(box.origin.x + 1, box.origin.y + SLEEP_BAR_H - 1 - fill,
+                                SLEEP_BAR_W - 2, fill), 0, GCornerNone);
   }
 }
 
@@ -572,7 +594,7 @@ static void draw_leds(GContext *g, GRect box, GColor fg) {
   graphics_context_set_stroke_color(g, fg);
   for (int i = 0; i < led_count(); i++) {
     uint8_t state = no_data ? TUYA_LED_UNKNOWN : TuyaLeds_states[i];
-    GPoint p = GPoint(box.origin.x + i * (LED_D + LED_GAP) + r, box.origin.y + r);
+    GPoint p = GPoint(box.origin.x + i * (LED_D + LED_GAP) + r, box.origin.y + WL_ICON_H / 2);
     if (state == TUYA_LED_ON || state == TUYA_LED_OFF) {
       graphics_context_set_fill_color(g, (state == TUYA_LED_ON) ? GColorGreen : GColorRed);
       graphics_fill_circle(g, p, r);
@@ -623,7 +645,7 @@ static void measure(const WidgetCtx *c, WidgetSize *out) {
       break;
     case ICON_LEDS:
       out->icon_w = led_count() * LED_D + (led_count() - 1) * LED_GAP;
-      out->icon_h = LED_D;
+      out->icon_h = WL_ICON_H;
       break;
     case ICON_UNIT:
       if (d->unit(c, buf, sizeof(buf))) {

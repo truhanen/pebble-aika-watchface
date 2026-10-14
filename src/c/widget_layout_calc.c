@@ -145,3 +145,21 @@ void wl_fraction_layout(const WidgetFontMetrics *m, WlFraction *out) {
   out->den_top = (int16_t)(out->rule_y + 1 + WL_FRACTION_GAP);
   out->h = (int16_t)(out->den_top + cap);
 }
+
+WlIconScale wl_icon_scale(int raw_extent, int raw_per_px, int stroke, int target_px) {
+  WlIconScale s = { 1, 1 };
+  if (raw_extent <= 0 || target_px <= stroke) { return s; }
+  s.num = (int32_t)(target_px - stroke) * raw_per_px;
+  s.den = raw_extent;
+  return s;
+}
+
+int wl_icon_coord(int v, int v_min, int origin, WlIconScale s) {
+  int64_t d = (int64_t)(v - v_min) * s.num;
+  return origin + (int)((d + (d >= 0 ? s.den / 2 : -s.den / 2)) / s.den);
+}
+
+int wl_icon_width_px(int raw_w, int raw_per_px, int stroke, WlIconScale s) {
+  int64_t raw = (int64_t)raw_w * s.num / s.den;
+  return (int)((raw + raw_per_px - 1) / raw_per_px) + stroke;
+}

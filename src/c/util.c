@@ -1,6 +1,7 @@
 #include <pebble.h>
 #include "util.h"
 #include "test_hooks.h"
+#include "widget_layout_calc.h"
 
 
 bool recolor_iterator_cb(GDrawCommand *command, uint32_t index, void *context) {
@@ -19,6 +20,57 @@ void gdraw_command_image_recolor(GDrawCommandImage *img, GColor fill_color, GCol
 
   gdraw_command_list_iterate(gdraw_command_image_get_command_list(img),
                              recolor_iterator_cb, &colors);
+}
+
+// PDC points are 1/8 px for precise paths (every icon here), whole px otherwise.
+typedef struct {
+  int min_x, max_x, min_y, max_y, stroke, per_px;
+  WlIconScale scale;
+  bool any;
+} IconFit;
+
+static int icon_per_px(const GDrawCommand *c) {
+  return gdraw_command_get_type((GDrawCommand *)c) == GDrawCommandTypePrecisePath ? 8 : 1;
+}
+
+static bool icon_extent_cb(GDrawCommand *c, uint32_t index, void *context) {
+  IconFit *f = context;
+  f->per_px = icon_per_px(c);
+  if (gdraw_command_get_stroke_width(c) > f->stroke) { f->stroke = gdraw_command_get_stroke_width(c); }
+  for (uint16_t i = 0; i < gdraw_command_get_num_points(c); i++) {
+    GPoint p = gdraw_command_get_point(c, i);
+    if (!f->any || p.x < f->min_x) { f->min_x = p.x; }
+    if (!f->any || p.x > f->max_x) { f->max_x = p.x; }
+    if (!f->any || p.y < f->min_y) { f->min_y = p.y; }
+    if (!f->any || p.y > f->max_y) { f->max_y = p.y; }
+    f->any = true;
+  }
+  return true;
+}
+
+static bool icon_scale_cb(GDrawCommand *c, uint32_t index, void *context) {
+  IconFit *f = context;
+  int origin = f->stroke * f->per_px / 2;
+  for (uint16_t i = 0; i < gdraw_command_get_num_points(c); i++) {
+    GPoint p = gdraw_command_get_point(c, i);
+    gdraw_command_set_point(c, i, GPoint(wl_icon_coord(p.x, f->min_x, origin, f->scale),
+                                         wl_icon_coord(p.y, f->min_y, origin, f->scale)));
+  }
+  return true;
+}
+
+GDrawCommandImage *icon_image_create_with_resource(uint32_t resource_id) {
+  GDrawCommandImage *img = gdraw_command_image_create_with_resource(resource_id);
+  if (!img) { return NULL; }
+  GDrawCommandList *list = gdraw_command_image_get_command_list(img);
+  IconFit f = { .per_px = 8 };
+  gdraw_command_list_iterate(list, icon_extent_cb, &f);
+  if (!f.any || f.max_y <= f.min_y) { return img; }
+  f.scale = wl_icon_scale(f.max_y - f.min_y, f.per_px, f.stroke, WL_ICON_H);
+  gdraw_command_list_iterate(list, icon_scale_cb, &f);
+  gdraw_command_image_set_bounds_size(
+      img, GSize(wl_icon_width_px(f.max_x - f.min_x, f.per_px, f.stroke, f.scale), WL_ICON_H));
+  return img;
 }
 
 int time_get_beats(const struct tm *tm) {

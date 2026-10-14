@@ -74,6 +74,20 @@ static void test_vertical(void) {
   assert(wl_center_offset(10, 10) == 0);
 }
 
+static void test_icon_fit(void) {
+  // a 25 px view whose ink spans raw 4..188 (1/8 px), 2 px stroke, to WL_ICON_H
+  WlIconScale s = wl_icon_scale(184, 8, 2, WL_ICON_H);
+  assert(s.num == (WL_ICON_H - 2) * 8 && s.den == 184);
+  assert(wl_icon_coord(4, 4, 8, s) == 8);                              // min lands on the half stroke
+  assert(wl_icon_coord(188, 4, 8, s) == 8 + (WL_ICON_H - 2) * 8);      // max lands on the far side
+  assert((8 + (WL_ICON_H - 2) * 8 + 8 + 7) / 8 == WL_ICON_H);        // so the ink is WL_ICON_H high
+  assert(wl_icon_width_px(184, 8, 2, s) == WL_ICON_H);                 // square extent -> square box
+  WlIconScale half = wl_icon_scale(92, 8, 2, WL_ICON_H);
+  assert(wl_icon_width_px(92, 8, 2, half) == WL_ICON_H);
+  assert(wl_icon_scale(0, 8, 2, WL_ICON_H).num == 1);                  // degenerate: identity
+  assert(wl_icon_coord(10, 10, 8, wl_icon_scale(0, 8, 2, WL_ICON_H)) == 8);
+}
+
 static void test_columns(void) {
   int16_t h[4] = { 18, 18, 18, 18 }, ys[4];
   // space-between: first at top, last ends at bottom
@@ -141,6 +155,7 @@ int main(void) {
   test_cp_and_coverage();
   test_runs();
   test_vertical();
+  test_icon_fit();
   test_columns();
   test_horizontal();
   test_fraction();

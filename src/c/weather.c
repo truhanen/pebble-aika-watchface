@@ -1,5 +1,6 @@
 #include <pebble.h>
 #include "weather.h"
+#include "util.h"
 
 // Has any weather ever reached this watch? (persist restore or a phone push)
 static bool s_hasData = false;
@@ -62,7 +63,7 @@ void Weather_setCurrentCondition(int conditionCode) {
 
   // ok, now load the new icon:
   gdraw_command_image_destroy(Weather_currentWeatherIcon);
-  Weather_currentWeatherIcon = gdraw_command_image_create_with_resource(currentWeatherIcon);
+  Weather_currentWeatherIcon = icon_image_create_with_resource(currentWeatherIcon);
 
   Weather_weatherInfo.currentIconResourceID = currentWeatherIcon;
 }
@@ -71,7 +72,7 @@ void Weather_setForecastCondition(int conditionCode) {
   uint32_t forecastWeatherIcon = getConditionIcon(conditionCode);
 
   gdraw_command_image_destroy(Weather_forecastWeatherIcon);
-  Weather_forecastWeatherIcon = gdraw_command_image_create_with_resource(forecastWeatherIcon);
+  Weather_forecastWeatherIcon = icon_image_create_with_resource(forecastWeatherIcon);
 
   Weather_weatherInfo.forecastIconResourceID = forecastWeatherIcon;
 }
@@ -97,13 +98,13 @@ void Weather_init() {
 
   // load icon if needed
   if (Weather_weatherInfo.currentIconResourceID > 0) {
-    Weather_currentWeatherIcon = gdraw_command_image_create_with_resource(Weather_weatherInfo.currentIconResourceID);
+    Weather_currentWeatherIcon = icon_image_create_with_resource(Weather_weatherInfo.currentIconResourceID);
   } else {
     Weather_currentWeatherIcon = NULL;
   }
   
   if (Weather_weatherInfo.forecastIconResourceID > 0) {
-    Weather_forecastWeatherIcon = gdraw_command_image_create_with_resource(Weather_weatherInfo.forecastIconResourceID);
+    Weather_forecastWeatherIcon = icon_image_create_with_resource(Weather_weatherInfo.forecastIconResourceID);
   } else {
     Weather_forecastWeatherIcon = NULL;
   }

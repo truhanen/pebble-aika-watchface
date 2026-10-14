@@ -17,6 +17,11 @@
 // Gap between the parts of a stacked fraction unit and its rule.
 #define WL_FRACTION_GAP 1
 
+// Every graphical icon (not the text units) is this high, ink included, so that the
+// left and right columns line up whichever widgets they hold. It is the height of the
+// vertical battery of the original Nyquist: a 20 px body plus its 3 px nub.
+#define WL_ICON_H 23
+
 typedef enum { WL_LEFT, WL_RIGHT, WL_TOP, WL_BOTTOM } WlPosition;
 
 const WidgetFontMetrics *wl_metrics(int font);
@@ -73,3 +78,14 @@ typedef struct {
 bool wl_split_fraction(const char *label, char *num, char *den, int cap);
 // Layout of a fraction in the unit font m (Gothic 14).
 void wl_fraction_layout(const WidgetFontMetrics *m, WlFraction *out);
+
+// Fitting a vector icon to WL_ICON_H. The icon's points span [min, max] on an axis in
+// raw units (1/8 px for precise paths); `stroke` px of line is drawn around them. The
+// scale maps the raw extent onto (target_px - stroke) px, as the ratio num/den, and
+// wl_icon_coord moves one raw coordinate through it to land `origin` raw units from
+// the box edge (the stroke's half width, so the ink starts at the box edge).
+typedef struct { int32_t num, den; } WlIconScale;
+WlIconScale wl_icon_scale(int raw_extent, int raw_per_px, int stroke, int target_px);
+int wl_icon_coord(int v, int v_min, int origin, WlIconScale s);
+// Box width in px of an icon whose raw width is raw_w under the scale (rounded up).
+int wl_icon_width_px(int raw_w, int raw_per_px, int stroke, WlIconScale s);

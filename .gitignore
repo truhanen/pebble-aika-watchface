@@ -4,3 +4,4 @@ node_modules/
 .DS_Store
 screenshots/test/
 src/pkjs/
+.claude/worktrees/

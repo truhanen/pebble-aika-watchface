@@ -121,6 +121,12 @@ static void test_fraction(void) {
   assert(!wl_split_fraction("BTC/", n, d, 8) && !strcmp(n, "BTC/"));
   assert(!wl_split_fraction("/USD", n, d, 8) && !strcmp(n, "/USD"));
   assert(wl_split_fraction("ABCDEFGHIJ/KLMNOPQR", n, d, 4) && !strcmp(n, "ABC") && !strcmp(d, "KLM"));
+  // the buffers widget_text.c uses (16) hold every whole part of a unit label: a data
+  // slot label (7 chars), the cheap-electricity "-12.5c/kWh", nothing is cut
+  { char n16[16], d16[16];
+    assert(wl_split_fraction("BTC/USD", n16, d16, 16) && !strcmp(n16, "BTC") && !strcmp(d16, "USD"));
+    assert(wl_split_fraction("-12.5c/kWh", n16, d16, 16) && !strcmp(n16, "-12.5c") && !strcmp(d16, "kWh"));
+    assert(wl_split_fraction("ABCDE/FGHIJKL", n16, d16, 16) && !strcmp(n16, "ABCDE") && !strcmp(d16, "FGHIJKL")); }
   const WidgetFontMetrics *u = wl_metrics(0);
   WlFraction fr;
   wl_fraction_layout(u, &fr);

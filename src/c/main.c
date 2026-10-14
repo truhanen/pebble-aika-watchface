@@ -106,6 +106,7 @@ void update_clock() {
 #endif
   TestHooks_applyTime(timeInfo);
 
+  Widgets_updateTime(timeInfo);
   ClockFace_updateTime(timeInfo);
 }
 

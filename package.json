@@ -157,16 +157,6 @@
           "type": "raw"
         },
         {
-          "file": "data/DATE_BG.pdc",
-          "name": "DATE_BG",
-          "type": "raw"
-        },
-        {
-          "file": "data/DATE_BG_LG.pdc",
-          "name": "DATE_BG_LG",
-          "type": "raw"
-        },
-        {
           "file": "data/CLOUDY_DAY.pdc",
           "name": "WEATHER_CLOUDY",
           "type": "raw"
@@ -179,16 +169,6 @@
         {
           "file": "data/CLEAR_DAY.pdc",
           "name": "WEATHER_CLEAR_DAY",
-          "type": "raw"
-        },
-        {
-          "file": "data/BATTERY_CHARGE.pdc",
-          "name": "BATTERY_CHARGE",
-          "type": "raw"
-        },
-        {
-          "file": "data/BATTERY_BG.pdc",
-          "name": "BATTERY_BG",
           "type": "raw"
         },
         {

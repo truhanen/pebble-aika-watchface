@@ -4,7 +4,7 @@
 #include <string.h>
 
 #define MAX_RUNS 6
-#define UNIT_PART_LEN 8
+#define UNIT_PART_LEN 16   // room for a whole part of any unit label (a data-slot label is up to 7 chars)
 
 static int advance(const char *text, int len, int font) {
   char buf[40];

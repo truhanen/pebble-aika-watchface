@@ -1,10 +1,11 @@
-// Widgets, on the new measure / draw_icon / draw_value API (see widgets.h).
+// Widgets, on the measure / draw_icon / draw_value API (see widgets.h).
 //
-// Every ported widget is a WidgetDesc: how to format its value, and what stands beside
-// it (an icon, or a unit). The three Widget functions are generic and look the
-// descriptor up by id. Ids without a descriptor draw nothing yet, except EMPTY, which
-// reserves the ink height of its font. Value strings keep the data access (health,
-// weather, price tables, phone slots) of the sidebar widgets they replace.
+// Every widget is a WidgetDesc: how to format its value, and what stands beside it (an
+// icon, or a unit). The three Widget functions are generic and look the descriptor up by
+// id. EMPTY has neither and just reserves the ink height of its font; a widget with an
+// icon and no value (the icon-only ones) is as high as its icon. Value strings keep the
+// data access (health, weather, price tables, phone slots, the face's time) of the
+// sidebar widgets they replace.
 #include "widgets.h"
 #include "settings.h"
 #include "languages.h"
@@ -16,6 +17,9 @@
 #include "crypto.h"
 #include "currency.h"
 #include "tuya.h"
+#include "tuya_leds.h"
+#include "battery_days.h"
+#include "sleep_calc.h"
 #include "clock_face.h"
 #include "widget_text.h"
 #include "widget_layout_calc.h"
@@ -23,15 +27,22 @@
 #include <math.h>
 #include <string.h>
 
-typedef enum { ICON_NONE, ICON_BATTERY, ICON_BT, ICON_STEPS, ICON_HEART, ICON_WEATHER, ICON_UNIT } IconKind;
+typedef enum {
+  ICON_NONE, ICON_BATTERY, ICON_BT, ICON_BT_STATE, ICON_STEPS, ICON_HEART, ICON_WEATHER,
+  ICON_FORECAST, ICON_SLEEP, ICON_DEEP_SLEEP, ICON_SLEEP_BAR, ICON_LEDS, ICON_UNIT
+} IconKind;
 
 typedef struct {
-  bool (*value)(const WidgetCtx *c, char *buf, size_t n);   // false = no value text
+  bool (*value)(const WidgetCtx *c, char *buf, size_t n);   // false = no value text now;
+                                                            // NULL = a widget without a value
   IconKind icon;
-  const char *(*unit)(const WidgetCtx *c);                   // ICON_UNIT label
+  bool (*unit)(const WidgetCtx *c, char *buf, size_t n);    // ICON_UNIT label; false = none
 } WidgetDesc;
 
-static GDrawCommandImage *s_bt_image, *s_steps_image, *s_heart_image;
+static GDrawCommandImage *s_bt_image, *s_steps_image, *s_heart_image, *s_sleep_image, *s_deep_sleep_image;
+
+// The time the date / time widgets show: the face's own, test-hook override included.
+static struct tm s_tm;
 
 // UTC time of the most recent heart-rate reading; 0 = unknown.
 static time_t s_last_hr_update_time = 0;
@@ -76,6 +87,8 @@ void Widgets_init(void) {
   s_bt_image = gdraw_command_image_create_with_resource(RESOURCE_ID_DISCONNECTED);
   s_steps_image = gdraw_command_image_create_with_resource(RESOURCE_ID_HEALTH_STEPS);
   s_heart_image = gdraw_command_image_create_with_resource(RESOURCE_ID_HEALTH_HEART);
+  s_sleep_image = gdraw_command_image_create_with_resource(RESOURCE_ID_HEALTH_SLEEP);
+  s_deep_sleep_image = gdraw_command_image_create_with_resource(RESOURCE_ID_HEALTH_DEEP_SLEEP);
   health_service_events_subscribe(hr_health_handler, NULL);
   hr_seed_from_history();
 }
@@ -84,8 +97,12 @@ void Widgets_deinit(void) {
   gdraw_command_image_destroy(s_bt_image);
   gdraw_command_image_destroy(s_steps_image);
   gdraw_command_image_destroy(s_heart_image);
+  gdraw_command_image_destroy(s_sleep_image);
+  gdraw_command_image_destroy(s_deep_sleep_image);
   health_service_events_unsubscribe();
 }
+
+void Widgets_updateTime(const struct tm *t) { s_tm = *t; }
 
 /********** values **********/
 
@@ -95,9 +112,21 @@ static uint8_t battery_percent(void) {
 }
 
 static bool value_battery(const WidgetCtx *c, char *buf, size_t n) {
-  if (!settings.showBatteryPct) { return false; }
   // the percent sign goes first in Turkish
   snprintf(buf, n, (settings.languageId == LANGUAGE_TR) ? "%%%d" : "%d%%", battery_percent());
+  return true;
+}
+
+// Estimated days left, one decimal. The estimate is meaningless while charging: the
+// icon's bolt says it all then.
+static bool value_battery_days(const WidgetCtx *c, char *buf, size_t n) {
+  if (battery_state_service_peek().is_charging) { return false; }
+  int tenths = BatteryDays_currentEstimateTenths();
+  if (tenths == BATTERY_DAYS_NONE) {
+    snprintf(buf, n, "--");   // warm-up / not enough data
+  } else {
+    snprintf(buf, n, "%d%c%d", tenths / 10, settings.decimalSeparator, tenths % 10);
+  }
   return true;
 }
 
@@ -145,16 +174,166 @@ static bool value_heart(const WidgetCtx *c, char *buf, size_t n) {
   return true;
 }
 
+static int to_display_temp(int celsius) {
+  return settings.useMetric ? celsius : (int)roundf(celsius * 1.8f + 32);
+}
+
 static bool value_weather(const WidgetCtx *c, char *buf, size_t n) {
   if (Weather_weatherInfo.currentTemp == INT32_MIN) {
     snprintf(buf, n, "--\xc2\xb0");
     return true;
   }
-  int temp = Weather_weatherInfo.currentTemp;
-  if (!settings.useMetric) { temp = (int)roundf(temp * 1.8f + 32); }
-  snprintf(buf, n, "%d\xc2\xb0", temp);
+  snprintf(buf, n, "%d\xc2\xb0", to_display_temp(Weather_weatherInfo.currentTemp));
   return true;
 }
+
+// Today's high / low on one line, "18/11"; the icon is the forecast's.
+static bool value_forecast(const WidgetCtx *c, char *buf, size_t n) {
+  if (Weather_weatherInfo.todaysHighTemp == INT32_MIN) {
+    snprintf(buf, n, "--/--");
+    return true;
+  }
+  snprintf(buf, n, "%d/%d", to_display_temp(Weather_weatherInfo.todaysHighTemp),
+           to_display_temp(Weather_weatherInfo.todaysLowTemp));
+  return true;
+}
+
+static bool value_uv(const WidgetCtx *c, char *buf, size_t n) {
+  // A real UV index is always >= 0. A negative value (INT32_MIN before any data, or -1
+  // sent by the provider when no reading could be obtained, e.g. FMI at night) means
+  // "no data": show a placeholder rather than a misleading 0.
+  if (Weather_weatherInfo.currentUVIndex >= 0) {
+    snprintf(buf, n, "%d", (int)Weather_weatherInfo.currentUVIndex);
+  } else {
+    snprintf(buf, n, "--");
+  }
+  return true;
+}
+
+static bool unit_uv(const WidgetCtx *c, char *buf, size_t n) { snprintf(buf, n, "UV"); return true; }
+
+/***** time and date *****/
+
+static bool value_digital_time(const WidgetCtx *c, char *buf, size_t n) {
+  int h = s_tm.tm_hour;
+  if (!clock_is_24h_style()) {
+    h %= 12;
+    if (h == 0) { h = 12; }
+  }
+  snprintf(buf, n, (settings.showLeadingZero && h < 10) ? "0%d:%02d" : "%d:%02d", h, s_tm.tm_min);
+  return true;
+}
+
+// AM / PM beside a 12 h time; a 24 h clock has no unit.
+static bool unit_digital_time(const WidgetCtx *c, char *buf, size_t n) {
+  if (clock_is_24h_style()) { return false; }
+  snprintf(buf, n, s_tm.tm_hour < 12 ? "AM" : "PM");
+  return true;
+}
+
+static int mod(int a, int b) {
+  int r = a % b;
+  return r < 0 ? r + b : r;
+}
+
+// Local time shifted to the configured alternate zone: "14:05", or "2:05p" on a 12 h
+// clock. The configured offset is in whole hours.
+static bool value_alt_time(const WidgetCtx *c, char *buf, size_t n) {
+  int hour = s_tm.tm_hour - (int)(s_tm.tm_gmtoff / 3600) - s_tm.tm_isdst + settings.altclockOffset;
+  char am_pm[2] = { 0, 0 };
+  if (clock_is_24h_style()) {
+    hour = mod(hour, 24);
+  } else {
+    am_pm[0] = (mod(hour, 24) < 12) ? 'a' : 'p';
+    hour = mod(hour, 12);
+    if (hour == 0) { hour = 12; }
+  }
+  snprintf(buf, n, (settings.showLeadingZero && hour < 10) ? "0%d:%02d%s" : "%d:%02d%s",
+           hour, s_tm.tm_min, am_pm);
+  return true;
+}
+
+static bool unit_alt_time(const WidgetCtx *c, char *buf, size_t n) {
+  if (settings.altclockName[0] == '\0') { return false; }
+  snprintf(buf, n, "%s", settings.altclockName);
+  return true;
+}
+
+static bool value_seconds(const WidgetCtx *c, char *buf, size_t n) {
+  snprintf(buf, n, ":%02d", s_tm.tm_sec);
+  return true;
+}
+
+static bool value_week(const WidgetCtx *c, char *buf, size_t n) {
+  strftime(buf, n, "%V", &s_tm);
+  return true;
+}
+
+static bool unit_week(const WidgetCtx *c, char *buf, size_t n) {
+  snprintf(buf, n, "%s", wordForWeek[settings.languageId]);
+  return true;
+}
+
+static bool value_beats(const WidgetCtx *c, char *buf, size_t n) {
+  snprintf(buf, n, "@%d", time_get_beats(&s_tm));
+  return true;
+}
+
+// The date widgets 26..34. Weekday and month come from the language tables.
+static bool value_date(const WidgetCtx *c, char *buf, size_t n) {
+  int d = s_tm.tm_mday, m = s_tm.tm_mon + 1, y = s_tm.tm_year + 1900;
+  const char *wd = dayNames[settings.languageId][(unsigned)s_tm.tm_wday % 7];
+  const char *mon = monthNames[settings.languageId][(unsigned)s_tm.tm_mon % 12];
+  switch (c->id) {
+    case DATE_D_M_DOT:    snprintf(buf, n, "%d.%d.", d, m); break;
+    case DATE_DD_MM_DOT:  snprintf(buf, n, "%02d.%02d.", d, m); break;
+    case DATE_DD_MM:      snprintf(buf, n, "%02d.%02d", d, m); break;
+    case DATE_D_M_YYYY:   snprintf(buf, n, "%d.%d.%d", d, m, y); break;
+    case DATE_WKDAY_DD:   snprintf(buf, n, "%s %02d", wd, d); break;
+    case DATE_WKDAY_D_M:  snprintf(buf, n, "%s %d.%d.", wd, d, m); break;
+    case DATE_WKDAY:      snprintf(buf, n, "%s", wd); break;
+    case DATE_DD_MON:     snprintf(buf, n, "%02d %s", d, mon); break;
+    default:              snprintf(buf, n, "%04d-%02d-%02d", y, m, d); break;
+  }
+  return true;
+}
+
+/***** sleep *****/
+
+static int read_sleep_seconds(HealthMetric metric) {
+  if (!is_health_metric_accessible(metric)) { return 0; }
+  return (int)health_service_sum_today(metric);
+}
+
+// Total sleep and the restful part of it (what the sleep widgets show).
+static void sleep_seconds(int *total, int *deep) {
+  *total = read_sleep_seconds(HealthMetricSleepSeconds);
+  *deep = read_sleep_seconds(HealthMetricSleepRestfulSeconds);
+#ifdef SCREENSHOT_FIXTURES
+  *total = 23400;   // demo: 6.5 h slept, 1.75 h of it restful
+  *deep = 6300;
+#endif
+}
+
+static bool value_sleep(const WidgetCtx *c, char *buf, size_t n) {
+  int total, deep;
+  sleep_seconds(&total, &deep);
+  sleep_format_decimal(c->id == DEEP_SLEEP_TIMER ? deep : total, settings.decimalSeparator, buf, n);
+  return true;
+}
+
+// Total / restful on one line, "7.3/1.8".
+static bool value_sleep_combined(const WidgetCtx *c, char *buf, size_t n) {
+  int total, deep;
+  sleep_seconds(&total, &deep);
+  char a[12], b[12];
+  sleep_format_decimal(total, settings.decimalSeparator, a, sizeof(a));
+  sleep_format_decimal(deep, settings.decimalSeparator, b, sizeof(b));
+  snprintf(buf, n, "%s/%s", a, b);
+  return true;
+}
+
+/***** electricity *****/
 
 static bool value_electricity(const WidgetCtx *c, char *buf, size_t n) {
   int16_t v;
@@ -166,7 +345,44 @@ static bool value_electricity(const WidgetCtx *c, char *buf, size_t n) {
   return true;
 }
 
-static const char *unit_electricity(const WidgetCtx *c) { return "c/kWh"; }
+static bool unit_electricity(const WidgetCtx *c, char *buf, size_t n) { snprintf(buf, n, "c/kWh"); return true; }
+
+// The window the cheap-electricity widgets show, or false when there is none.
+static bool cheap_window(uint8_t id, ElecDisplay *d) {
+  return id == NEXT_CHEAP_ELEC
+      ? Electricity_getNextCheap(settings.elecQuietStart, settings.elecQuietEnd,
+                                 settings.elecCheapFactorPct, settings.elecCheapFloorCenti,
+                                 settings.elecCheapCeilingCenti, d)
+      : Electricity_getCheapestHour(settings.elecQuietStart, settings.elecQuietEnd, d);
+}
+
+// When the window starts: "NOW", "14:00", or "3:15+" when it is on a later day.
+static bool value_cheap_time(const WidgetCtx *c, char *buf, size_t n) {
+  ElecDisplay d;
+  if (!cheap_window(c->id, &d)) {
+    snprintf(buf, n, "--");
+  } else if (d.now) {
+    snprintf(buf, n, "NOW");
+  } else {
+    snprintf(buf, n, "%d:%02d%s", d.startHour, d.startMin, d.today ? "" : "+");
+  }
+  return true;
+}
+
+// The window's average price as the unit, a stacked "2.1c" over "kWh".
+static bool unit_cheap_price(const WidgetCtx *c, char *buf, size_t n) {
+  ElecDisplay d;
+  if (!cheap_window(c->id, &d)) {
+    snprintf(buf, n, "c/kWh");
+    return true;
+  }
+  char price[12];
+  elec_format_price(d.avgCenti, settings.decimalSeparator, price, sizeof(price));
+  snprintf(buf, n, "%sc/kWh", price);
+  return true;
+}
+
+/***** phone data slots (crypto, currency, tuya sensors) *****/
 
 static CryptoSlot *data_slot(uint8_t wid) {
   return Crypto_isWid(wid) ? Crypto_find(wid)
@@ -180,33 +396,73 @@ static bool value_slot(const WidgetCtx *c, char *buf, size_t n) {
   return true;
 }
 
-static const char *unit_slot(const WidgetCtx *c) {
+static bool unit_slot(const WidgetCtx *c, char *buf, size_t n) {
   CryptoSlot *s = data_slot(c->id);
-  return (s && s->label[0]) ? s->label : "--";
+  snprintf(buf, n, "%s", (s && s->label[0]) ? s->label : "--");
+  return true;
 }
+
+/********** descriptors **********/
 
 static const WidgetDesc DESC_EMPTY = { NULL, ICON_NONE, NULL };
 static const WidgetDesc DESC_BT = { NULL, ICON_BT, NULL };
+static const WidgetDesc DESC_BT_ICON = { NULL, ICON_BT_STATE, NULL };
 static const WidgetDesc DESC_BATTERY = { value_battery, ICON_BATTERY, NULL };
+static const WidgetDesc DESC_BATTERY_DAYS = { value_battery_days, ICON_BATTERY, NULL };
+static const WidgetDesc DESC_BATTERY_ICON = { NULL, ICON_BATTERY, NULL };
 static const WidgetDesc DESC_STEPS = { value_steps, ICON_STEPS, NULL };
 static const WidgetDesc DESC_DISTANCE = { value_distance, ICON_STEPS, NULL };
 static const WidgetDesc DESC_HEART = { value_heart, ICON_HEART, NULL };
 static const WidgetDesc DESC_WEATHER = { value_weather, ICON_WEATHER, NULL };
+static const WidgetDesc DESC_WEATHER_ICON = { NULL, ICON_WEATHER, NULL };
+static const WidgetDesc DESC_FORECAST = { value_forecast, ICON_FORECAST, NULL };
+static const WidgetDesc DESC_UV = { value_uv, ICON_UNIT, unit_uv };
+static const WidgetDesc DESC_ALT_TIME = { value_alt_time, ICON_UNIT, unit_alt_time };
+static const WidgetDesc DESC_SECONDS = { value_seconds, ICON_NONE, NULL };
+static const WidgetDesc DESC_WEEK = { value_week, ICON_UNIT, unit_week };
+static const WidgetDesc DESC_BEATS = { value_beats, ICON_NONE, NULL };
+static const WidgetDesc DESC_DATE = { value_date, ICON_NONE, NULL };
+static const WidgetDesc DESC_DIGITAL_TIME = { value_digital_time, ICON_UNIT, unit_digital_time };
+static const WidgetDesc DESC_SLEEP = { value_sleep, ICON_SLEEP, NULL };
+static const WidgetDesc DESC_DEEP_SLEEP = { value_sleep, ICON_DEEP_SLEEP, NULL };
+static const WidgetDesc DESC_SLEEP_COMBINED = { value_sleep_combined, ICON_SLEEP, NULL };
+static const WidgetDesc DESC_SLEEP_BAR = { value_sleep, ICON_SLEEP_BAR, NULL };
 static const WidgetDesc DESC_ELECTRICITY = { value_electricity, ICON_UNIT, unit_electricity };
+static const WidgetDesc DESC_CHEAP = { value_cheap_time, ICON_UNIT, unit_cheap_price };
+static const WidgetDesc DESC_TUYA_LEDS = { NULL, ICON_LEDS, NULL };
 static const WidgetDesc DESC_SLOT = { value_slot, ICON_UNIT, unit_slot };
 
 static const WidgetDesc *desc_for(uint8_t id) {
   if (Crypto_isWid(id) || Currency_isWid(id) || Tuya_isWid(id)) { return &DESC_SLOT; }
+  if (id >= DATE_D_M_DOT && id <= DATE_ISO) { return &DESC_DATE; }
   switch (id) {
     case EMPTY:                return &DESC_EMPTY;
     case BLUETOOTH_DISCONNECT: return &DESC_BT;
     case BATTERY_METER:        return &DESC_BATTERY;
-    case STEP_COUNTER:         return &DESC_STEPS;
-    case DISTANCE:             return &DESC_DISTANCE;
-    case HEARTRATE:            return &DESC_HEART;
+    case ALT_TIME_ZONE:        return &DESC_ALT_TIME;
+    case SECONDS:              return &DESC_SECONDS;
+    case WEEK_NUMBER:          return &DESC_WEEK;
     case WEATHER_CURRENT:      return &DESC_WEATHER;
+    case WEATHER_FORECAST_TODAY: return &DESC_FORECAST;
+    case SLEEP_TIMER:          return &DESC_SLEEP;
+    case STEP_COUNTER:         return &DESC_STEPS;
+    case BEATS:                return &DESC_BEATS;
+    case HEARTRATE:            return &DESC_HEART;
+    case WEATHER_UV_INDEX:     return &DESC_UV;
     case ELECTRICITY:          return &DESC_ELECTRICITY;
-    default:                   return NULL;   // not ported yet: draws nothing
+    case NEXT_CHEAP_ELEC:
+    case CHEAPEST_ELEC_HOUR:   return &DESC_CHEAP;
+    case DEEP_SLEEP_TIMER:     return &DESC_DEEP_SLEEP;
+    case DISTANCE:             return &DESC_DISTANCE;
+    case BATTERY_DAYS:         return &DESC_BATTERY_DAYS;
+    case TUYA_LEDS:            return &DESC_TUYA_LEDS;
+    case SLEEP_COMBINED:       return &DESC_SLEEP_COMBINED;
+    case SLEEP_DEEP_BAR:       return &DESC_SLEEP_BAR;
+    case DIGITAL_TIME:         return &DESC_DIGITAL_TIME;
+    case BATTERY_ICON:         return &DESC_BATTERY_ICON;
+    case WEATHER_ICON:         return &DESC_WEATHER_ICON;
+    case BLUETOOTH_ICON:       return &DESC_BT_ICON;
+    default:                   return NULL;   // unknown id: draws nothing
   }
 }
 
@@ -219,15 +475,30 @@ static const WidgetDesc *desc_for(uint8_t id) {
 #define BATTERY_H 11
 #define BATTERY_INNER_W 16
 
+// The Bluetooth rune (icon-only Bluetooth widget), same box connected or not.
+#define BT_RUNE_W 11
+#define BT_RUNE_H 17
+
+// Share bar of the sleep + deep widget, and the Tuya LED row.
+#define SLEEP_BAR_W 24
+#define SLEEP_BAR_H 7
+#define LED_D 9
+#define LED_GAP 2
+
 static GDrawCommandImage *icon_image(IconKind kind) {
   switch (kind) {
-    case ICON_BT:      return s_bt_image;
-    case ICON_STEPS:   return s_steps_image;
-    case ICON_HEART:   return s_heart_image;
-    case ICON_WEATHER: return Weather_currentWeatherIcon;
-    default:           return NULL;
+    case ICON_BT:       return s_bt_image;
+    case ICON_STEPS:    return s_steps_image;
+    case ICON_HEART:    return s_heart_image;
+    case ICON_SLEEP:    return s_sleep_image;
+    case ICON_DEEP_SLEEP: return s_deep_sleep_image;
+    case ICON_WEATHER:  return Weather_currentWeatherIcon;
+    case ICON_FORECAST: return Weather_forecastWeatherIcon;
+    default:            return NULL;
   }
 }
+
+static uint8_t led_count(void) { return TuyaLeds_count == 0 ? 1 : TuyaLeds_count; }
 
 static void draw_battery(GContext *g, GRect box, GColor fg, GColor bg) {
   BatteryChargeState st = battery_state_service_peek();
@@ -256,33 +527,112 @@ static void draw_battery(GContext *g, GRect box, GColor fg, GColor bg) {
   }
 }
 
+// The rune is 1 px lines inside its box; disconnected it gets a slash across, with a
+// bg halo so the slash reads over the rune.
+static void draw_bt_rune(GContext *g, GRect box, bool connected, GColor fg, GColor bg) {
+  static const int8_t P[6][2] = { { 1, 5 }, { 9, 11 }, { 5, 15 }, { 5, 1 }, { 9, 5 }, { 1, 11 } };
+  int x = box.origin.x, y = box.origin.y;
+  graphics_context_set_antialiased(g, false);
+  graphics_context_set_stroke_color(g, fg);
+  graphics_context_set_stroke_width(g, 1);
+  for (int i = 0; i < 5; i++) {
+    graphics_draw_line(g, GPoint(x + P[i][0], y + P[i][1]), GPoint(x + P[i + 1][0], y + P[i + 1][1]));
+  }
+  if (!connected) {
+    graphics_context_set_stroke_color(g, bg);
+    graphics_context_set_stroke_width(g, 3);
+    graphics_draw_line(g, GPoint(x, y + BT_RUNE_H - 1), GPoint(x + BT_RUNE_W - 1, y));
+    graphics_context_set_stroke_color(g, fg);
+    graphics_context_set_stroke_width(g, 1);
+    graphics_draw_line(g, GPoint(x, y + BT_RUNE_H - 1), GPoint(x + BT_RUNE_W - 1, y));
+  }
+  graphics_context_set_antialiased(g, true);
+}
+
+// Outlined bar filled to the restful share of the night; the outline is drawn even at
+// 0 % so a dataless widget reads as an empty bar rather than a missing one.
+static void draw_sleep_bar(GContext *g, GRect box, GColor fg) {
+  int total, deep;
+  sleep_seconds(&total, &deep);
+  graphics_context_set_stroke_color(g, fg);
+  graphics_context_set_stroke_width(g, 1);
+  graphics_draw_rect(g, GRect(box.origin.x, box.origin.y, SLEEP_BAR_W, SLEEP_BAR_H));
+  int fill = sleep_bar_fill_px(total, deep, SLEEP_BAR_W - 2);
+  if (fill > 0) {
+    graphics_context_set_fill_color(g, fg);
+    graphics_fill_rect(g, GRect(box.origin.x + 1, box.origin.y + 1, fill, SLEEP_BAR_H - 2), 0, GCornerNone);
+  }
+}
+
+// A row of LEDs, green on / red off, an empty ring for an unknown state (and for no
+// data at all, so a placed widget is visibly present but declares it knows nothing).
+static void draw_leds(GContext *g, GRect box, GColor fg) {
+  const int r = LED_D / 2;
+  bool no_data = TuyaLeds_count == 0;
+  graphics_context_set_stroke_color(g, fg);
+  for (int i = 0; i < led_count(); i++) {
+    uint8_t state = no_data ? TUYA_LED_UNKNOWN : TuyaLeds_states[i];
+    GPoint p = GPoint(box.origin.x + i * (LED_D + LED_GAP) + r, box.origin.y + r);
+    if (state == TUYA_LED_ON || state == TUYA_LED_OFF) {
+      graphics_context_set_fill_color(g, (state == TUYA_LED_ON) ? GColorGreen : GColorRed);
+      graphics_fill_circle(g, p, r);
+    }
+    graphics_draw_circle(g, p, r);
+  }
+}
+
 /********** the Widget functions **********/
 
 static void measure(const WidgetCtx *c, WidgetSize *out) {
   memset(out, 0, sizeof(*out));
   const WidgetDesc *d = desc_for(c->id);
   if (!d) { return; }
-  out->ink_h = (int16_t)WidgetText_inkHeight(c->font);
   char buf[24];
+  if (d->value || d->icon == ICON_NONE) {   // a value, or EMPTY: reserves the font's ink height
+    out->ink_h = (int16_t)WidgetText_inkHeight(c->font);
+  }
   if (d->value && d->value(c, buf, sizeof(buf))) {
     out->value_w = (int16_t)WidgetText_width(buf, c->font);
   }
   if (c->hide_icon) { return; }
-  if (d->icon == ICON_BATTERY) {
-    out->icon_w = BATTERY_W;
-    out->icon_h = BATTERY_H;
-  } else if (d->icon == ICON_UNIT) {
-    int w, h;
-    WidgetUnit_measure(d->unit(c), &w, &h);
-    out->icon_w = (int16_t)w;
-    out->icon_h = (int16_t)h;
-  } else if (d->icon != ICON_NONE) {
-    GDrawCommandImage *img = icon_image(d->icon);
-    if (img) {
-      GSize s = gdraw_command_image_get_bounds_size(img);
-      out->icon_w = s.w;
-      out->icon_h = s.h;
+  switch (d->icon) {
+    case ICON_NONE:
+      break;
+    case ICON_BATTERY:
+      out->icon_w = BATTERY_W;
+      out->icon_h = BATTERY_H;
+      break;
+    case ICON_BT_STATE:
+      out->icon_w = BT_RUNE_W;
+      out->icon_h = BT_RUNE_H;
+      break;
+    case ICON_BT:
+    case ICON_STEPS: case ICON_HEART: case ICON_WEATHER: case ICON_FORECAST:
+    case ICON_SLEEP: case ICON_DEEP_SLEEP: {
+      GDrawCommandImage *img = icon_image(d->icon);
+      if (img) {
+        GSize s = gdraw_command_image_get_bounds_size(img);
+        out->icon_w = s.w;
+        out->icon_h = s.h;
+      }
+      break;
     }
+    case ICON_SLEEP_BAR:
+      out->icon_w = SLEEP_BAR_W;
+      out->icon_h = SLEEP_BAR_H;
+      break;
+    case ICON_LEDS:
+      out->icon_w = led_count() * LED_D + (led_count() - 1) * LED_GAP;
+      out->icon_h = LED_D;
+      break;
+    case ICON_UNIT:
+      if (d->unit(c, buf, sizeof(buf))) {
+        int w, h;
+        WidgetUnit_measure(buf, &w, &h);
+        out->icon_w = (int16_t)w;
+        out->icon_h = (int16_t)h;
+      }
+      break;
   }
 }
 
@@ -290,15 +640,23 @@ static void draw_icon(GContext *g, const WidgetCtx *c, GRect box) {
   const WidgetDesc *d = desc_for(c->id);
   if (!d || c->hide_icon) { return; }
   GColor fg = theme.timeColor, bg = theme.timeBgColor;
-  if (d->icon == ICON_BATTERY) {
-    draw_battery(g, box, fg, bg);
-  } else if (d->icon == ICON_UNIT) {
-    WidgetUnit_draw(g, d->unit(c), box, fg);
-  } else if (d->icon != ICON_NONE) {
-    GDrawCommandImage *img = icon_image(d->icon);
-    if (img) {
-      gdraw_command_image_recolor(img, theme.iconFillColor, theme.iconStrokeColor);
-      gdraw_command_image_draw(g, img, box.origin);
+  IconKind kind = d->icon;
+  char buf[24];
+  switch (kind) {
+    case ICON_NONE:      break;
+    case ICON_BT_STATE:  draw_bt_rune(g, box, bluetooth_connection_service_peek(), fg, bg); break;
+    case ICON_BATTERY:   draw_battery(g, box, fg, bg); break;
+    case ICON_SLEEP_BAR: draw_sleep_bar(g, box, fg); break;
+    case ICON_LEDS:      draw_leds(g, box, fg); break;
+    case ICON_UNIT:
+      if (d->unit(c, buf, sizeof(buf))) { WidgetUnit_draw(g, buf, box, fg); }
+      break;
+    default: {
+      GDrawCommandImage *img = icon_image(kind);
+      if (img) {
+        gdraw_command_image_recolor(img, theme.iconFillColor, theme.iconStrokeColor);
+        gdraw_command_image_draw(g, img, box.origin);
+      }
     }
   }
 }

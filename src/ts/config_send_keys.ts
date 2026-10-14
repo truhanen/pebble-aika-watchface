@@ -17,7 +17,7 @@ export const STRAIGHT_THROUGH_KEYS: string[] = [
   'SettingPollIntervalMin', 'SettingElecQuietStart', 'SettingElecQuietEnd',
   'SettingElecCheapFactorPct',
   'SettingAutoBatteryThreshold', 'SettingFallbackColumn', 'SettingFallbackPosition',
-  'SettingAnalogTicks', 'SettingNightRotationMode', 'SettingNightRotationStart', 'SettingNightRotationEnd',
+  'SettingNightRotationMode', 'SettingNightRotationStart', 'SettingNightRotationEnd',
   'SettingNightSlowRotation', 'SettingNightColors',
   'SettingBatteryWarnPct', 'SettingBatteryWarnDays', 'SettingBtWarnBorder',
 ];

@@ -95,12 +95,6 @@ const config = [
     type: 'section',
     items: [
       { type: 'heading', defaultValue: 'Clock' },
-      { type: 'radiogroup', messageKey: 'SettingAnalogTicks', label: 'Analog hour marks',
-        defaultValue: '2', options: [
-          { label: 'Hide', value: '0' },
-          { label: 'Normal', value: '1' },
-          { label: 'Bold', value: '2' },
-        ] },
       { type: 'text', id: 'analog-credit', defaultValue:
         'The clock face is based on the <b>Nyquist</b> watchface ' +
         'by truhanen, used under the GPL-3.0 license.<br>' +

@@ -42,7 +42,6 @@ static void set_defaults(void) {
   settings.elecCheapFloorCenti = 200;   // 2.0 snt/kWh
   settings.elecCheapCeilingCenti = 800; // 8.0 snt/kWh
 
-  settings.analogTickStyle = ANALOG_TICKS_BOLD;
 
   settings.nightMode = NIGHT_WINDOW_OFF;
   settings.nightStartHour = 23;
@@ -89,7 +88,6 @@ void Settings_loadFromStorage() {
   if (settings.autoBatteryThreshold < 1 || settings.autoBatteryThreshold > 100) { settings.autoBatteryThreshold = 10; }
   if (settings.fallbackColumn > 2) { settings.fallbackColumn = 0; }
   if (settings.fallbackPosition < 1 || settings.fallbackPosition > MAX_WIDGET_SLOTS + 1) { settings.fallbackPosition = 1; }
-  if (settings.analogTickStyle > ANALOG_TICKS_BOLD) { settings.analogTickStyle = ANALOG_TICKS_BOLD; }
   if (settings.batteryWarnPct > 100) { settings.batteryWarnPct = 0; }
   // 100 tenths = 10 days; a larger threshold would mean "always warning".
   if (settings.batteryWarnDaysTenths > 100) { settings.batteryWarnDaysTenths = 0; }

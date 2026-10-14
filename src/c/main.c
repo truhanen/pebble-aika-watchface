@@ -1,5 +1,5 @@
 #include <pebble.h>
-#include "clock_area.h"
+#include "clock_face.h"
 #include "messaging.h"
 #include "settings.h"
 #include "weather.h"
@@ -107,12 +107,12 @@ void update_clock() {
 #endif
   TestHooks_applyTime(timeInfo);
 
-  ClockArea_update_time(timeInfo);
+  ClockFace_updateTime(timeInfo);
   Sidebar_updateTime(timeInfo);
 }
 
-// Lay out the sidebar columns and the clock between them. A column is shown iff its
-// list is non-empty.
+// Lay out the sidebar columns over the full-screen clock face. A column is shown iff
+// its list is non-empty.
 static void apply_layout(void) {
   Layer *root_layer = window_get_root_layer(mainWindow);
   GRect root = layer_get_bounds(root_layer);
@@ -127,11 +127,7 @@ static void apply_layout(void) {
   Sidebar_setSecondaryFrame(GRect(root.size.w - sidebarWidth, 0, sidebarWidth, root.size.h));
   Sidebar_setSecondaryHidden(!showSecondary);
 
-  int leftInset = showPrimary ? sidebarWidth : 0;
-  int rightInset = showSecondary ? sidebarWidth : 0;
-  layer_set_frame(clock_area_layer,
-      GRect(leftInset, 0, root.size.w - leftInset - rightInset, root.size.h));
-  layer_mark_dirty(clock_area_layer);
+  layer_mark_dirty(clock_face_layer);
 }
 
 // Recompute the layout the instant the timeline-peek banner slides in/out.
@@ -219,7 +215,7 @@ void redrawScreen() {
   // update the sidebar
   Sidebar_redraw();
 
-  ClockArea_redraw();
+  ClockFace_redraw();
 
   apply_layout();
 
@@ -229,16 +225,16 @@ void redrawScreen() {
 static void main_window_load(Window *window) {
   window_set_background_color(window, theme.timeBgColor);
 
+  ClockFace_init(window);
+
   // create the sidebar
   Sidebar_init(window);
-
-  ClockArea_init(window);
 
   redrawScreen();
 }
 
 static void main_window_unload(Window *window) {
-  ClockArea_deinit();
+  ClockFace_deinit();
   Sidebar_deinit();
 }
 
@@ -394,7 +390,7 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 
   // redraw all screen
   Sidebar_redraw();
-  ClockArea_redraw();
+  ClockFace_redraw();
 }
 
 void bluetoothStateChanged(bool newConnectionState) {

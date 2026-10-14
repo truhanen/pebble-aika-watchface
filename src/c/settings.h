@@ -8,11 +8,6 @@
 #define SETTINGS_PERSIST_KEY 100
 #define SETTINGS_VERSION_PERSIST_KEY 4
 
-// Analog hour-tick style (SettingAnalogTicks): 0=hide, 1=normal, 2=bold.
-#define ANALOG_TICKS_HIDE   0
-#define ANALOG_TICKS_NORMAL 1
-#define ANALOG_TICKS_BOLD   2
-
 typedef enum {
   NO_VIBE = 0,
   VIBE_EVERY_HOUR = 1,
@@ -63,7 +58,6 @@ typedef struct {
   int16_t elecCheapCeilingCenti; // cheapBar ceiling, 0.01 snt
 
   // analog clock hour-tick style: 0=hide, 1=normal, 2=bold
-  uint8_t analogTickStyle;
 
   // widget lists (see widget_list.h for the byte format)
   uint8_t widgetList[MAX_WIDGET_LIST];

@@ -215,7 +215,6 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   Tuple *autoBatteryThreshold_tuple = dict_find(iterator, MESSAGE_KEY_SettingAutoBatteryThreshold);
   Tuple *fallbackColumn_tuple = dict_find(iterator, MESSAGE_KEY_SettingFallbackColumn);
   Tuple *fallbackPosition_tuple = dict_find(iterator, MESSAGE_KEY_SettingFallbackPosition);
-  Tuple *analogTicks_tuple = dict_find(iterator, MESSAGE_KEY_SettingAnalogTicks);
 
   if(timeColor_tuple != NULL) {
     settings.timeColor = GColorFromHEX(timeColor_tuple->value->int32);
@@ -421,10 +420,6 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   if(fallbackPosition_tuple != NULL) {
     int v = fallbackPosition_tuple->value->int32;
     if (v >= 1 && v <= MAX_WIDGET_SLOTS + 1) { settings.fallbackPosition = (uint8_t)v; }
-  }
-  if(analogTicks_tuple != NULL) {
-    int v = analogTicks_tuple->value->int32;
-    if (v >= ANALOG_TICKS_HIDE && v <= ANALOG_TICKS_BOLD) { settings.analogTickStyle = (uint8_t)v; }
   }
 
   // Save the new settings to persistent storage -- but only if a Setting* key actually

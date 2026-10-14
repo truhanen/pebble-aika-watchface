@@ -1,4 +1,4 @@
-// Clock face: hour + minute hands, centre pivot, the dithered minute strip along the
+// Clock face: hour + minute hands, centre pivot, the dithered tick strip along the
 // screen edges and the widgets (icons below the hands, values above), all on one
 // full-screen layer.
 //
@@ -24,8 +24,8 @@ Layer *clock_face_layer;
 static int s_hours;
 static int s_minutes;
 
-// Minute index (0..59) of every strip pixel, in cf_strip_row_spans order.
-static uint8_t *s_strip_minute;
+// Tick index (0..59) of every strip pixel, in cf_strip_row_spans order.
+static uint8_t *s_strip_tick;
 
 static GPoint to_gpoint(CfPoint p) { return GPoint(p.x, p.y); }
 
@@ -64,27 +64,25 @@ static void draw_hand_fill(GContext *ctx, const CfHandPose *p, GColor color) {
 }
 
 static void build_strip_table(int w, int h) {
-  s_strip_minute = malloc(cf_strip_pixel_count(w, h));
-  if (!s_strip_minute) { return; }
+  s_strip_tick = malloc(cf_strip_pixel_count(w, h));
+  if (!s_strip_tick) { return; }
   int cx = w / 2, cy = h / 2, i = 0;
   for (int y = 0; y < h; y++) {
     int x0[2], x1[2];
     int n = cf_strip_row_spans(y, w, h, x0, x1);
     for (int s = 0; s < n; s++) {
       for (int x = x0[s]; x < x1[s]; x++) {
-        s_strip_minute[i++] = (uint8_t)cf_minute_of_direction(2 * x + 1 - 2 * cx,
+        s_strip_tick[i++] = (uint8_t)cf_tick_of_direction(2 * x + 1 - 2 * cx,
                                                               2 * y + 1 - 2 * cy);
       }
     }
   }
 }
 
-// Writes the strip straight into the framebuffer. A pixel that currently shows the
-// hand colour (only the minute hand reaches the strip) gets the inverted shade, so
-// the hand's exact outline cuts through the dither pattern.
-static void draw_strip(GContext *ctx, GRect bounds, GColor hand) {
-  if (!s_strip_minute) { return; }
-  bool invert = !gcolor_equal(hand, theme.timeBgColor);
+// Writes the strip's plain shades straight into the framebuffer, over whatever is
+// underneath (including the minute hand).
+static void draw_strip(GContext *ctx, GRect bounds) {
+  if (!s_strip_tick) { return; }
   GBitmap *fb = graphics_capture_frame_buffer(ctx);
   if (!fb) { return; }
   const uint8_t black = GColorBlack.argb, white = GColorWhite.argb;
@@ -96,8 +94,7 @@ static void draw_strip(GContext *ctx, GRect bounds, GColor hand) {
     GBitmapDataRowInfo row = gbitmap_get_data_row_info(fb, y);
     for (int s = 0; s < n; s++) {
       for (int x = x0[s]; x < x1[s]; x++) {
-        bool is_black = cf_shade_is_black(cf_strip_shade(s_strip_minute[i++]), x, y);
-        if (invert && row.data[x] == hand.argb) { is_black = !is_black; }
+        bool is_black = cf_shade_is_black(cf_strip_shade(s_strip_tick[i++]), x, y);
         row.data[x] = is_black ? black : white;
       }
     }
@@ -166,7 +163,7 @@ static void face_update_proc(Layer *l, GContext *ctx) {
 
   WidgetLayer_drawValues(ctx);
 
-  draw_strip(ctx, bounds, fg);
+  draw_strip(ctx, bounds);
   draw_warn_border(ctx, bounds);
 }
 
@@ -181,8 +178,8 @@ void ClockFace_init(Window *window) {
 
 void ClockFace_deinit(void) {
   layer_destroy(clock_face_layer);
-  free(s_strip_minute);
-  s_strip_minute = NULL;
+  free(s_strip_tick);
+  s_strip_tick = NULL;
 }
 
 void ClockFace_redraw(void) {

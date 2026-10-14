@@ -66,6 +66,7 @@ static void draw_hand_fill(GContext *ctx, const CfHandPose *p, GColor color) {
 typedef struct { uint8_t x, y, argb; } TickPixel;
 typedef struct { uint8_t x, y; } ShadowPixel;
 static TickPixel s_tick_pixels[CF_TICK_COUNT * CF_TICK_MAX_PIXELS];
+static bool s_tick_is_major[CF_TICK_COUNT * CF_TICK_MAX_PIXELS];  // track which pixels are major ticks
 static int s_tick_pixel_count;
 static ShadowPixel s_shadow_pixels[CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK];
 static int s_shadow_pixel_count;
@@ -81,15 +82,20 @@ static void build_tick_table(int w, int h) {
     float t;
     cf_boundary_hit(w, h, sin_a, cos_a, &edge, &t);
     CfPoint px[CF_TICK_MAX_PIXELS];
-    // 5-minute ticks are CF_STRIP_W deep; minor ticks are CF_MINOR_TICK_DEPTH deep.
-    int depth = cf_tick_is_black(b) ? CF_STRIP_W : CF_MINOR_TICK_DEPTH;
+    // Major (5-minute) ticks are CF_STRIP_W deep; minor ticks are CF_MINOR_TICK_DEPTH deep.
+    bool is_major = cf_tick_is_major(b);
+    int depth = is_major ? CF_STRIP_W : CF_MINOR_TICK_DEPTH;
     int count = cf_tick_pixels(w, h, edge, t, depth, px);
     for (int i = 0; i < count; i++) {
       all[n] = px[i];
-      // 5-minute ticks are solid black; minor ticks are solid light gray.
-      GColor color = cf_tick_is_black(b) ? GColorBlack : GColorLightGray;
-      s_tick_pixels[n++] = (TickPixel){
+      // Minor ticks are solid light gray; major ticks will use the foreground colour
+      // (resolved at draw time). We store GColorLightGray for both initially and update
+      // major pixels at draw time.
+      GColor color = GColorLightGray;
+      s_tick_pixels[n] = (TickPixel){
         (uint8_t)px[i].x, (uint8_t)px[i].y, color.argb };
+      s_tick_is_major[n] = is_major;
+      n++;
     }
   }
   s_tick_pixel_count = n;
@@ -108,8 +114,9 @@ static void build_tick_table(int w, int h) {
 
 // Writes the shadow pixels (background colour), then the tick pixels, straight into
 // the framebuffer over whatever is underneath (including the minute hand). Everything
-// else in the strip area is left as drawn.
-static void draw_ticks(GContext *ctx, GColor bg) {
+// else in the strip area is left as drawn. Major (5-minute) ticks use the foreground
+// colour; minor ticks use light gray.
+static void draw_ticks(GContext *ctx, GColor bg, GColor fg) {
   GBitmap *fb = graphics_capture_frame_buffer(ctx);
   if (!fb) { return; }
   int last_y = -1;
@@ -122,7 +129,9 @@ static void draw_ticks(GContext *ctx, GColor bg) {
   for (int i = 0; i < s_tick_pixel_count; i++) {
     const TickPixel *p = &s_tick_pixels[i];
     if (p->y != last_y) { row = gbitmap_get_data_row_info(fb, p->y); last_y = p->y; }
-    row.data[p->x] = p->argb;
+    // Major ticks use the foreground colour; minor ticks use their stored colour (light gray).
+    uint8_t color_argb = s_tick_is_major[i] ? fg.argb : p->argb;
+    row.data[p->x] = color_argb;
   }
   graphics_release_frame_buffer(ctx, fb);
 }
@@ -188,7 +197,7 @@ static void face_update_proc(Layer *l, GContext *ctx) {
 
   WidgetLayer_drawValues(ctx);
 
-  draw_ticks(ctx, bg);
+  draw_ticks(ctx, bg, fg);
   draw_warn_border(ctx, bounds);
 }
 

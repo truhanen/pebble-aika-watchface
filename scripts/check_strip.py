@@ -3,18 +3,19 @@
 
 Tick b (b = 0..59) sits at the point where the ray from the screen centre at
 b*6 degrees (clockwise from 12 o'clock) meets the screen rectangle. It is 5 px
-long on the outermost row, 4 px deep for 5-minute ticks (b%5==0) and 1 px deep
-for others, its sides following rays from the centre; see cf_tick_pixels in
+long on the outermost row, 4 px deep for major (5-minute) ticks (b%5==0) and 1 px deep
+for minor ticks, its sides following rays from the centre; see cf_tick_pixels in
 src/c/clock_face_calc.h for the exact rule, ported here in exact integer arithmetic.
-Every 5th tick (b%5==0) is solid black; the others are solid light gray.
+Every major tick (b%5==0) uses the foreground colour (--fg R,G,B, default black 0,0,0);
+minor ticks are solid light gray (171,171,171).
 Every tick pixel's 4-neighbour that is not itself a tick pixel (on screen) is its
 1 px shadow and must show the background colour (--bg R,G,B, default white
 255,255,255). All other pixels show the face and are ignored.
 
 Prints the match/mismatch counts and every mismatching pixel (up to 20); exits 1
 on a mismatch. With --out FILE, writes a 4x zoomed map: grey = match, red =
-mismatch, yellow = neither black nor light-gray, the face (non-tick) pixels as
-shot. Usage: check_strip.py shot.png [--out map.png] [--bg R,G,B]
+mismatch, yellow = neither major nor minor, the face (non-tick) pixels as
+shot. Usage: check_strip.py shot.png [--out map.png] [--bg R,G,B] [--fg R,G,B]
 """
 import math, sys
 from PIL import Image
@@ -72,8 +73,8 @@ def tick_pixels(b):
     x1, y1 = perimeter_point(2 * (o - 2) - 1)
     x2, y2 = perimeter_point(2 * (o + 2) + 1)
     x1 -= W; y1 -= H; x2 -= W; y2 -= H
-    # 5-minute ticks (b%5==0) are S (4) px deep; minor ticks are MINOR_TICK_DEPTH (1) px deep.
-    depth = S if is_black(b) else MINOR_TICK_DEPTH
+    # Major (5-minute) ticks (b%5==0) are S (4) px deep; minor ticks are MINOR_TICK_DEPTH (1) px deep.
+    depth = S if is_major(b) else MINOR_TICK_DEPTH
     out = []
     for d in range(depth):
         start = o - (2 * edge + 1) * d - 12
@@ -85,7 +86,7 @@ def tick_pixels(b):
     return out
 
 
-def is_black(b):
+def is_major(b):
     return b % 5 == 0
 
 
@@ -93,6 +94,7 @@ def main():
     args = sys.argv[1:]
     out_path = args[args.index('--out') + 1] if '--out' in args else None
     bg = tuple(int(v) for v in args[args.index('--bg') + 1].split(',')) if '--bg' in args else (255, 255, 255)
+    fg = tuple(int(v) for v in args[args.index('--fg') + 1].split(',')) if '--fg' in args else (0, 0, 0)
     im = Image.open(args[0]).convert('RGB')
     out = im.copy()
     ok = bad = 0
@@ -109,13 +111,13 @@ def main():
                 shadow.add(n)
     for (x, y), b in owner.items():
         px = im.getpixel((x, y))
-        # Black tick: (0,0,0), Light gray tick: (171,171,171) as produced by emulator
-        expected_color = (0, 0, 0) if is_black(b) else (171, 171, 171)
+        # Major tick uses foreground colour (--fg, default black); minor tick uses light gray (171,171,171)
+        expected_color = fg if is_major(b) else (171, 171, 171)
         if px == expected_color:
             ok += 1; out.putpixel((x, y), (150, 150, 150))
         else:
             bad += 1; wrong.append((x, y, b, px))
-            out.putpixel((x, y), (255, 200, 0) if px not in ((0, 0, 0), (171, 171, 171)) else (220, 0, 0))
+            out.putpixel((x, y), (255, 200, 0) if px not in (fg, (171, 171, 171)) else (220, 0, 0))
     for (x, y) in sorted(shadow):
         px = im.getpixel((x, y))
         if px == bg:

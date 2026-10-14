@@ -118,6 +118,6 @@ int cf_shadow_pixels(int w, int h, const CfPoint *ticks, int n, uint8_t *scratch
   return count;
 }
 
-bool cf_tick_is_black(int b) {
+bool cf_tick_is_major(int b) {
   return b % 5 == 0;
 }

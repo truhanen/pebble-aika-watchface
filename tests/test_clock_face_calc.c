@@ -194,8 +194,8 @@ static void test_ticks_geometry(void) {
       for (int x = 0; x < W; x++) {
         int edge_dist = min_edge_dist((CfPoint){ (int16_t)x, (int16_t)y });
         if (edge_dist >= max_check_depth) { continue; }
-        // Skip pixels beyond this tick's depth (minor ticks only 2 px deep).
-        if (!cf_tick_is_black(b) && edge_dist >= CF_MINOR_TICK_DEPTH) { continue; }
+        // Skip pixels beyond this tick's depth (minor ticks only 1 px deep).
+        if (!cf_tick_is_major(b) && edge_dist >= CF_MINOR_TICK_DEPTH) { continue; }
         int s = in_sector(a1, a2, x, y), member = g_owner[y][x] == b + 1;
         if (s != 0) { assert(member == (s > 0)); }
       }
@@ -308,17 +308,17 @@ static void test_boundary_hit(void) {
 }
 
 static void test_tick_colour(void) {
-  // Test that colour mapping is correct: b%5==0 → black, others → solid light gray.
-  int blacks = 0;
+  // Test that major tick detection is correct: b%5==0 → major, others → minor.
+  int majors = 0;
   for (int b = 0; b < CF_TICK_COUNT; b++) {
-    if (cf_tick_is_black(b)) {
+    if (cf_tick_is_major(b)) {
       assert(b % 5 == 0);
-      blacks++;
+      majors++;
     } else {
       assert(b % 5 != 0);
     }
   }
-  assert(blacks == 12);  // 12 five-minute ticks: 0, 5, 10, ..., 55
+  assert(majors == 12);  // 12 major (five-minute) ticks: 0, 5, 10, ..., 55
 }
 
 int main(void) {

@@ -88,6 +88,6 @@ int cf_tick_pixels(int w, int h, int edge, float t, int depth, CfPoint out[CF_TI
 int cf_shadow_pixels(int w, int h, const CfPoint *ticks, int n, uint8_t *scratch,
                      CfPoint *out, int max);
 
-// True when tick b should be solid black: all 5-minute ticks (0 = 12 o'clock included).
-// Others are solid light gray.
-bool cf_tick_is_black(int b);
+// True when tick b is a major (5-minute) tick: all ticks at b % 5 == 0 (0 = 12 o'clock included).
+// Major ticks use the foreground colour; minor ticks use light gray.
+bool cf_tick_is_major(int b);

@@ -63,9 +63,9 @@ export function buildRateUrl(base: string): string {
 }
 
 function labelFor(r: CurrencyRow): string {
-  // Empty label -> the quote currency alone (e.g. "USD"), which fits the narrow
-  // sidebar; the full "BASE/QUOTE" would clip. Users can set any custom label.
-  return r.label !== '' ? r.label : r.quote;
+  // Empty label -> "BASE/QUOTE" (e.g. "EUR/USD") for stacked display as a fraction.
+  // Custom labels are sent unchanged.
+  return r.label !== '' ? r.label : r.base + '/' + r.quote;
 }
 
 // ratesByBase: { BASE: { QUOTE: number, ... } } accumulated from the per-base

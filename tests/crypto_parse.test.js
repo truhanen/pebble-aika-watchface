@@ -41,13 +41,13 @@ test('normalizeRows drops malformed rows and coerces types', () => {
 test('packCryptoData formats each row and joins wid/label/value triplets', () => {
   const json = { bitcoin: { usd: 104235 }, ethereum: { eur: 3520.4 } };
   const packed = packCryptoData(ROWS, json);
-  assert.strictEqual(packed, ['15', 'BTC', '104', '200', 'ETH', '3520'].join(DELIM));
+  assert.strictEqual(packed, ['15', 'BTC/USD', '104', '200', 'ETH/EUR', '3520'].join(DELIM));
 });
 
 test('packCryptoData emits -- for a missing price but keeps the slot', () => {
   const json = { bitcoin: { usd: 104235 } };
   const packed = packCryptoData(ROWS, json);
-  assert.strictEqual(packed, ['15', 'BTC', '104', '200', 'ETH', '--'].join(DELIM));
+  assert.strictEqual(packed, ['15', 'BTC/USD', '104', '200', 'ETH/EUR', '--'].join(DELIM));
 });
 
 test('normalizeRows clamps precision to [-8, 8]', () => {
@@ -59,11 +59,25 @@ test('normalizeRows clamps precision to [-8, 8]', () => {
   assert.strictEqual(out[1].p, -8);
 });
 
-test('label falls back to the uppercased coin id when empty', () => {
+test('empty label -> uppercased coin/vs fraction', () => {
   const packed = packCryptoData(
     [{ wid: 200, coin: 'dogecoin', vs: 'usd', p: 4, label: '' }],
     { dogecoin: { usd: 0.1234 } });
-  assert.strictEqual(packed, ['200', 'DOGECOIN', '0.1234'].join(DELIM));
+  assert.strictEqual(packed, ['200', 'DOGECOIN/USD', '0.1234'].join(DELIM));
+});
+
+test('custom label without "/" -> label/vs fraction', () => {
+  const packed = packCryptoData(
+    [{ wid: 200, coin: 'bitcoin', vs: 'eur', p: 0, label: 'BTC' }],
+    { bitcoin: { eur: 51234.5 } });
+  assert.strictEqual(packed, ['200', 'BTC/EUR', '51235'].join(DELIM));
+});
+
+test('custom label containing "/" -> unchanged', () => {
+  const packed = packCryptoData(
+    [{ wid: 200, coin: 'bitcoin', vs: 'usd', p: 0, label: 'BTC/USD' }],
+    { bitcoin: { usd: 104235 } });
+  assert.strictEqual(packed, ['200', 'BTC/USD', '104235'].join(DELIM));
 });
 
 test('countValidPrices counts coins with a finite price', () => {
@@ -110,5 +124,5 @@ test('packCryptoData applies the per-row trim', () => {
   const packed = packCryptoData(
     [{ wid: 17, coin: 'euro-coin', vs: 'eur', p: 3, t: 2, label: 'EUR' }],
     { 'euro-coin': { eur: 1.160 } });
-  assert.strictEqual(packed, '17' + DELIM + 'EUR' + DELIM + '60');
+  assert.strictEqual(packed, '17' + DELIM + 'EUR/EUR' + DELIM + '60');
 });

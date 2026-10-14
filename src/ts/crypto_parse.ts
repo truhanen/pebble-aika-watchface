@@ -60,7 +60,10 @@ export function buildPriceUrl(rows: CoinRow[]): string {
 }
 
 function labelFor(r: CoinRow): string {
-  return r.label !== '' ? r.label : r.coin.toUpperCase();
+  const name = r.label !== '' ? r.label : r.coin.toUpperCase();
+  // If the name already contains '/', send it unchanged (custom label with fraction).
+  // Otherwise, append the quote currency to form BASE/QUOTE for stacked display.
+  return name.indexOf('/') !== -1 ? name : name + '/' + r.vs.toUpperCase();
 }
 
 export function packCryptoData(rows: CoinRow[], json: any): string {

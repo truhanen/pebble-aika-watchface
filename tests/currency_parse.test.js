@@ -67,17 +67,31 @@ test('buildRateUrl targets the open.er-api latest endpoint for the base', () => 
   assert.strictEqual(buildRateUrl('EUR'), 'https://open.er-api.com/v6/latest/EUR');
 });
 
-test('packCurrencyData formats each row; label falls back to the quote currency', () => {
+test('packCurrencyData formats each row; custom label used unchanged', () => {
   const packed = packCurrencyData(ROWS, BY_BASE, {});
-  assert.strictEqual(packed, ['216', 'USD', '1.0823', '217', 'Yen', '162.40'].join(DELIM));
+  assert.strictEqual(packed, ['216', 'EUR/USD', '1.0823', '217', 'Yen', '162.40'].join(DELIM));
 });
 
 test('packCurrencyData uses prevValues when a rate is missing, else --', () => {
   const partial = { EUR: { USD: 1.0823 } };   // USD base absent this round
   const withPrev = packCurrencyData(ROWS, partial, { 217: '161.00' });
-  assert.strictEqual(withPrev, ['216', 'USD', '1.0823', '217', 'Yen', '161.00'].join(DELIM));
+  assert.strictEqual(withPrev, ['216', 'EUR/USD', '1.0823', '217', 'Yen', '161.00'].join(DELIM));
   const noPrev = packCurrencyData(ROWS, partial, {});
-  assert.strictEqual(noPrev, ['216', 'USD', '1.0823', '217', 'Yen', '--'].join(DELIM));
+  assert.strictEqual(noPrev, ['216', 'EUR/USD', '1.0823', '217', 'Yen', '--'].join(DELIM));
+});
+
+test('empty label -> base/quote fraction', () => {
+  const packed = packCurrencyData(
+    [{ wid: 216, base: 'EUR', quote: 'USD', p: 4, t: 0, label: '' }],
+    { EUR: { USD: 1.0823 } }, {});
+  assert.strictEqual(packed, ['216', 'EUR/USD', '1.0823'].join(DELIM));
+});
+
+test('custom label -> unchanged', () => {
+  const packed = packCurrencyData(
+    [{ wid: 216, base: 'EUR', quote: 'USD', p: 4, t: 0, label: 'Euro' }],
+    { EUR: { USD: 1.0823 } }, {});
+  assert.strictEqual(packed, ['216', 'Euro', '1.0823'].join(DELIM));
 });
 
 test('packCurrencyData: negative precision rounds (crypto-style)', () => {

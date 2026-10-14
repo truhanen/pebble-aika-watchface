@@ -7,7 +7,7 @@
 
 // Shared wid/label/value slot table for the phone-data widgets (crypto, currency,
 // tuya). Pebble-free so it host-compiles for tests/test_data_slots.c.
-#define DATA_SLOT_LABEL_LEN 8    // up to 7 chars + NUL (fits "EUR/USD")
+#define DATA_SLOT_LABEL_LEN 12   // up to 11 chars + NUL (fits "USDT/USD", "BTC/USD", "EUR/USD")
 #define DATA_SLOT_VALUE_LEN 16   // formatted value + NUL
 
 typedef struct {

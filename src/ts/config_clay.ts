@@ -89,6 +89,8 @@ const ALT_CLOCK_OFFSETS: ClayOption[] = [
   { label: 'UTC+14:00 (Kiritimati, Line Islands)', value: 14 },
 ];
 
+function emptySlot() { return { id: 0, hide: false, font: 31 }; }
+
 const config = [
   // ------------------------------------------------------------------ Clock
   {
@@ -155,14 +157,21 @@ const config = [
         'scale (12 / 6 / 2 extra full redraws per minute). Intervals of <b>1 min or ' +
         'longer are free</b> — they ride the refresh the watchface does anyway.' },
       // Defaults: font 31 = "Default" (the watch maps it per list: Gothic medium on
-      // the edges, Bitham large at the top / bottom). Ids: 7 weather, 10 steps,
-      // 2 battery, 12 heart rate, 30 date "Wkday dd".
+      // the edges, Bitham large at the top / bottom). Each edge groups an icon-only
+      // widget over its value (icon hidden) in the top corner and one widget in the
+      // bottom corner; five Empty slots push them apart. Ids: 37 weather icon,
+      // 7 weather, 0 Empty, 10 steps, 36 battery icon, 2 battery, 12 heart rate,
+      // 30 date "Wkday dd". Must match the watch defaults in src/c/settings.c.
       { type: 'text', defaultValue: '<b>Left edge</b>' },
       { type: 'widgetList', messageKey: 'WidgetList',
-        defaultValue: [{ id: 7, hide: false, font: 31 }, { id: 10, hide: false, font: 31 }] },
+        defaultValue: [{ id: 37, hide: false, font: 31 }, { id: 7, hide: true, font: 31 },
+          emptySlot(), emptySlot(), emptySlot(), emptySlot(), emptySlot(),
+          { id: 10, hide: false, font: 31 }] },
       { type: 'text', defaultValue: '<b>Right edge</b>' },
       { type: 'widgetList', messageKey: 'WidgetListRight',
-        defaultValue: [{ id: 2, hide: false, font: 31 }, { id: 12, hide: false, font: 31 }] },
+        defaultValue: [{ id: 36, hide: false, font: 31 }, { id: 2, hide: true, font: 31 },
+          emptySlot(), emptySlot(), emptySlot(), emptySlot(), emptySlot(),
+          { id: 12, hide: false, font: 31 }] },
       { type: 'text', defaultValue: '<b>Top center</b>' },
       { type: 'widgetList', messageKey: 'WidgetListTop', max: 1,
         defaultValue: [{ id: 30, hide: false, font: 31 }] },

@@ -50,10 +50,20 @@ static void set_defaults(void) {
   settings.batteryWarnColor = GColorRed;
   settings.btWarnColor = GColorYellow;
 
-  // a fresh install: weather + steps left, battery + heart rate right, "Wkday dd" on
-  // top, an empty bottom slot, every widget in its position's default font
-  static const uint8_t LEFT[] = { WEATHER_CURRENT, WL_FONT_POS_DEFAULT, STEP_COUNTER, WL_FONT_POS_DEFAULT };
-  static const uint8_t RIGHT[] = { BATTERY_METER, WL_FONT_POS_DEFAULT, HEARTRATE, WL_FONT_POS_DEFAULT };
+  // A fresh install, every widget in its position's default font. Each edge groups an
+  // icon over its value in the top corner (weather icon + temperature, battery icon +
+  // percent) and one widget in the bottom corner (steps, heart rate); the five Empty
+  // slots in between push the pairs apart.
+#define D WL_FONT_POS_DEFAULT
+#define VALUE_ONLY (WL_FONT_POS_DEFAULT | WL_FLAG_HIDE)
+#define FIVE_EMPTY EMPTY, D, EMPTY, D, EMPTY, D, EMPTY, D, EMPTY, D
+  static const uint8_t LEFT[] = { WEATHER_ICON, D, WEATHER_CURRENT, VALUE_ONLY, FIVE_EMPTY,
+                                  STEP_COUNTER, D };
+  static const uint8_t RIGHT[] = { BATTERY_ICON, D, BATTERY_METER, VALUE_ONLY, FIVE_EMPTY,
+                                   HEARTRATE, D };
+#undef FIVE_EMPTY
+#undef VALUE_ONLY
+#undef D
   static const uint8_t TOP[] = { DATE_WKDAY_DD, WL_FONT_POS_DEFAULT };
   static const uint8_t BOTTOM[] = { EMPTY, WL_FONT_POS_DEFAULT };
   Settings_setWidgetList(WIDGET_POS_LEFT, LEFT, sizeof LEFT);

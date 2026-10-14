@@ -11,7 +11,7 @@
    code must not reference TS downlevel helpers (__spreadArray / _this etc.), which
    live in module scope and would be undefined once re-evaluated in the webview.
    Keep to native array methods; NO spread / destructuring / for...of. Widget-id
-   gating rationale (verified against src/c/sidebar_widgets.c): widget 14 (current
+   gating rationale (verified against src/c/widgets.c): widget 14 (current
    price) uses none of the electricity inputs; 19 (cheapest hour) uses quiet hours
    only; 18 (next cheap) uses quiet hours + cheap factor/floor/ceiling.
    See docs/superpowers/specs/2026-07-07-timestyle-config-accordion-design.md and
@@ -56,12 +56,39 @@ function clayConfigCustom(this: ClayConfigThis, minified: unknown): void {
   let groups: ClayGroup[] = [];
   let openIndex = -1;
 
+  // Plain widget ids placed in any of the four lists (left / right edge, top / bottom
+  // centre). A list value is an array of slot objects ({id,hide,font} or
+  // {rotating,interval,members:[...]}); an older flat int array (255, count,
+  // interval, members...; hide flag 0x20 in the id) is still understood.
   function widgetIds(): number[] {
     const ids: number[] = [];
-    ['WidgetList', 'WidgetListRight'].forEach((k) => {
+    function addEntry(raw: any): void {
+      if (raw && typeof raw === 'object') { ids.push(parseInt(raw.id, 10) || 0); return; }
+      const v = parseInt(raw, 10) || 0;
+      ids.push((v > 0x20 && v <= 0x39) ? v - 0x20 : v);
+    }
+    ['WidgetList', 'WidgetListRight', 'WidgetListTop', 'WidgetListBottom'].forEach((k) => {
       const v = clayConfig.getItemByMessageKey(k).get();
-      if (v && v.length) {
-        for (let i = 0; i < v.length; i++) { ids.push((parseInt(v[i], 10) || 0) & 0xdf); }
+      if (!v || !v.length) { return; }
+      let i = 0;
+      while (i < v.length) {
+        const el = v[i];
+        if (el && typeof el === 'object') {
+          if (el.rotating) {
+            const mems = Array.isArray(el.members) ? el.members : [];
+            for (let m = 0; m < mems.length; m++) { addEntry(mems[m]); }
+          } else {
+            addEntry(el);
+          }
+          i += 1;
+        } else if (parseInt(el, 10) === 255) {
+          const count = parseInt(v[i + 1], 10) || 0;
+          for (let m = 0; m < count; m++) { addEntry(v[i + 3 + m]); }
+          i += 3 + count;
+        } else {
+          addEntry(el);
+          i += 1;
+        }
       }
     });
     return ids;
@@ -74,7 +101,7 @@ function clayConfigCustom(this: ClayConfigThis, minified: unknown): void {
   // ---- Gating: per-item visibility decisions (a key absent from gk/gi = visible)
   function computeGate(): GateResult {
     const ids = widgetIds();
-    const weather = has(ids, [7, 8, 13]);
+    const weather = has(ids, [7, 8, 13, 37]);
     const temp = has(ids, [7, 8]);
     const manual = weather && key('weather_loc_mode').get() === 'manual';
     const cheapHour = has(ids, [18, 19]);
@@ -106,7 +133,6 @@ function clayConfigCustom(this: ClayConfigThis, minified: unknown): void {
     gk.elec_cheap_ceiling = nextCheap;
     gk.SettingAltClockName = altClock;
     gk.SettingAltClockOffset = altClock;
-    gk.SettingShowBatteryPct = has(ids, [2]) || autoBattery;
     gk.SettingAutoBatteryThreshold = autoBattery;
     gk.SettingFallbackPosition = fallbackManual;
     gk.SettingNightRotationStart = nightCustom;
@@ -234,7 +260,7 @@ function clayConfigCustom(this: ClayConfigThis, minified: unknown): void {
     openIndex = -1;
     wireHeadings();
     applyVisibility();
-    ['WidgetList', 'WidgetListRight', 'weather_loc_mode', 'SettingDisableAutobattery',
+    ['WidgetList', 'WidgetListRight', 'WidgetListTop', 'WidgetListBottom', 'weather_loc_mode', 'SettingDisableAutobattery',
      'SettingFallbackColumn', 'SettingNightRotationMode', 'SettingNightColors',
      'SettingBatteryWarnPct', 'SettingBatteryWarnDays', 'SettingBtWarnBorder']
       .forEach((k) => { clayConfig.getItemByMessageKey(k).on('change', applyVisibility); });

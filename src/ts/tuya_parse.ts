@@ -15,7 +15,7 @@ export interface TuyaRow {
   code: string;
   p: number;      // display precision (crypto_format.formatPrice)
   t: number;      // leading digits to trim
-  label: string;  // sidebar label; '' -> auto = code
+  label: string;  // widget label; '' -> auto = code
 }
 
 export const DELIM = '\x1f';

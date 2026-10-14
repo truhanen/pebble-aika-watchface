@@ -5,7 +5,7 @@
    Value = array of { wid, base, quote, p, label }. Each row is one compact line: a
    base <select> (+ "Custom…" revealing a free-text 3-letter code), a quote <select>
    (same), a numeric decimals input `p`, an optional label (empty -> auto
-   "BASE/QUOTE"), and a remove button. Row order is irrelevant (sidebar position is
+   "BASE/QUOTE"), and a remove button. Row order is irrelevant (widget position is
    decided in the widget list). Each row carries a STABLE wid (data-wid) in
    [216, 223); the widget-list component reads these rows live from the DOM to build
    its currency options (see config_widget_list.ts).

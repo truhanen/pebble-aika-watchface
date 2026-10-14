@@ -6,7 +6,7 @@
    popular-coin <select> (+ "Custom…" revealing a free-text CoinGecko id on a
    second line), a vs-currency <select> (USD/EUR), a numeric precision input `p`,
    an optional label input, and a remove button. There is NO ordering here — a
-   coin's position in the sidebar is decided in the widget list, so row order is
+   coin's position in the widget lists is decided in the widget list, so row order is
    irrelevant (it only affects the order coins appear in the widget picker's
    dropdown). Each row carries a STABLE wid (data-wid): legacy migrated rows keep
    15/16/17; new rows get the smallest free id in [200,216). The widget-list

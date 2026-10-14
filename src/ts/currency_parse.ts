@@ -15,7 +15,7 @@ export interface CurrencyRow {
   quote: string;    // 3-letter ISO, uppercase (looked up in rates)
   p: number;        // display precision (see crypto_format.formatPrice): >=0 decimals; <0 rounds
   t: number;        // leading digits to trim (see formatPrice); 0 = none
-  label: string;    // sidebar label; '' -> auto = quote currency
+  label: string;    // widget label; '' -> auto = quote currency
 }
 
 export const DELIM = '\x1f';                 // unit separator between wire fields

@@ -107,3 +107,7 @@ test('the night palette settings reach the watch', () => {
     assert.ok(COLOR_KEYS.indexOf(k) !== -1, k + ' must be sent as a colour');
   });
 });
+
+test('the removed SettingShowBatteryPct is no longer sent', () => {
+  assert.strictEqual(STRAIGHT_THROUGH_KEYS.indexOf('SettingShowBatteryPct'), -1);
+});

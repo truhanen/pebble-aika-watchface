@@ -3,19 +3,18 @@
 
 Tick b (b = 0..59) sits at the point where the ray from the screen centre at
 b*6 degrees (clockwise from 12 o'clock) meets the screen rectangle. It is 5 px
-long on the outermost row, 4 px deep for major (5-minute) ticks (b%5==0) and 1 px deep
-for minor ticks, its sides following rays from the centre; see cf_tick_pixels in
+long on the outermost row, 4 px deep for 5-minute ticks (b%5==0) and 1 px deep
+for 1-minute ticks, its sides following rays from the centre; see cf_tick_pixels in
 src/c/clock_face_calc.h for the exact rule, ported here in exact integer arithmetic.
-Every major tick (b%5==0) uses the foreground colour (--fg R,G,B, default black 0,0,0);
-minor ticks are solid light gray (171,171,171).
+All ticks use the foreground colour (--fg R,G,B, default black 0,0,0).
 Every tick pixel's 4-neighbour that is not itself a tick pixel (on screen) is its
 1 px shadow and must show the background colour (--bg R,G,B, default white
 255,255,255). All other pixels show the face and are ignored.
 
 Prints the match/mismatch counts and every mismatching pixel (up to 20); exits 1
 on a mismatch. With --out FILE, writes a 4x zoomed map: grey = match, red =
-mismatch, yellow = neither major nor minor, the face (non-tick) pixels as
-shot. Usage: check_strip.py shot.png [--out map.png] [--bg R,G,B] [--fg R,G,B]
+mismatch, the face (non-tick) pixels as shot.
+Usage: check_strip.py shot.png [--out map.png] [--bg R,G,B] [--fg R,G,B]
 """
 import math, sys
 from PIL import Image
@@ -111,13 +110,13 @@ def main():
                 shadow.add(n)
     for (x, y), b in owner.items():
         px = im.getpixel((x, y))
-        # Major tick uses foreground colour (--fg, default black); minor tick uses light gray (171,171,171)
-        expected_color = fg if is_major(b) else (171, 171, 171)
+        # All ticks use foreground colour (--fg, default black)
+        expected_color = fg
         if px == expected_color:
             ok += 1; out.putpixel((x, y), (150, 150, 150))
         else:
             bad += 1; wrong.append((x, y, b, px))
-            out.putpixel((x, y), (255, 200, 0) if px not in (fg, (171, 171, 171)) else (220, 0, 0))
+            out.putpixel((x, y), (220, 0, 0))
     for (x, y) in sorted(shadow):
         px = im.getpixel((x, y))
         if px == bg:

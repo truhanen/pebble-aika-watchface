@@ -1,7 +1,7 @@
 // Clock face: hour + minute hands, centre pivot, the 60 minute-boundary ticks along
-// the screen edges (separate, 5 px long on the outer edge with radial sides, 1 px background shadow, black on
-// every 5th and light gray otherwise) and the widgets (icons below the hands, values above), all on one
-// full-screen layer.
+// the screen edges (separate, 5 px long on the outer edge with radial sides, 1 px background shadow, all in the
+// time text colour: 4 px deep for 5-minute ticks and 1 px deep for 1-minute ticks) and the widgets (icons below
+// the hands, values above), all on one full-screen layer.
 //
 // Hand dimensions are those of the Nyquist watchface (truhanen/
 // pebble-nyquist-watchface, GPL-3.0); the minute hand is lengthened so it always
@@ -63,10 +63,9 @@ static void draw_hand_fill(GContext *ctx, const CfHandPose *p, GColor color) {
 
 // Colour of every tick pixel, and the shadow pixels around the ticks, all computed
 // once at init.
-typedef struct { uint8_t x, y, argb; } TickPixel;
+typedef struct { uint8_t x, y; } TickPixel;
 typedef struct { uint8_t x, y; } ShadowPixel;
 static TickPixel s_tick_pixels[CF_TICK_COUNT * CF_TICK_MAX_PIXELS];
-static bool s_tick_is_major[CF_TICK_COUNT * CF_TICK_MAX_PIXELS];  // track which pixels are major ticks
 static int s_tick_pixel_count;
 static ShadowPixel s_shadow_pixels[CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK];
 static int s_shadow_pixel_count;
@@ -88,13 +87,9 @@ static void build_tick_table(int w, int h) {
     int count = cf_tick_pixels(w, h, edge, t, depth, px);
     for (int i = 0; i < count; i++) {
       all[n] = px[i];
-      // Minor ticks are solid light gray; major ticks will use the foreground colour
-      // (resolved at draw time). We store GColorLightGray for both initially and update
-      // major pixels at draw time.
-      GColor color = GColorLightGray;
+      // All ticks use the foreground colour (resolved at draw time).
       s_tick_pixels[n] = (TickPixel){
-        (uint8_t)px[i].x, (uint8_t)px[i].y, color.argb };
-      s_tick_is_major[n] = is_major;
+        (uint8_t)px[i].x, (uint8_t)px[i].y };
       n++;
     }
   }
@@ -114,8 +109,7 @@ static void build_tick_table(int w, int h) {
 
 // Writes the shadow pixels (background colour), then the tick pixels, straight into
 // the framebuffer over whatever is underneath (including the minute hand). Everything
-// else in the strip area is left as drawn. Major (5-minute) ticks use the foreground
-// colour; minor ticks use light gray.
+// else in the strip area is left as drawn. All ticks use the foreground colour.
 static void draw_ticks(GContext *ctx, GColor bg, GColor fg) {
   GBitmap *fb = graphics_capture_frame_buffer(ctx);
   if (!fb) { return; }
@@ -129,9 +123,7 @@ static void draw_ticks(GContext *ctx, GColor bg, GColor fg) {
   for (int i = 0; i < s_tick_pixel_count; i++) {
     const TickPixel *p = &s_tick_pixels[i];
     if (p->y != last_y) { row = gbitmap_get_data_row_info(fb, p->y); last_y = p->y; }
-    // Major ticks use the foreground colour; minor ticks use their stored colour (light gray).
-    uint8_t color_argb = s_tick_is_major[i] ? fg.argb : p->argb;
-    row.data[p->x] = color_argb;
+    row.data[p->x] = fg.argb;
   }
   graphics_release_frame_buffer(ctx, fb);
 }

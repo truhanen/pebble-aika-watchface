@@ -112,10 +112,9 @@ static uint8_t battery_percent(void) {
   return (st.charge_percent > 0) ? st.charge_percent : 5;
 }
 
-// Widget 2: battery icon + number (no separate % unit)
+// Widget 2: battery icon + number, no percent sign in any language
 static bool value_battery(const WidgetCtx *c, char *buf, size_t n) {
-  // the percent sign goes first in Turkish
-  snprintf(buf, n, (settings.languageId == LANGUAGE_TR) ? "%%%d" : "%d", battery_percent());
+  snprintf(buf, n, "%d", battery_percent());
   return true;
 }
 

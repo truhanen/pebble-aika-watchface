@@ -177,6 +177,8 @@ static void face_update_proc(Layer *l, GContext *ctx) {
   hand_pose(center, hour_angle, CF_HOUR_SHOULDER, CF_HOUR_WIDTH, CF_HOUR_APEX_EXT, &hour);
   hand_pose(center, minute_angle, CF_MINUTE_SHOULDER, CF_MINUTE_WIDTH, CF_MINUTE_APEX_EXT, &minute);
 
+  // Both hands get a bg halo so they separate from the widget icons/units below them.
+  draw_hand_border(ctx, &hour, CF_HAND_EDGE_W + 2 * CF_HAND_HALO_W, bg);
   draw_hand_fill(ctx, &hour, fg);
   draw_hand_border(ctx, &hour, CF_HAND_EDGE_W, fg);
 

@@ -14,7 +14,7 @@
 #define CF_MINUTE_WIDTH       15
 #define CF_MINUTE_APEX_EXT     6
 #define CF_HAND_EDGE_W         9   // outline stroke (odd: the SDK rounds even widths down)
-#define CF_HAND_HALO_W         2   // bg halo around the minute hand, each side
+#define CF_HAND_HALO_W         2   // bg halo around each hand, each side
 #define CF_PIVOT_R             3
 
 // Minute shoulder: Nyquist's is 86. Ours is the shortest length whose stroked

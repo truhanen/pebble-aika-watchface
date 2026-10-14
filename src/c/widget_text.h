@@ -14,7 +14,7 @@ int WidgetText_inkHeight(int font);
 void WidgetText_drawAtBaseline(GContext *ctx, const char *text, int font, int x, int baseline);
 // Draw text so the digits' ink starts at row ink_top.
 void WidgetText_draw(GContext *ctx, const char *text, int font, int x, int ink_top);
-// A widget value: a 1 px shadow in `bg` in the four directions, then the text in `fg`.
+// A widget value: a 2 px shadow in `bg` (the CF_SHADOW_OFFSETS diamond), then the text in `fg`.
 void WidgetText_drawValue(GContext *ctx, const char *text, int font, int x, int ink_top,
                           GColor fg, GColor bg);
 

@@ -9,8 +9,8 @@ pixels). It is 5 px long on the outermost row (measured along the rounded bounda
 for 1-minute ticks, its sides following rays from the centre; see cf_tick_pixels in
 src/c/clock_face_calc.h for the exact rule, ported here in exact integer arithmetic.
 All ticks use the foreground colour (--fg R,G,B, default black 0,0,0).
-Every tick pixel's 4-neighbour that is not itself a tick pixel (on screen) is its
-1 px shadow and must show the background colour (--bg R,G,B, default white
+Every on-screen pixel within Manhattan distance 2 of a tick pixel (the 12-offset
+diamond, CF_SHADOW_R) that is not itself a tick pixel is its 2 px shadow and must show the background colour (--bg R,G,B, default white
 255,255,255). All other pixels show the face and are ignored.
 
 Prints the match/mismatch counts and every mismatching pixel (up to 20); exits 1
@@ -23,6 +23,7 @@ from PIL import Image
 
 W, H, S, LEN = 200, 228, 4, 5
 MINOR_TICK_DEPTH = 1
+SHADOW_R = 2   # CF_SHADOW_R: Manhattan reach of the shadow
 CX, CY = W / 2, H / 2
 RADIUS = 10   # CF_CORNER_R in src/c/clock_face_calc.h; override with --radius
 
@@ -166,10 +167,12 @@ def main():
             owner[(x, y)] = b
     shadow = set()
     for (x, y) in owner:
-        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-            n = (x + dx, y + dy)
-            if 0 <= n[0] < W and 0 <= n[1] < H and n not in owner:
-                shadow.add(n)
+        for dy in range(-SHADOW_R, SHADOW_R + 1):
+            for dx in range(-SHADOW_R, SHADOW_R + 1):
+                if not 1 <= abs(dx) + abs(dy) <= SHADOW_R: continue
+                n = (x + dx, y + dy)
+                if 0 <= n[0] < W and 0 <= n[1] < H and n not in owner:
+                    shadow.add(n)
     for (x, y), b in owner.items():
         px = im.getpixel((x, y))
         # All ticks use foreground colour (--fg, default black)

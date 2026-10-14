@@ -88,14 +88,24 @@ bool cf_in_band(int w, int h, int r, int x, int y, int depth);
 // corners the outer row follows the arc and its pixel count varies slightly around 5.
 int cf_tick_pixels(int w, int h, int r, float hx, float hy, int depth, CfPoint out[CF_TICK_MAX_PIXELS]);
 
-// Upper bound on the shadow pixels of one tick (tests check it).
-#define CF_SHADOW_MAX_PER_TICK 16
+// Shadow reach in px: every shadow (ticks, widget values, icon-only widgets) covers the
+// pixels within this Manhattan distance of the shape: all offsets (dx,dy) with
+// 1 <= |dx|+|dy| <= CF_SHADOW_R, a diamond (12 offsets for 2). A diamond keeps the shadow
+// 2 px wide along straight edges and avoids the notched corners a plain 4-direction
+// offset leaves on diagonals.
+#define CF_SHADOW_R             2
+#define CF_SHADOW_OFFSET_COUNT 12
+// The offsets, {dx, dy} each.
+extern const int8_t CF_SHADOW_OFFSETS[CF_SHADOW_OFFSET_COUNT][2];
 
-// Shadow of the ticks: every on-screen pixel that is a 4-neighbour (+-1 in x or y)
-// of some pixel of the n given tick pixels (all ticks together) and is not itself a
-// tick pixel, each listed once. Same style as the widget value shadow. Returns the
-// count, at most `max` (extra pixels are dropped). `scratch` is 2 * ((w*h + 7) / 8)
-// bytes of working memory; its contents are overwritten.
+// Upper bound on the shadow pixels of one tick (tests check it).
+#define CF_SHADOW_MAX_PER_TICK 40
+
+// Shadow of the ticks: every on-screen pixel within CF_SHADOW_R (Manhattan distance,
+// i.e. offset by one of CF_SHADOW_OFFSETS) of some pixel of the n given tick pixels (all
+// ticks together) that is not itself a tick pixel, each listed once. Same shape as the
+// widget shadow. Returns the count, at most `max` (extra pixels are dropped). `scratch`
+// is 2 * ((w*h + 7) / 8) bytes of working memory; its contents are overwritten.
 int cf_shadow_pixels(int w, int h, const CfPoint *ticks, int n, uint8_t *scratch,
                      CfPoint *out, int max);
 

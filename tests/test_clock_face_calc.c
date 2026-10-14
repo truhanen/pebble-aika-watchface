@@ -337,7 +337,8 @@ static void test_corner_ticks(void) {
 static uint8_t g_scratch[2 * ((W * H + 7) / 8)];
 static CfPoint g_shadow[CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK];
 
-// The shadow is exactly the on-screen non-tick 4-neighbours of tick pixels.
+// The shadow is exactly the on-screen non-tick pixels within Manhattan distance
+// CF_SHADOW_R of a tick pixel (the 12 diamond offsets).
 static void shadow_check(int r) {
   static CfPoint all[CF_TICK_COUNT * CF_TICK_MAX_PIXELS];
   static int is_tick[H][W], is_shadow[H][W], expect[H][W];
@@ -346,10 +347,14 @@ static void shadow_check(int r) {
   for (int b = 0; b < CF_TICK_COUNT; b++) { n += tick_at(r, b, depth_of(b), all + n); }
   for (int i = 0; i < n; i++) { is_tick[all[i].y][all[i].x] = 1; }
   for (int i = 0; i < n; i++) {
-    static const int dx[4] = { 1, -1, 0, 0 }, dy[4] = { 0, 0, 1, -1 };
-    for (int k = 0; k < 4; k++) {
-      int x = all[i].x + dx[k], y = all[i].y + dy[k];
-      if (x >= 0 && y >= 0 && x < W && y < H && !is_tick[y][x]) { expect[y][x] = 1; }
+    for (int dy = -CF_SHADOW_R; dy <= CF_SHADOW_R; dy++) {
+      for (int dx = -CF_SHADOW_R; dx <= CF_SHADOW_R; dx++) {
+        int d = (dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy);
+        int x = all[i].x + dx, y = all[i].y + dy;
+        if (d >= 1 && d <= CF_SHADOW_R && x >= 0 && y >= 0 && x < W && y < H && !is_tick[y][x]) {
+          expect[y][x] = 1;
+        }
+      }
     }
   }
   int sn = cf_shadow_pixels(W, H, all, n, g_scratch, g_shadow, CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK);
@@ -369,7 +374,27 @@ static void shadow_check(int r) {
   if (r == CF_CORNER_R) { printf("R=%d: %d tick pixels, %d shadow pixels\n", r, n, sn); }
 }
 
+static void test_shadow_offsets(void) {
+  // exactly the diamond: every (dx,dy) with 1 <= |dx|+|dy| <= CF_SHADOW_R once
+  int seen[2 * CF_SHADOW_R + 1][2 * CF_SHADOW_R + 1] = { { 0 } };
+  for (int i = 0; i < CF_SHADOW_OFFSET_COUNT; i++) {
+    int dx = CF_SHADOW_OFFSETS[i][0], dy = CF_SHADOW_OFFSETS[i][1];
+    int d = (dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy);
+    assert(d >= 1 && d <= CF_SHADOW_R);
+    assert(++seen[dy + CF_SHADOW_R][dx + CF_SHADOW_R] == 1);
+  }
+  int expect = 0;
+  for (int dy = -CF_SHADOW_R; dy <= CF_SHADOW_R; dy++) {
+    for (int dx = -CF_SHADOW_R; dx <= CF_SHADOW_R; dx++) {
+      int d = (dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy);
+      if (d >= 1 && d <= CF_SHADOW_R) { expect++; }
+    }
+  }
+  assert(expect == CF_SHADOW_OFFSET_COUNT);
+}
+
 static void test_shadow(void) {
+  test_shadow_offsets();
   for (int r = 0; r <= 20; r++) { shadow_check(r); }
 }
 

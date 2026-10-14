@@ -192,6 +192,12 @@ int cf_tick_pixels(int w, int h, int r, float hx, float hy, int depth, CfPoint o
   return n;
 }
 
+const int8_t CF_SHADOW_OFFSETS[CF_SHADOW_OFFSET_COUNT][2] = {
+  { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 },
+  { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 },
+  { 2, 0 }, { -2, 0 }, { 0, 2 }, { 0, -2 },
+};
+
 int cf_shadow_pixels(int w, int h, const CfPoint *ticks, int n, uint8_t *scratch,
                      CfPoint *out, int max) {
   int bytes = (w * h + 7) / 8;
@@ -201,11 +207,10 @@ int cf_shadow_pixels(int w, int h, const CfPoint *ticks, int n, uint8_t *scratch
     int bit = ticks[i].y * w + ticks[i].x;
     is_tick[bit >> 3] |= (uint8_t)(1 << (bit & 7));
   }
-  static const int8_t dx[4] = { 1, -1, 0, 0 }, dy[4] = { 0, 0, 1, -1 };
   int count = 0;
   for (int i = 0; i < n; i++) {
-    for (int k = 0; k < 4; k++) {
-      int x = ticks[i].x + dx[k], y = ticks[i].y + dy[k];
+    for (int k = 0; k < CF_SHADOW_OFFSET_COUNT; k++) {
+      int x = ticks[i].x + CF_SHADOW_OFFSETS[k][0], y = ticks[i].y + CF_SHADOW_OFFSETS[k][1];
       if (x < 0 || y < 0 || x >= w || y >= h) { continue; }
       int bit = y * w + x;
       uint8_t m = (uint8_t)(1 << (bit & 7));

@@ -1,6 +1,7 @@
 #include "widget_text.h"
 #include "widget_fonts.h"
 #include "widget_layout_calc.h"
+#include "clock_face_calc.h"
 #include <string.h>
 
 #define MAX_RUNS 6
@@ -61,10 +62,9 @@ void WidgetText_draw(GContext *ctx, const char *text, int font, int x, int ink_t
 
 void WidgetText_drawValue(GContext *ctx, const char *text, int font, int x, int ink_top,
                           GColor fg, GColor bg) {
-  static const int8_t DIRS[4][2] = { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } };
   graphics_context_set_text_color(ctx, bg);
-  for (int i = 0; i < 4; i++) {
-    WidgetText_draw(ctx, text, font, x + DIRS[i][0], ink_top + DIRS[i][1]);
+  for (int i = 0; i < CF_SHADOW_OFFSET_COUNT; i++) {
+    WidgetText_draw(ctx, text, font, x + CF_SHADOW_OFFSETS[i][0], ink_top + CF_SHADOW_OFFSETS[i][1]);
   }
   graphics_context_set_text_color(ctx, fg);
   WidgetText_draw(ctx, text, font, x, ink_top);

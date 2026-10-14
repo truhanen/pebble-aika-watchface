@@ -1,5 +1,5 @@
 // Clock face: hour + minute hands, centre pivot, the 60 minute-boundary ticks along
-// the screen edges (separate, 5 px long on the outer edge, following the frame's rounded corners (CF_CORNER_R), with radial sides, 1 px background shadow, all in the
+// the screen edges (separate, 5 px long on the outer edge, following the frame's rounded corners (CF_CORNER_R), with radial sides, 2 px background shadow, all in the
 // time text colour: 4 px deep for 5-minute ticks and 1 px deep for 1-minute ticks) and the widgets (icons below
 // the hands, values above), all on one full-screen layer.
 //

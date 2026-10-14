@@ -11,6 +11,7 @@
 #include "languages.h"
 #include "night_window_calc.h"
 #include "widget_list.h"
+#include "test_hooks.h"
 
 void (*message_processed_callback)(void);
 
@@ -50,6 +51,8 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   // differences.
   static Settings prevSettings;
   memcpy(&prevSettings, &settings, sizeof(Settings));
+
+  TestHooks_handleMessage(iterator);
 
   bool weatherDataUpdated = false;
 

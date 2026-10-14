@@ -7,6 +7,7 @@
 #include "crypto.h"
 #include "widget_list.h"
 #include <pebble.h>
+#include "test_hooks.h"
 
 GRect screen_rect;
 int sidebarWidth;

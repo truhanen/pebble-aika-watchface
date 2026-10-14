@@ -6,6 +6,7 @@
 #include "clock_analog.h"
 #include "warn_border_calc.h"
 #include "battery_days.h"
+#include "test_hooks.h"
 
 Layer* clock_area_layer;
 

@@ -16,6 +16,7 @@
 #include "poll_state_calc.h"
 #include "night_window_calc.h"
 #include "theme.h"
+#include "test_hooks.h"
 
 // windows and layers
 static Window* mainWindow;
@@ -104,6 +105,7 @@ void update_clock() {
   time(&rawTime);
   timeInfo = localtime(&rawTime);
 #endif
+  TestHooks_applyTime(timeInfo);
 
   ClockArea_update_time(timeInfo);
   Sidebar_updateTime(timeInfo);

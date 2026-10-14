@@ -87,7 +87,15 @@
       "SettingNightSlowRotation",
       "SettingNightColors",
       "SettingNightBgColor",
-      "SettingNightFgColor"
+      "SettingNightFgColor",
+      "TestTime",
+      "TestBattery",
+      "TestBt",
+      "TestSteps",
+      "TestSleepMin",
+      "TestDeepSleepMin",
+      "TestHeartRate",
+      "TestScene"
     ],
     "resources": {
       "media": [

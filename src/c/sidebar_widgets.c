@@ -16,6 +16,7 @@
 #include "sidebar.h"   // sidebarWidth, for fitting the LED row
 #include "battery_days.h"
 #include "sleep_calc.h"
+#include "test_hooks.h"
 
 int SidebarWidgets_xOffset;
 uint8_t SidebarWidgets_currentWidgetType = 0;

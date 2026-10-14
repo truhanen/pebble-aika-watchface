@@ -1,5 +1,6 @@
 #include <pebble.h>
 #include "util.h"
+#include "test_hooks.h"
 
 
 bool recolor_iterator_cb(GDrawCommand *command, uint32_t index, void *context) {

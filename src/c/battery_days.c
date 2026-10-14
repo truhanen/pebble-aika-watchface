@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (c) 2026 Tuomas Airaksinen
 #include "battery_days.h"
+#include "test_hooks.h"
 
 static BatteryDaysState s_state;
 

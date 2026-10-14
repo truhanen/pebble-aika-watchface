@@ -1,9 +1,13 @@
 {
-  "name": "timestyle-pebble",
-  "author": "Sykerö Software",
-  "version": "8.10.0",
+  "name": "pebble-nyquist-3",
+  "author": "Tuukka Ruhanen",
+  "version": "1.0.0",
   "keywords": [
-    "pebble-watchface"
+    "watchface",
+    "analog",
+    "readable",
+    "bold",
+    "widgets"
   ],
   "private": true,
   "dependencies": {
@@ -12,8 +16,8 @@
     "pebble-fctx": "^1.6.5"
   },
   "pebble": {
-    "displayName": "Sykerö TimeStyle",
-    "uuid": "812efd3c-309b-4474-a942-35bcb55a76f2",
+    "displayName": "Nyquist 3",
+    "uuid": "55a7038e-c87b-432a-8816-50108f72670c",
     "sdkVersion": "3",
     "enableMultiJS": true,
     "companionApp": {
@@ -29,10 +33,7 @@
       }
     },
     "targetPlatforms": [
-      "basalt",
-      "diorite",
-      "emery",
-      "flint"
+      "emery"
     ],
     "capabilities": [
       "location",

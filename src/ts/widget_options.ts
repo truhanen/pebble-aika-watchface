@@ -11,15 +11,28 @@
 
 export interface WidgetOption { id: number; label: string; }
 
+// KEEP IN SYNC with docs/widget_contract.md, src/c/widgets.h (WidgetType) and the
+// inlined STATIC_OPTIONS copy in config_widget_list.ts (tests/widget_options_sync).
+// Id 1 (BT disconnect, internal) and 4 (retired date) are deliberately not listed.
 export const STATIC_WIDGETS: WidgetOption[] = [
   { id: 0, label: 'Empty' },
   { id: 255, label: '🔁 Rotating' },
+  { id: 35, label: 'Digital time' },
+  { id: 26, label: 'Date d.m.' },
+  { id: 27, label: 'Date dd.mm.' },
+  { id: 28, label: 'Date dd.mm' },
+  { id: 29, label: 'Date d.m.yyyy' },
+  { id: 30, label: 'Date Wkday dd' },
+  { id: 31, label: 'Date Wkday d.m.' },
+  { id: 32, label: 'Date Wkday' },
+  { id: 33, label: 'Date dd Mon' },
+  { id: 34, label: 'Date yyyy-mm-dd' },
   { id: 3, label: 'Alternate Time Zone' },
   { id: 5, label: 'Seconds' },
   { id: 11, label: 'Swatch Internet Time' },
-  { id: 4, label: "Today's Date" },
   { id: 6, label: 'Week Number' },
   { id: 7, label: 'Current Weather' },
+  { id: 37, label: 'Weather (icon only)' },
   { id: 8, label: "Today's Forecast" },
   { id: 13, label: 'UV Index' },
   { id: 14, label: 'Electricity price' },
@@ -32,9 +45,35 @@ export const STATIC_WIDGETS: WidgetOption[] = [
   { id: 10, label: 'Steps' },
   { id: 21, label: 'Distance' },
   { id: 12, label: 'Heart Rate' },
-  { id: 2, label: 'Battery' },
+  { id: 2, label: 'Battery (icon + %)' },
+  { id: 36, label: 'Battery (icon only)' },
   { id: 22, label: 'Battery (days left)' },
+  { id: 38, label: 'Bluetooth (icon only)' },
   { id: 23, label: 'Tuya LEDs' },
+];
+
+// Value-font choices for a widget row. The array index IS the font index sent in the
+// payload flags (bits 0-4); FONT_DEFAULT (31) means "the position's default font".
+// KEEP IN SYNC with docs/widget_contract.md and FONT_KEYS in src/c/widget_fonts.c.
+export const FONT_DEFAULT = 31;
+export const FONT_OPTIONS: string[] = [
+  'Gothic 3x-small (14)',
+  'Gothic 2x-small (14 bold)',
+  'Gothic x-small (18 bold)',
+  'Gothic small (24 bold)',
+  'Roboto small (21 condensed)',
+  'Gothic medium (28 bold)',
+  'Leco medium (20 bold)',
+  'Bitham large (30 black)',
+  'Droid serif large (28 bold)',
+  'Leco large (26 bold)',
+  'Leco x-large (32 bold)',
+  'Bitham 2x-large (42 bold)',
+  'Leco 2x-large (36 bold)',
+  'Leco 2x-large (38 bold)',
+  'Leco 3x-large (42)',
+  'Leco 4x-large (60)',
+  'Leco 5x-large (60 bold)',
 ];
 
 export const ROTATING_ID = 255;

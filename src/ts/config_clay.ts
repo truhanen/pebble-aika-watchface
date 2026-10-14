@@ -126,18 +126,24 @@ const config = [
   {
     type: 'section',
     items: [
-      { type: 'heading', defaultValue: 'Sidebar widgets' },
+      { type: 'heading', defaultValue: 'Widgets' },
       { type: 'text', id: 'widgets-help', defaultValue:
-        'Each row is one widget. Pick the widget from the dropdown, reorder with ' +
-        '▲ / ▼, remove with ✕, and add more with “+ Add widget”.<br><br>' +
+        'Widgets are placed in four lists: the <b>left</b> and <b>right edge</b> of the ' +
+        'screen, and a single widget each at the <b>top</b> and <b>bottom centre</b>. ' +
+        'A widget’s value sits at the screen edge and its icon sits next to it, toward ' +
+        'the centre.<br><br>' +
+        'Each row is one widget. Pick the widget from the dropdown, choose the ' +
+        '<b>font</b> of its value (Default = Gothic medium at the edges, Bitham large ' +
+        'at the top / bottom), reorder with ▲ / ▼, remove with ✕, and add more with ' +
+        '“+ Add widget”. The top and bottom lists hold one widget each.<br><br>' +
         'The <b>◉ / ⊘</b> button after the dropdown shows or hides that ' +
         'widget’s <b>identifier</b> — the icon (battery, weather, steps, heart ' +
         'rate, …) or the short title label (UV, week number, electricity, a coin ' +
         'code, …). <b>◉</b> = shown (default); <b>⊘</b> = hidden, leaving ' +
-        'only the value and making the widget shorter so you can fit more into a ' +
-        'column.<br>' +
-        '(Widgets with no separate identifier — Empty, Today’s Date, Seconds, ' +
-        'Bluetooth disconnect — have no such button.)' },
+        'only the value and making the widget shorter so you can fit more along the ' +
+        'edge.<br>' +
+        '(Widgets with no separate identifier — Empty, the dates, Seconds and the ' +
+        'icon-only widgets — have no such button.)' },
       { type: 'text', id: 'widgets-power-warning', defaultValue:
         '<b>⚡ Battery note.</b> The watchface redraws <i>everything</i> at once — ' +
         'there is no partial refresh — so anything that forces a faster refresh ' +
@@ -148,12 +154,20 @@ const config = [
         'A rotating group set to <b>5 / 10 / 30 s</b> is the same effect on a smaller ' +
         'scale (12 / 6 / 2 extra full redraws per minute). Intervals of <b>1 min or ' +
         'longer are free</b> — they ride the refresh the watchface does anyway.' },
-      { type: 'text', defaultValue: '<b>Left sidebar widgets</b>' },
-      { type: 'widgetList', messageKey: 'WidgetList', defaultValue: [12, 15, 17] },
-      { type: 'text', defaultValue: '<b>Right sidebar widgets</b>' },
-      { type: 'widgetList', messageKey: 'WidgetListRight', defaultValue: [] },
-      { type: 'radiogroup', messageKey: 'SettingShowBatteryPct', label: 'Battery meter style',
-        defaultValue: '1', options: [{ label: 'Icon & percent', value: '1' }, { label: 'Icon only', value: '0' }] },
+      // Defaults: font 31 = "Default" (the watch maps it per list: Gothic medium on
+      // the edges, Bitham large at the top / bottom). Ids: 7 weather, 10 steps,
+      // 2 battery, 12 heart rate, 30 date "Wkday dd".
+      { type: 'text', defaultValue: '<b>Left edge</b>' },
+      { type: 'widgetList', messageKey: 'WidgetList',
+        defaultValue: [{ id: 7, hide: false, font: 31 }, { id: 10, hide: false, font: 31 }] },
+      { type: 'text', defaultValue: '<b>Right edge</b>' },
+      { type: 'widgetList', messageKey: 'WidgetListRight',
+        defaultValue: [{ id: 2, hide: false, font: 31 }, { id: 12, hide: false, font: 31 }] },
+      { type: 'text', defaultValue: '<b>Top center</b>' },
+      { type: 'widgetList', messageKey: 'WidgetListTop', max: 1,
+        defaultValue: [{ id: 30, hide: false, font: 31 }] },
+      { type: 'text', defaultValue: '<b>Bottom center</b>' },
+      { type: 'widgetList', messageKey: 'WidgetListBottom', max: 1, defaultValue: [] },
       { type: 'radiogroup', messageKey: 'SettingDisableAutobattery', label: 'Auto-show battery meter',
         defaultValue: '0', options: [{ label: 'On', value: '0' }, { label: 'Off', value: '1' }] },
       { type: 'select', messageKey: 'SettingAutoBatteryThreshold', label: 'Auto-show below battery %',
@@ -163,15 +177,16 @@ const config = [
           { label: '40 %', value: '40' }, { label: '50 %', value: '50' },
         ] },
       { type: 'radiogroup', messageKey: 'SettingFallbackColumn',
-        label: 'Battery / disconnect icon column', defaultValue: '0', options: [
-          { label: 'Automatic', value: '0' }, { label: 'Left bar', value: '1' }, { label: 'Right bar', value: '2' },
+        label: 'Battery / disconnect icon edge', defaultValue: '0', options: [
+          { label: 'Automatic', value: '0' }, { label: 'Left edge', value: '1' }, { label: 'Right edge', value: '2' },
         ] },
-      { type: 'input', messageKey: 'SettingFallbackPosition', label: 'Position in that bar',
+      { type: 'input', messageKey: 'SettingFallbackPosition', label: 'Position in that edge list',
         attributes: { type: 'number', min: 1, max: 17, step: 1, placeholder: '1' }, defaultValue: '1' },
       { type: 'text', id: 'fallback-help', defaultValue:
-        'Position N replaces the Nth widget in the chosen bar. A position one past ' +
-        'the last widget adds the battery / disconnect icon as an extra at the bottom ' +
-        'instead of replacing one.' },
+        'Position N replaces the Nth widget in the chosen edge list (left or right; the ' +
+        'top and bottom centre lists are not used). A position one past the last widget ' +
+        'adds the battery / disconnect icon as an extra at the end instead of ' +
+        'replacing one.' },
     ],
   },
 
@@ -245,7 +260,7 @@ const config = [
       { type: 'heading', id: 'heading-crypto', defaultValue: 'Crypto' },
       { type: 'text', defaultValue:
         'Prices load from CoinGecko; the Data Refresh interval (bottom of this page) ' +
-        'sets how often. Add coins, then place each in the sidebar widget list above. ' +
+        'sets how often. Add coins, then place each in one of the widget lists above. ' +
         'Precision: positive = decimals (2 → 104000.00), negative = round (−3 → 104). ' +
         'Trim: cut N leading digits (1.160 with trim 2 → 60).' },
       { type: 'cryptoList', messageKey: 'CryptoList', defaultValue: [] },
@@ -259,10 +274,10 @@ const config = [
       { type: 'heading', id: 'heading-currency', defaultValue: 'Currency pairs' },
       { type: 'text', defaultValue:
         'Live fiat exchange rates from ExchangeRate-API (open access, no key). ' +
-        'Add pairs (base / quote), then place each in the sidebar widget list above. ' +
+        'Add pairs (base / quote), then place each in one of the widget lists above. ' +
         'Precision: positive = decimals (EUR/USD 4 → 1.0823), negative = round. ' +
         'Trim: cut N leading digits (1.160, trim 2 → 60). ' +
-        'Leave the label empty to show the quote currency (e.g. USD); short labels fit the narrow sidebar best.' },
+        'Leave the label empty to show the quote currency (e.g. USD); short labels fit best.' },
       { type: 'currencyList', messageKey: 'CurrencyList', defaultValue: [] },
     ],
   },
@@ -274,7 +289,7 @@ const config = [
       { type: 'heading', id: 'heading-tuya', defaultValue: 'Tuya sensors & switches' },
       { type: 'text', defaultValue:
         'Show live readings from your Tuya cloud sensors (soil moisture, temperature, ' +
-        'humidity, battery, …) in a sidebar widget. This talks to Tuya&#39;s cloud, so it ' +
+        'humidity, battery, …) in a widget. This talks to Tuya&#39;s cloud, so it ' +
         'needs your own free Tuya developer keys &mdash; the official Tuya / Smart Life app ' +
         'cannot be read directly.<br><br>' +
         '<b>1.</b> Go to <b>iot.tuya.com</b> and sign up. In the left menu pick <b>Cloud &gt; ' +
@@ -309,14 +324,14 @@ const config = [
         'newly-added device shows up the next time you open settings.)<br><br>' +
         'Add a sensor, pick its datapoint &mdash; the dropdown shows each code&#39;s current value, ' +
         'so the right one is easy to spot (e.g. a soil sensor&#39;s real moisture) &mdash; then place ' +
-        'it in the sidebar widget list near the top of this page.<br><br>' +
+        'it in one of the widget lists near the top of this page.<br><br>' +
         'Precision: positive = decimals, negative = round. Trim: cut N leading digits. ' +
         'Leave the label empty to use the datapoint code.' },
       { type: 'tuyaCatalog', messageKey: 'TuyaCatalog', defaultValue: '' },
       { type: 'tuyaList', messageKey: 'TuyaList', defaultValue: [] },
       { type: 'text', defaultValue:
         'Switches can also be shown as a compact row of coloured LEDs — add them below, ' +
-        'then place the <b>Tuya LEDs</b> widget in a sidebar slot.' },
+        'then place the <b>Tuya LEDs</b> widget in one of the widget lists.' },
       { type: 'tuyaLedList', messageKey: 'TuyaLedList', defaultValue: [] },
     ],
   },
@@ -369,8 +384,7 @@ const config = [
     items: [
       { type: 'heading', defaultValue: 'Warning border' },
       { type: 'text', defaultValue:
-        'Draws a coloured frame around the clock (not around the sidebars or the ' +
-        'date/status strips) when something needs attention. Off by default.' },
+        'Draws a coloured frame around the clock face when something needs attention. Off by default.' },
       { type: 'select', messageKey: 'SettingBatteryWarnPct', label: 'Battery warning below',
         defaultValue: '0', options: [
           { label: 'Off', value: '0' },
@@ -413,7 +427,7 @@ const config = [
     items: [
       { type: 'heading', defaultValue: 'Night' },
       { type: 'text', defaultValue:
-        'One night window, two independent uses: saving battery on sidebar rotation, ' +
+        'One night window, two independent uses: saving battery on widget rotation, ' +
         'and a dark palette.' },
       // NOTE: the messageKey names below keep the historical "SettingNightRotation*"
       // spelling on purpose, even though this window now feeds two independent

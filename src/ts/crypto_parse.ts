@@ -15,7 +15,7 @@ export interface CoinRow {
   vs: string;       // 'usd' | 'eur'
   p: number;        // display precision (see formatPrice)
   t: number;        // leading digits to trim (see formatPrice); 0 = none
-  label: string;    // sidebar label; '' -> uppercased coin id
+  label: string;    // widget label; '' -> uppercased coin id
 }
 
 export const DELIM = '\x1f';                 // unit separator between wire fields

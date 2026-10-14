@@ -6,7 +6,7 @@
    datapoint <select> (both from the TuyaCatalog baked into clay-settings by PKJS), a
    precision input p, a trim input t, and an optional label (empty -> the code). Each
    row carries a STABLE wid (data-wid) in [128, 144); config_widget_list.ts reads these
-   rows live from the DOM to build the sidebar picker's Tuya options.
+   rows live from the DOM to build the widget picker's Tuya options.
 
    Serialized via toSource() + re-eval'd in the webview -> fully self-contained: no
    runtime imports, no module-scope helpers, no spread/destructuring, native DOM only.

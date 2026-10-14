@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Tuomas Airaksinen
 
 /* Clay custom component "tuyaLedList": the ordered SET of Tuya switches drawn by the
-   Tuya LED-row sidebar widget (widget id 23). Value = array of { deviceId, code },
+   Tuya LED-row widget (widget id 23). Value = array of { deviceId, code },
    max 6, order = LED position (left to right, top to bottom). Only BOOLEAN
    datapoints are offered: a code qualifies if the catalog says type 'Boolean' or its
    sampled value is a boolean (manufacturer-custom DPs often carry no spec type).

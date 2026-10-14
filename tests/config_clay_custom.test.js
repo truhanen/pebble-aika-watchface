@@ -87,7 +87,7 @@ function makeDocument() {
 }
 
 // widgetVals: left-list widget IDs. opts: {locMode, autoBatteryDisabled, rightVals,
-// fallbackColumn}
+// topVals, bottomVals, rawLeft, fallbackColumn}
 function makeClay(widgetVals, opts) {
   opts = opts || {};
   const items = flattenConfig(configArr).map(makeItem);
@@ -97,8 +97,13 @@ function makeClay(widgetVals, opts) {
     if (it.messageKey) { byKey[it.messageKey] = it; }
     if (it.id) { byId[it.id] = it; }
   });
-  byKey['WidgetList'].value = (widgetVals || []).map((v) => parseInt(v, 10) || 0);
-  byKey['WidgetListRight'].value = (opts.rightVals || []).map((v) => parseInt(v, 10) || 0);
+  // List values are arrays of {id,hide,font} slot objects (what the widgetList
+  // component produces); opts.raw* inject an arbitrary (e.g. legacy flat) value.
+  const slotsOf = (vals) => (vals || []).map((v) => ({ id: parseInt(v, 10) || 0, hide: false, font: 31 }));
+  byKey['WidgetList'].value = opts.rawLeft !== undefined ? opts.rawLeft : slotsOf(widgetVals);
+  byKey['WidgetListRight'].value = slotsOf(opts.rightVals);
+  byKey['WidgetListTop'].value = slotsOf(opts.topVals);
+  byKey['WidgetListBottom'].value = slotsOf(opts.bottomVals);
   byKey['weather_loc_mode'].value = opts.locMode || 'auto';
   byKey['SettingDisableAutobattery'].value = String(opts.autoBatteryDisabled ? 1 : 0);
   byKey['SettingFallbackColumn'].value = String(opts.fallbackColumn !== undefined ? opts.fallbackColumn : 0);
@@ -153,9 +158,9 @@ function openSectionFor(c, keyOrId) {
   return head;
 }
 
-test('no widgets: weather/electricity/alt hidden; battery style shown (auto-battery on)', () => {
+test('no widgets: weather/electricity/alt hidden; fallback settings shown', () => {
   const c = render([]);
-  openSectionFor(c, 'SettingShowBatteryPct');
+  openSectionFor(c, 'SettingFallbackColumn');
   assert.strictEqual(c.byId['heading-weather'].shown, false);
   assert.strictEqual(c.byKey['SettingUseMetric'].shown, false);
   assert.strictEqual(c.byKey['weather_loc_mode'].shown, false);
@@ -163,7 +168,7 @@ test('no widgets: weather/electricity/alt hidden; battery style shown (auto-batt
   assert.strictEqual(c.byKey['SettingElecQuietStart'].shown, false);
   assert.strictEqual(c.byKey['SettingElecCheapFactorPct'].shown, false);
   assert.strictEqual(c.byKey['SettingAltClockName'].shown, false);
-  assert.strictEqual(c.byKey['SettingShowBatteryPct'].shown, true);
+  assert.strictEqual(c.byKey['SettingFallbackColumn'].shown, true);
 });
 
 test('weather temp widget (7): weather shown incl units; manual fields hidden in auto mode', () => {
@@ -186,11 +191,55 @@ test('UV index only (13): weather shown but units hidden (UV is unitless)', () =
   assert.strictEqual(c.byKey['SettingUseMetric'].shown, false);
 });
 
-test('hidden-identifier flag (0x20) still gates the widget\'s settings', () => {
-  const c = render([7 | 0x20]);   // hidden weather is still weather
+test('a hidden-identifier weather widget still gates the weather settings', () => {
+  const c = render([], { rawLeft: [{ id: 7, hide: true, font: 31 }] });
   openSectionFor(c, 'SettingUseMetric');
   assert.strictEqual(c.byId['heading-weather'].shown, true);
   assert.strictEqual(c.byKey['SettingUseMetric'].shown, true);
+});
+
+test('legacy flat list values (0x20 hide flag, rotating marker) still gate settings', () => {
+  const hidden = render([], { rawLeft: [7 | 0x20] });   // hidden weather is still weather
+  openSectionFor(hidden, 'SettingUseMetric');
+  assert.strictEqual(hidden.byKey['SettingUseMetric'].shown, true);
+  // rotating group: 255, count, interval, members... (count/interval are NOT ids)
+  const rot = render([], { rawLeft: [255, 2, 3, 3, 5] });
+  openSectionFor(rot, 'SettingAltClockName');
+  assert.strictEqual(rot.byKey['SettingAltClockName'].shown, true);
+  assert.strictEqual(rot.byId['heading-weather'].shown, false);
+});
+
+test('icon-only weather (37): weather source settings shown, units hidden', () => {
+  const c = render([37]);
+  openSectionFor(c, 'weather_loc_mode');
+  assert.strictEqual(c.byId['heading-weather'].shown, true);
+  assert.strictEqual(c.byKey['weather_loc_mode'].shown, true);
+  assert.strictEqual(c.byKey['weather_datasource'].shown, true);
+  assert.strictEqual(c.byKey['SettingUseMetric'].shown, false);
+});
+
+test('top / bottom centre lists gate settings too', () => {
+  const top = render([], { topVals: [7] });
+  assert.strictEqual(top.byId['heading-weather'].shown, true);
+  const bottom = render([], { bottomVals: [18] });
+  assert.strictEqual(bottom.byId['heading-electricity'].shown, true);
+  const none = render([]);
+  assert.strictEqual(none.byId['heading-weather'].shown, false);
+});
+
+test('rotating-group members gate settings', () => {
+  const c = render([], { rawLeft: [{ rotating: true, interval: 3, members: [
+    { id: 10, hide: false, font: 31 }, { id: 3, hide: false, font: 31 }] }] });
+  openSectionFor(c, 'SettingAltClockName');
+  assert.strictEqual(c.byKey['SettingAltClockName'].shown, true);
+});
+
+test('live change: a weather widget in the top list reveals weather', () => {
+  const c = render([]);
+  assert.strictEqual(c.byId['heading-weather'].shown, false);
+  c.byKey['WidgetListTop'].value = [{ id: 7, hide: false, font: 31 }];
+  c.byKey['WidgetListTop'].changeHandlers.forEach((fn) => fn());
+  assert.strictEqual(c.byId['heading-weather'].shown, true);
 });
 
 test('weather + manual location: manual fields shown', () => {
@@ -236,22 +285,10 @@ test('alt time zone widget (3): alt clock name + offset shown', () => {
   assert.strictEqual(c.byKey['SettingAltClockOffset'].shown, true);
 });
 
-test('battery style: shown with battery widget even if auto-battery off', () => {
-  const c = render([2], { autoBatteryDisabled: true });
-  openSectionFor(c, 'SettingShowBatteryPct');
-  assert.strictEqual(c.byKey['SettingShowBatteryPct'].shown, true);
-});
-
-test('battery style: hidden when no battery widget AND auto-battery off', () => {
-  const c = render([], { autoBatteryDisabled: true });
-  openSectionFor(c, 'SettingShowBatteryPct');
-  assert.strictEqual(c.byKey['SettingShowBatteryPct'].shown, false);
-});
-
 test('live change: selecting a weather widget reveals weather after re-render', () => {
   const c = render([]);
   assert.strictEqual(c.byId['heading-weather'].shown, false);
-  c.byKey['WidgetList'].value = [7];
+  c.byKey['WidgetList'].value = [{ id: 7, hide: false, font: 31 }];
   c.byKey['WidgetList'].changeHandlers.forEach((fn) => fn());
   openSectionFor(c, 'SettingUseMetric');
   assert.strictEqual(c.byId['heading-weather'].shown, true);
@@ -269,15 +306,6 @@ test('live change: switching weather location to manual reveals lat/lng/label', 
   assert.strictEqual(c.byKey['weather_loc_lng'].shown, true);
 });
 
-test('live change: disabling auto-battery hides battery style when no battery widget', () => {
-  const c = render([]);  // no widgets, auto-battery on -> style shown
-  openSectionFor(c, 'SettingShowBatteryPct');
-  assert.strictEqual(c.byKey['SettingShowBatteryPct'].shown, true);
-  c.byKey['SettingDisableAutobattery'].value = '1';
-  c.byKey['SettingDisableAutobattery'].changeHandlers.forEach((fn) => fn());
-  assert.strictEqual(c.byKey['SettingShowBatteryPct'].shown, false);
-});
-
 test('right-list weather widget reveals weather section', () => {
   const c = render([], { rightVals: [7] });
   openSectionFor(c, 'SettingUseMetric');
@@ -288,7 +316,7 @@ test('right-list weather widget reveals weather section', () => {
 test('live change: adding a weather widget to the right list reveals weather', () => {
   const c = render([]);
   assert.strictEqual(c.byId['heading-weather'].shown, false);
-  c.byKey['WidgetListRight'].value = [7];
+  c.byKey['WidgetListRight'].value = [{ id: 7, hide: false, font: 31 }];
   c.byKey['WidgetListRight'].changeHandlers.forEach((fn) => fn());
   assert.strictEqual(c.byId['heading-weather'].shown, true);
 });
@@ -446,16 +474,17 @@ test('accordion: chevron flips ▸ -> ▾ when a section opens', () => {
   assert.match(w.$manipulatorTarget.innerHTML, /▾/, 'open shows ▾');
 });
 
-test('accordion: Sidebar widgets is a single group (13 rows, not split by sub-labels)', () => {
+test('accordion: Widgets is a single group (13 rows, not split by sub-labels)', () => {
   const c = render([]);
   const headings = c.getAllItems().filter((it) => it.config.type === 'heading');
   assert.strictEqual(headings.length, 13, 'exactly 13 accordion heading rows (13 sections 1:1)');
-  const head = openSectionFor(c, 'SettingShowBatteryPct');
-  assert.strictEqual(head.config.defaultValue, 'Sidebar widgets',
-    'battery setting opens under the "Sidebar widgets" heading, not a sub-label');
-  assert.strictEqual(c.byKey['SettingShowBatteryPct'].shown, true);
+  const head = openSectionFor(c, 'SettingFallbackColumn');
+  assert.strictEqual(head.config.defaultValue, 'Widgets',
+    'fallback setting opens under the "Widgets" heading, not a sub-label');
   assert.strictEqual(c.byKey['SettingFallbackColumn'].shown, true);
-  assert.strictEqual(c.byKey['WidgetListRight'].shown, true);
+  ['WidgetList', 'WidgetListRight', 'WidgetListTop', 'WidgetListBottom'].forEach((k) => {
+    assert.strictEqual(c.byKey[k].shown, true, k + ' shown with the Widgets section');
+  });
 });
 
 test('accordion: removing an open section\'s gating widget closes it; re-adding reopens collapsed', () => {
@@ -466,7 +495,7 @@ test('accordion: removing an open section\'s gating widget closes it; re-adding 
   c.byKey['WidgetList'].changeHandlers.forEach((fn) => fn());
   assert.strictEqual(c.byId['heading-weather'].shown, false, 'heading hidden when gated off');
   assert.strictEqual(c.byKey['SettingUseMetric'].shown, false, 'items hidden when force-closed');
-  c.byKey['WidgetList'].value = [7];        // re-add weather widget
+  c.byKey['WidgetList'].value = [{ id: 7, hide: false, font: 31 }];        // re-add weather widget
   c.byKey['WidgetList'].changeHandlers.forEach((fn) => fn());
   assert.strictEqual(c.byId['heading-weather'].shown, true, 'heading shown again');
   assert.strictEqual(c.byKey['SettingUseMetric'].shown, false, 'came back collapsed, not auto-opened');
@@ -474,12 +503,14 @@ test('accordion: removing an open section\'s gating widget closes it; re-adding 
 
 test('accordion: custom-component sections collapse (widgetList/cryptoList/... have no hide/show manipulator)', () => {
   const c = render([]);
-  // Sidebar widgets contains widgetList — a custom component whose manipulator is a
+  // Widgets contains widgetList — a custom component whose manipulator is a
   // bare {get,set} with no hide/show. The old code called it.hide() and threw here,
-  // aborting applyVisibility so every section after Sidebar widgets stayed visible.
+  // aborting applyVisibility so every section after Widgets stayed visible.
   openSectionFor(c, 'SettingHourlyVibe');   // open Clock -> all other sections collapsed
   assert.strictEqual(c.byKey['WidgetList'].shown, false, 'widgetList hidden when collapsed');
   assert.strictEqual(c.byKey['WidgetListRight'].shown, false);
+  assert.strictEqual(c.byKey['WidgetListTop'].shown, false);
+  assert.strictEqual(c.byKey['WidgetListBottom'].shown, false);
   assert.strictEqual(c.byKey['CryptoList'].shown, false);
   assert.strictEqual(c.byKey['CurrencyList'].shown, false);
   assert.strictEqual(c.byKey['TuyaList'].shown, false);
@@ -574,4 +605,38 @@ test('live change: turning on night colours reveals the palette pickers', () => 
   c.byKey['SettingNightColors'].changeHandlers.forEach((fn) => fn());
   assert.strictEqual(c.byKey['SettingNightBgColor'].shown, true);
   assert.strictEqual(c.byKey['SettingNightFgColor'].shown, true);
+});
+
+// ------------------------------------------------------ Widgets section layout
+test('Widgets section: four widgetLists in order, with the expected max/defaults', () => {
+  const items = flattenConfig(configArr);
+  const lists = items.filter((it) => it.type === 'widgetList');
+  assert.deepStrictEqual(lists.map((l) => l.messageKey),
+    ['WidgetList', 'WidgetListRight', 'WidgetListTop', 'WidgetListBottom']);
+  assert.strictEqual(lists[0].max, undefined);
+  assert.strictEqual(lists[1].max, undefined);
+  assert.strictEqual(lists[2].max, 1);
+  assert.strictEqual(lists[3].max, 1);
+  const ids = (l) => l.defaultValue.map((e) => e.id);
+  assert.deepStrictEqual(ids(lists[0]), [7, 10]);
+  assert.deepStrictEqual(ids(lists[1]), [2, 12]);
+  assert.deepStrictEqual(ids(lists[2]), [30]);
+  assert.deepStrictEqual(ids(lists[3]), []);
+  lists.forEach((l) => l.defaultValue.forEach((e) => {
+    assert.strictEqual(e.font, 31, 'defaults use the position default font');
+    assert.strictEqual(e.hide, false);
+  }));
+  const labels = items.filter((it) => it.type === 'text' && /^<b>(Left|Right|Top|Bottom) /.test(it.defaultValue))
+    .map((it) => it.defaultValue);
+  assert.deepStrictEqual(labels,
+    ['<b>Left edge</b>', '<b>Right edge</b>', '<b>Top center</b>', '<b>Bottom center</b>']);
+});
+
+test('no removed settings or sidebar wording remain in the config', () => {
+  const json = JSON.stringify(configArr);
+  ['SettingShowBatteryPct', 'SettingUseLargeFonts', 'SettingColorSidebar', 'SettingSidebarTextColor',
+   'SettingSidebarBgColor', 'SettingAnalogTicks'].forEach((k) => {
+    assert.ok(json.indexOf(k) === -1, k + ' must not be in the config');
+  });
+  assert.ok(!/sidebar/i.test(json), 'no "sidebar" wording in user-facing config text');
 });

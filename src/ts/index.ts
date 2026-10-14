@@ -17,7 +17,7 @@ import Clay from 'pebble-clay';
 import clayConfig from './config_clay';
 import clayConfigCustom from './config_clay_custom';
 import widgetListComponent from './config_widget_list';
-import { widgetListToPayload } from './widget_list_payload';
+import { widgetListToPayload, widgetListIds } from './widget_list_payload';
 import { isWatchPollRequest, isColdPollRequest } from './poll_request';
 import { toAppMessageValue } from './app_message_value';
 import { STRAIGHT_THROUGH_KEYS, COLOR_KEYS } from './config_send_keys';
@@ -185,16 +185,21 @@ Pebble.addEventListener('webviewclosed', (e) => {
     window.localStorage.setItem('weather_api_key', '');
   }
 
-  // widget lists -> two byte-array keys the watch draws per column (variable length).
-  const widgetPayload = widgetListToPayload(s.WidgetList);
-  const widgetPayloadRight = widgetListToPayload(s.WidgetListRight);
-  dict.SettingWidgetList = widgetPayload;
-  dict.SettingRightWidgetList = widgetPayloadRight;
+  // widget lists -> four v2 byte-array keys the watch draws (left / right edge, top /
+  // bottom centre; see docs/widget_contract.md).
+  dict.SettingWidgetList = widgetListToPayload(s.WidgetList, 'side');
+  dict.SettingRightWidgetList = widgetListToPayload(s.WidgetListRight, 'side');
+  dict.SettingTopWidgetList = widgetListToPayload(s.WidgetListTop, 'center');
+  dict.SettingBottomWidgetList = widgetListToPayload(s.WidgetListBottom, 'center');
 
-  // derive disable_* flags from the selected widget IDs across BOTH lists
-  const widgetIDs = widgetPayload.concat(widgetPayloadRight);
+  // derive disable_* flags from the plain widget ids (no flags) across ALL four lists
+  const widgetIDs = widgetListIds(s.WidgetList, 'side')
+    .concat(widgetListIds(s.WidgetListRight, 'side'))
+    .concat(widgetListIds(s.WidgetListTop, 'center'))
+    .concat(widgetListIds(s.WidgetListBottom, 'center'));
   window.localStorage.setItem('disable_weather',
-    (widgetIDs.indexOf(7) !== -1 || widgetIDs.indexOf(8) !== -1 || widgetIDs.indexOf(13) !== -1) ? 'no' : 'yes');
+    (widgetIDs.indexOf(7) !== -1 || widgetIDs.indexOf(8) !== -1 || widgetIDs.indexOf(13) !== -1 ||
+     widgetIDs.indexOf(37) !== -1) ? 'no' : 'yes');
   window.localStorage.setItem('disable_electricity',
     (widgetIDs.indexOf(14) !== -1 || widgetIDs.indexOf(18) !== -1 || widgetIDs.indexOf(19) !== -1) ? 'no' : 'yes');
   // crypto: enabled iff any placed widget id is in the crypto range (15/16/17 or 200+)

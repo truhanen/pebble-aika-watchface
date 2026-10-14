@@ -12,7 +12,7 @@ export const STRAIGHT_THROUGH_KEYS: string[] = [
   'SettingLanguageID', 'SettingShowLeadingZero', 'SettingDisconnectIcon',
   'SettingBluetoothVibe', 'SettingHourlyVibe',
   'SettingUseMetric',
-  'SettingShowBatteryPct', 'SettingDisableAutobattery', 'SettingAltClockName', 'SettingAltClockOffset',
+  'SettingDisableAutobattery', 'SettingAltClockName', 'SettingAltClockOffset',
   'SettingDecimalSep',
   'SettingPollIntervalMin', 'SettingElecQuietStart', 'SettingElecQuietEnd',
   'SettingElecCheapFactorPct',

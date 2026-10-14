@@ -98,23 +98,23 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   // Font choices; index == font index in the payload. KEEP IN SYNC with
   // src/ts/widget_options.ts FONT_OPTIONS and docs/widget_contract.md.
   const FONT_OPTIONS: string[] = [
-    'Gothic 3x-small (14)',
-    'Gothic 2x-small (14 bold)',
-    'Gothic x-small (18 bold)',
-    'Gothic small (24 bold)',
-    'Roboto small (21 condensed)',
-    'Gothic medium (28 bold)',
-    'Leco medium (20 bold)',
-    'Bitham large (30 black)',
-    'Droid serif large (28 bold)',
-    'Leco large (26 bold)',
-    'Leco x-large (32 bold)',
-    'Bitham 2x-large (42 bold)',
-    'Leco 2x-large (36 bold)',
-    'Leco 2x-large (38 bold)',
-    'Leco 3x-large (42)',
-    'Leco 4x-large (60)',
-    'Leco 5x-large (60 bold)',
+    'Gothic 3x-small',
+    'Gothic 2x-small',
+    'Gothic x-small',
+    'Gothic small',
+    'Roboto small',
+    'Gothic medium',
+    'Leco medium',
+    'Bitham large',
+    'Droid serif large',
+    'Leco large',
+    'Leco x-large',
+    'Bitham 2x-large',
+    'Leco 2x-large 36',
+    'Leco 2x-large 38',
+    'Leco 3x-large',
+    'Leco 4x-large',
+    'Leco 5x-large',
   ];
 
   const INTERVAL_OPTIONS: { code: number; label: string }[] = [
@@ -289,7 +289,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   function fontOptionsHtml(selected: number): string {
     let defLabel = 'Default';
     if (!isNaN(cfgDefFont) && cfgDefFont >= 0 && cfgDefFont < FONT_OPTIONS.length) {
-      defLabel += ' (' + FONT_OPTIONS[cfgDefFont].replace(/\s*\(.*$/, '') + ')';
+      defLabel += ' (' + FONT_OPTIONS[cfgDefFont] + ')';
     }
     let html = '<option value="' + FONT_DEFAULT + '"' + (selected === FONT_DEFAULT ? ' selected' : '') +
       '>' + defLabel + '</option>';

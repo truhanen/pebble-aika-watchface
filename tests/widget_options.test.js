@@ -52,10 +52,10 @@ test('FONT_OPTIONS has the 17 contract labels; FONT_DEFAULT is 31', () => {
   const { FONT_OPTIONS, FONT_DEFAULT } = require('../src/pkjs/widget_options');
   assert.strictEqual(FONT_DEFAULT, 31);
   assert.strictEqual(FONT_OPTIONS.length, 17);
-  assert.strictEqual(FONT_OPTIONS[0], 'Gothic 3x-small (14)');
-  assert.strictEqual(FONT_OPTIONS[5], 'Gothic medium (28 bold)');
-  assert.strictEqual(FONT_OPTIONS[7], 'Bitham large (30 black)');
-  assert.strictEqual(FONT_OPTIONS[16], 'Leco 5x-large (60 bold)');
+  assert.strictEqual(FONT_OPTIONS[0], 'Gothic 3x-small');
+  assert.strictEqual(FONT_OPTIONS[5], 'Gothic medium');
+  assert.strictEqual(FONT_OPTIONS[7], 'Bitham large');
+  assert.strictEqual(FONT_OPTIONS[16], 'Leco 5x-large');
 });
 
 test('STATIC_WIDGETS includes the Battery Days widget (id 22)', () => {

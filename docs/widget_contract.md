@@ -40,27 +40,27 @@ A list is a sequence of slots. Each slot is either:
 
 ## Font indices
 
-The label is shown on the config page.
+The label is shown on the config page. Size details are noted with the Pebble font key.
 
 | # | Label | Pebble font |
 |---|---|---|
-| 0 | Gothic 3x-small (14) | GOTHIC_14 |
-| 1 | Gothic 2x-small (14 bold) | GOTHIC_14_BOLD |
-| 2 | Gothic x-small (18 bold) | GOTHIC_18_BOLD |
-| 3 | Gothic small (24 bold) | GOTHIC_24_BOLD |
-| 4 | Roboto small (21 condensed) | ROBOTO_CONDENSED_21 |
-| 5 | Gothic medium (28 bold) | GOTHIC_28_BOLD |
-| 6 | Leco medium (20 bold) | LECO_20_BOLD_NUMBERS |
-| 7 | Bitham large (30 black) | BITHAM_30_BLACK |
-| 8 | Droid serif large (28 bold) | DROID_SERIF_28_BOLD |
-| 9 | Leco large (26 bold) | LECO_26_BOLD_NUMBERS_AM_PM |
-| 10 | Leco x-large (32 bold) | LECO_32_BOLD_NUMBERS |
-| 11 | Bitham 2x-large (42 bold) | BITHAM_42_BOLD |
-| 12 | Leco 2x-large (36 bold) | LECO_36_BOLD_NUMBERS |
-| 13 | Leco 2x-large (38 bold) | LECO_38_BOLD_NUMBERS |
-| 14 | Leco 3x-large (42) | LECO_42_NUMBERS |
-| 15 | Leco 4x-large (60) | LECO_60_NUMBERS_AM_PM |
-| 16 | Leco 5x-large (60 bold) | LECO_60_BOLD_NUMBERS_AM_PM |
+| 0 | Gothic 3x-small | GOTHIC_14 |
+| 1 | Gothic 2x-small | GOTHIC_14_BOLD |
+| 2 | Gothic x-small | GOTHIC_18_BOLD |
+| 3 | Gothic small | GOTHIC_24_BOLD |
+| 4 | Roboto small | ROBOTO_CONDENSED_21 |
+| 5 | Gothic medium | GOTHIC_28_BOLD |
+| 6 | Leco medium | LECO_20_BOLD_NUMBERS |
+| 7 | Bitham large | BITHAM_30_BLACK |
+| 8 | Droid serif large | DROID_SERIF_28_BOLD |
+| 9 | Leco large | LECO_26_BOLD_NUMBERS_AM_PM |
+| 10 | Leco x-large | LECO_32_BOLD_NUMBERS |
+| 11 | Bitham 2x-large | BITHAM_42_BOLD |
+| 12 | Leco 2x-large 36 | LECO_36_BOLD_NUMBERS |
+| 13 | Leco 2x-large 38 | LECO_38_BOLD_NUMBERS |
+| 14 | Leco 3x-large | LECO_42_NUMBERS |
+| 15 | Leco 4x-large | LECO_60_NUMBERS_AM_PM |
+| 16 | Leco 5x-large | LECO_60_BOLD_NUMBERS_AM_PM |
 
 ## Widget ids
 

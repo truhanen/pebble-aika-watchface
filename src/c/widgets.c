@@ -24,6 +24,7 @@
 #include "widget_text.h"
 #include "widget_layout_calc.h"
 #include "test_hooks.h"
+#include "text_case.h"
 #include <math.h>
 #include <string.h>
 
@@ -282,8 +283,14 @@ static bool value_beats(const WidgetCtx *c, char *buf, size_t n) {
 // The date widgets 26..34. Weekday and month come from the language tables.
 static bool value_date(const WidgetCtx *c, char *buf, size_t n) {
   int d = s_tm.tm_mday, m = s_tm.tm_mon + 1, y = s_tm.tm_year + 1900;
-  const char *wd = dayNames[settings.languageId][(unsigned)s_tm.tm_wday % 7];
-  const char *mon = monthNames[settings.languageId][(unsigned)s_tm.tm_mon % 12];
+  const char *wd_upper = dayNames[settings.languageId][(unsigned)s_tm.tm_wday % 7];
+  const char *mon_upper = monthNames[settings.languageId][(unsigned)s_tm.tm_mon % 12];
+
+  // Convert to initial-caps: first letter unchanged, rest lowercase
+  char wd[8], mon[8];
+  text_initial_caps(wd_upper, wd, sizeof(wd));
+  text_initial_caps(mon_upper, mon, sizeof(mon));
+
   switch (c->id) {
     case DATE_D_M_DOT:    snprintf(buf, n, "%d.%d.", d, m); break;
     case DATE_DD_MM_DOT:  snprintf(buf, n, "%02d.%02d.", d, m); break;

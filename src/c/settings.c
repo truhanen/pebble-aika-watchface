@@ -2,10 +2,12 @@
 #include "languages.h"
 #include "crypto.h"
 #include "widget_list.h"
+#include "widget_fonts.h"
 #include "night_window_calc.h"
 #include <pebble.h>
 
 Settings settings;
+WidgetFonts widgetFonts;
 DynamicSettings dynamicSettings;
 
 void Settings_init() {
@@ -19,10 +21,6 @@ static void set_defaults(void) {
 
   settings.timeBgColor = GColorWhite;
   settings.timeColor = GColorBlack;
-  settings.sidebarColor = GColorMintGreen;
-  settings.sidebarTextColor = GColorBlack;
-  settings.sidebarBgColorLeft = GColorMintGreen;
-  settings.sidebarBgColorRight = GColorMintGreen;
 
   settings.languageId = LANGUAGE_EN;
   settings.hourlyVibe = NO_VIBE;
@@ -53,6 +51,8 @@ static void set_defaults(void) {
 
   settings.batteryWarnColor = GColorRed;
   settings.btWarnColor = GColorYellow;
+
+  memset(&widgetFonts, WIDGET_FONT_UNSET, sizeof(widgetFonts));
 }
 
 void Settings_loadFromStorage() {
@@ -72,6 +72,18 @@ void Settings_loadFromStorage() {
   settings.widgetCount = WidgetList_sanitize(settings.widgetList, settings.widgetCount, MAX_WIDGET_LIST);
   if (settings.rightWidgetCount > MAX_WIDGET_LIST) { settings.rightWidgetCount = MAX_WIDGET_LIST; }
   settings.rightWidgetCount = WidgetList_sanitize(settings.rightWidgetList, settings.rightWidgetCount, MAX_WIDGET_LIST);
+  if (settings.topWidgetCount > MAX_CENTER_WIDGET_LIST) { settings.topWidgetCount = MAX_CENTER_WIDGET_LIST; }
+  settings.topWidgetCount = WidgetList_sanitize(settings.topWidgetList, settings.topWidgetCount, MAX_CENTER_WIDGET_LIST);
+  if (settings.bottomWidgetCount > MAX_CENTER_WIDGET_LIST) { settings.bottomWidgetCount = MAX_CENTER_WIDGET_LIST; }
+  settings.bottomWidgetCount = WidgetList_sanitize(settings.bottomWidgetList, settings.bottomWidgetCount, MAX_CENTER_WIDGET_LIST);
+  if (persist_get_size(WIDGET_FONTS_PERSIST_KEY) == (int)sizeof(widgetFonts)) {
+    persist_read_data(WIDGET_FONTS_PERSIST_KEY, &widgetFonts, sizeof(widgetFonts));
+  }
+  for (int p = 0; p < WIDGET_POS_COUNT; p++) {
+    for (int i = 0; i < MAX_WIDGET_LIST; i++) {
+      if (widgetFonts.font[p][i] >= WIDGET_FONT_COUNT) { widgetFonts.font[p][i] = WIDGET_FONT_UNSET; }
+    }
+  }
   if (settings.decimalSeparator != '.' && settings.decimalSeparator != ',') {
     settings.decimalSeparator = '.';
   }
@@ -114,6 +126,7 @@ void Settings_saveToStorage() {
   // Write the data
   persist_write_data(SETTINGS_PERSIST_KEY, &settings, sizeof(settings));
   persist_write_int(SETTINGS_VERSION_PERSIST_KEY, CURRENT_SETTINGS_VERSION);
+  persist_write_data(WIDGET_FONTS_PERSIST_KEY, &widgetFonts, sizeof(widgetFonts));
 }
 
 static void dyn_scan_cb(uint8_t w, void *ctx) {
@@ -142,6 +155,52 @@ void Settings_updateDynamicSettings() {
   // Scan the full priority list: a widget anywhere in it (even one currently not
   // visible because it didn't fit) should keep its data source / tick enabled,
   // since it can become visible when the status strip toggles.
-  WidgetList_forEachId(settings.widgetList, settings.widgetCount, dyn_scan_cb, NULL);
-  WidgetList_forEachId(settings.rightWidgetList, settings.rightWidgetCount, dyn_scan_cb, NULL);
+  Settings_forEachWidgetId(dyn_scan_cb, NULL);
+}
+
+const uint8_t *Settings_widgetList(int pos, int *count) {
+  switch (pos) {
+    case WIDGET_POS_LEFT:  *count = settings.widgetCount;       return settings.widgetList;
+    case WIDGET_POS_RIGHT: *count = settings.rightWidgetCount;  return settings.rightWidgetList;
+    case WIDGET_POS_TOP:   *count = settings.topWidgetCount;    return settings.topWidgetList;
+    default:               *count = settings.bottomWidgetCount; return settings.bottomWidgetList;
+  }
+}
+
+int Settings_widgetFont(int pos, int offset) {
+  if (offset >= 0 && offset < MAX_WIDGET_LIST && widgetFonts.font[pos][offset] < WIDGET_FONT_COUNT) {
+    return widgetFonts.font[pos][offset];
+  }
+  return (pos == WIDGET_POS_TOP || pos == WIDGET_POS_BOTTOM) ? WIDGET_FONT_DEFAULT_TOP_BOTTOM
+                                                              : WIDGET_FONT_DEFAULT_SIDE;
+}
+
+void Settings_setWidgetFonts(int pos, uint8_t font) {
+  memset(widgetFonts.font[pos], font < WIDGET_FONT_COUNT ? font : WIDGET_FONT_UNSET, MAX_WIDGET_LIST);
+}
+
+void Settings_forEachWidgetId(void (*cb)(uint8_t id, void *ctx), void *ctx) {
+  for (int pos = 0; pos < WIDGET_POS_COUNT; pos++) {
+    int n;
+    const uint8_t *list = Settings_widgetList(pos, &n);
+    WidgetList_forEachId(list, n, cb, ctx);
+  }
+}
+
+int Settings_minSubMinuteIntervalSec(void) {
+  int best = 0;
+  for (int pos = 0; pos < WIDGET_POS_COUNT; pos++) {
+    int n;
+    const uint8_t *list = Settings_widgetList(pos, &n);
+    int s = WidgetList_minSubMinuteIntervalSec(list, n);
+    if (s > 0 && (best == 0 || s < best)) { best = s; }
+  }
+  return best;
+}
+
+void Settings_sanitizeWidgetLists(void) {
+  settings.widgetCount = WidgetList_sanitize(settings.widgetList, settings.widgetCount, MAX_WIDGET_LIST);
+  settings.rightWidgetCount = WidgetList_sanitize(settings.rightWidgetList, settings.rightWidgetCount, MAX_WIDGET_LIST);
+  settings.topWidgetCount = WidgetList_sanitize(settings.topWidgetList, settings.topWidgetCount, MAX_CENTER_WIDGET_LIST);
+  settings.bottomWidgetCount = WidgetList_sanitize(settings.bottomWidgetList, settings.bottomWidgetCount, MAX_CENTER_WIDGET_LIST);
 }

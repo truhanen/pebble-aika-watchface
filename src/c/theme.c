@@ -20,23 +20,9 @@ void Theme_update(bool nightActive) {
 
   theme.timeColor          = mapc(settings.timeColor, false, nightActive);
   theme.timeBgColor        = mapc(settings.timeBgColor, true, nightActive);
-  theme.sidebarColor       = mapc(settings.sidebarColor, true, nightActive);
-  theme.sidebarTextColor   = mapc(settings.sidebarTextColor, false, nightActive);
-  theme.sidebarBgColorLeft = mapc(settings.sidebarBgColorLeft, true, nightActive);
-  theme.sidebarBgColorRight = mapc(settings.sidebarBgColorRight, true, nightActive);
 
-  // Sidebar icons follow the RESOLVED sidebar background, not the configured one, so at
-  // night they invert with the text around them. Same rule as the version that used to
-  // live in Settings_updateDynamicSettings: GColorClear = inherit sidebarColor.
-  GColor primaryBg = gcolor_equal(theme.sidebarBgColorLeft, GColorClear)
-      ? theme.sidebarColor : theme.sidebarBgColorLeft;
-  if (gcolor_equal(primaryBg, GColorBlack)) {
-    theme.iconFillColor = GColorBlack;
-    theme.iconStrokeColor = theme.sidebarTextColor;
-  } else {
-    theme.iconFillColor = GColorWhite;
-    theme.iconStrokeColor = GColorBlack;
-  }
+  theme.iconFillColor = theme.timeBgColor;
+  theme.iconStrokeColor = theme.timeColor;
 }
 
 bool Theme_nightActive(void) { return s_night_active; }

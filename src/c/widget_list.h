@@ -13,7 +13,7 @@
    group: WIDGET_ROTATING_MARKER, count, interval_code, member_1 .. member_count.
    See docs/superpowers/specs/2026-06-24-timestyle-rotating-widget-design.md */
 
-// Numeric mirrors — keep in sync with src/c/sidebar_widgets.h (MAX_WIDGET_TYPE),
+// Numeric mirrors — keep in sync with src/c/widgets.h (MAX_WIDGET_TYPE),
 // src/c/crypto.h (CRYPTO_WID_BASE / MAX_CRYPTO), src/c/tuya.h, src/ts/widget_list_payload.ts,
 // src/ts/config_tuya_list.ts.
 #define WL_MAX_WIDGET_TYPE   25    // SLEEP_DEEP_BAR
@@ -38,12 +38,14 @@ bool    WidgetList_isHidden(uint8_t b);
 typedef struct {
   uint8_t members[MAX_GROUP_MEMBERS];   // clean base ids (0x20 stripped)
   bool    hide[MAX_GROUP_MEMBERS];      // identifier hidden, per member
+  uint8_t offset[MAX_GROUP_MEMBERS];    // byte index of each member in the parsed list
+                                        // (keys its per-widget font)
   uint8_t count;          // 1 = plain slot; 2..MAX_GROUP_MEMBERS = rotating
   uint8_t interval_code;  // 0..5, meaningful only when count > 1
 } WidgetSlot;
 
-// Drawable id: a normal type 1..WL_MAX_WIDGET_TYPE or a crypto/currency wid. EMPTY(0) draws
-// nothing, so it is NOT drawable and is dropped from lists.
+// Drawable id: a normal type 0..WL_MAX_WIDGET_TYPE or a crypto/currency/tuya wid. EMPTY(0)
+// draws nothing but is a real slot (it reserves the ink height of its font), so lists keep it.
 bool WidgetList_isDrawableId(uint8_t id);
 
 // interval_code 0..5 -> seconds {5,10,30,60,120,300}; any other code -> 60.
@@ -66,6 +68,9 @@ void WidgetList_forEachId(const uint8_t *bytes, int len,
 
 // Shortest sub-minute (5/10/30 s) rotation interval present, or 0 if none.
 int WidgetList_minSubMinuteIntervalSec(const uint8_t *bytes, int len);
+
+// Index of the member a slot shows at the given seconds-of-day. count<=1 -> 0.
+int WidgetSlot_activeIndex(const WidgetSlot *slot, int secondsOfDay);
 
 // The member a slot shows at the given seconds-of-day. count<=1 -> members[0].
 uint8_t WidgetSlot_activeMember(const WidgetSlot *slot, int secondsOfDay);

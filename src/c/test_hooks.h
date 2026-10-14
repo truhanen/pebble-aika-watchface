@@ -9,7 +9,8 @@
 // The SDK peek calls are redirected by the macros below, so drawing code keeps
 // calling the plain SDK names. In a normal build everything here is a no-op.
 
-// Applies any Test* keys in `iter`; returns true if one was present.
+// Applies any Test* keys in `iter` (TestTopWidget / TestBottomWidget set that centre list
+// to one widget id, -1 clears it; 0 is the Empty widget); returns true if one was present.
 bool TestHooks_handleMessage(DictionaryIterator *iter);
 
 // Overwrites hour/minute in `t` while a TestTime override is active.
@@ -17,6 +18,10 @@ void TestHooks_applyTime(struct tm *t);
 
 // Current TestScene value (0 = normal watchface).
 int TestHooks_scene(void);
+
+// TestFont{Left,Right,Top,Bottom}: the widget font index forced on every widget of a
+// position (WIDGET_POS_*), or -1 for the configured fonts.
+int TestHooks_font(int pos);
 
 #if defined(TEST_HOOKS) && !defined(TEST_HOOKS_IMPL)
 BatteryChargeState TestHooks_batteryPeek(void);

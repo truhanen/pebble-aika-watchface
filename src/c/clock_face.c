@@ -1,5 +1,6 @@
-// Clock face: hour + minute hands, centre pivot and the dithered minute strip
-// along the screen edges, all on one full-screen layer.
+// Clock face: hour + minute hands, centre pivot, the dithered minute strip along the
+// screen edges and the widgets (icons below the hands, values above), all on one
+// full-screen layer.
 //
 // Hand dimensions are those of the Nyquist watchface (truhanen/
 // pebble-nyquist-watchface, GPL-3.0); the minute hand is lengthened so it always
@@ -16,6 +17,7 @@
 #include "battery_days.h"
 #include "test_hooks.h"
 #include "font_specimen.h"
+#include "widget_layer.h"
 
 Layer *clock_face_layer;
 
@@ -141,6 +143,10 @@ static void face_update_proc(Layer *l, GContext *ctx) {
   graphics_context_set_fill_color(ctx, bg);
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
 
+  // Icons and units sit below the hands, the values above them.
+  WidgetLayer_prepare(bounds);
+  WidgetLayer_drawIcons(ctx);
+
   int32_t minute_angle = s_minutes * TRIG_MAX_ANGLE / 60;
   int32_t hour_angle = (s_hours % 12) * TRIG_MAX_ANGLE / 12
                        + s_minutes * TRIG_MAX_ANGLE / 720;
@@ -157,6 +163,8 @@ static void face_update_proc(Layer *l, GContext *ctx) {
 
   graphics_context_set_fill_color(ctx, bg);
   graphics_fill_circle(ctx, center, CF_PIVOT_R);
+
+  WidgetLayer_drawValues(ctx);
 
   draw_strip(ctx, bounds, fg);
   draw_warn_border(ctx, bounds);

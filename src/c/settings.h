@@ -1,12 +1,21 @@
 #pragma once
 #include <pebble.h>
-#include "sidebar_widgets.h"
+#include "widgets.h"
 
 #define CURRENT_SETTINGS_VERSION 1
 
 // persistent storage keys
 #define SETTINGS_PERSIST_KEY 100
 #define SETTINGS_VERSION_PERSIST_KEY 4
+#define WIDGET_FONTS_PERSIST_KEY 101
+
+// Widget positions. The numbers equal WlPosition (widget_layout_calc.h).
+#define WIDGET_POS_LEFT 0
+#define WIDGET_POS_RIGHT 1
+#define WIDGET_POS_TOP 2
+#define WIDGET_POS_BOTTOM 3
+#define WIDGET_POS_COUNT 4
+#define MAX_CENTER_WIDGET_LIST 16   // byte budget of a top / bottom list
 
 typedef enum {
   NO_VIBE = 0,
@@ -21,10 +30,6 @@ typedef struct {
   // (src/c/theme.c): drawing code reads theme.*, never settings.*Color, directly.
   GColor timeColor;
   GColor timeBgColor;
-  GColor sidebarColor;
-  GColor sidebarTextColor;
-  GColor sidebarBgColorLeft;   // GColorClear = inherit sidebarColor
-  GColor sidebarBgColorRight;  // GColorClear = inherit sidebarColor
 
   // general
   uint8_t languageId;
@@ -34,7 +39,6 @@ typedef struct {
   uint8_t pollIntervalMin;   // watch->phone data request interval (min)
 
   // widget options
-  bool useLargeFonts;
   bool activateDisconnectIcon;
   bool useMetric;
   bool showBatteryPct;
@@ -57,13 +61,17 @@ typedef struct {
   int16_t elecCheapFloorCenti;   // cheapBar floor, 0.01 snt
   int16_t elecCheapCeilingCenti; // cheapBar ceiling, 0.01 snt
 
-  // analog clock hour-tick style: 0=hide, 1=normal, 2=bold
-
   // widget lists (see widget_list.h for the byte format)
   uint8_t widgetList[MAX_WIDGET_LIST];
   uint8_t widgetCount;
   uint8_t rightWidgetList[MAX_WIDGET_LIST];
   uint8_t rightWidgetCount;
+  // Top / bottom centre lists, same byte format; only the first slot is shown. Nothing
+  // fills them from the phone yet (payload v2), the emulator test hooks do.
+  uint8_t topWidgetList[MAX_CENTER_WIDGET_LIST];
+  uint8_t topWidgetCount;
+  uint8_t bottomWidgetList[MAX_CENTER_WIDGET_LIST];
+  uint8_t bottomWidgetCount;
 
   // Night window (NightWindowMode; [start, end) hours, may wrap midnight) and its
   // two consumers: slowing sub-minute rotation and the night palette.
@@ -93,7 +101,16 @@ typedef struct {
   bool enableAltTimeZone;
 } DynamicSettings;
 
+// Per-widget font (widget_fonts.h index), kept in a persist key of its own: one byte per
+// byte of the position's widget list (the member's offset in it, see WidgetSlot.offset),
+// WIDGET_FONT_UNSET = the position's default.
+#define WIDGET_FONT_UNSET 0xFF
+typedef struct {
+  uint8_t font[WIDGET_POS_COUNT][MAX_WIDGET_LIST];
+} WidgetFonts;
+
 extern Settings settings;
+extern WidgetFonts widgetFonts;
 extern DynamicSettings dynamicSettings;
 
 void Settings_init();
@@ -101,3 +118,17 @@ void Settings_deinit();
 void Settings_loadFromStorage();
 void Settings_saveToStorage();
 void Settings_updateDynamicSettings();
+
+// The bytes and length of a position's widget list.
+const uint8_t *Settings_widgetList(int pos, int *count);
+// Font of the widget at byte `offset` of a position's list: the stored one, else the
+// position's default (side widgets Gothic medium, top / bottom Bitham large).
+int Settings_widgetFont(int pos, int offset);
+// Set every font of a position (what a single-font config, or a test, wants).
+void Settings_setWidgetFonts(int pos, uint8_t font);
+// Every drawable widget id in all four lists (group members included).
+void Settings_forEachWidgetId(void (*cb)(uint8_t id, void *ctx), void *ctx);
+// Shortest sub-minute rotation interval over all four lists, or 0.
+int Settings_minSubMinuteIntervalSec(void);
+// Re-sanitize the lists after they changed.
+void Settings_sanitizeWidgetLists(void);

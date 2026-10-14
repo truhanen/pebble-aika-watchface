@@ -7,7 +7,7 @@ bool    WidgetList_isHidden(uint8_t b) { return (b & WIDGET_HIDE_FLAG) != 0; }
 
 bool WidgetList_isDrawableId(uint8_t id) {
   id = WidgetList_baseId(id);
-  if (id == 0) { return false; }                       // EMPTY draws nothing
+  if (id == 0) { return true; }                        // EMPTY: draws nothing, but holds a slot
   if (id <= WL_MAX_WIDGET_TYPE) { return true; }
   if (id >= WL_CRYPTO_WID_BASE && id < WL_CRYPTO_WID_BASE + WL_MAX_CRYPTO) { return true; }
   if (id >= WL_CURRENCY_WID_BASE && id < WL_CURRENCY_WID_BASE + WL_MAX_CURRENCY) { return true; }
@@ -90,6 +90,7 @@ int WidgetList_parse(const uint8_t *bytes, int len, WidgetSlot *out, int maxSlot
         if (WidgetList_isDrawableId(raw)) {
           out[n].members[v] = WidgetList_baseId(raw);
           out[n].hide[v] = WidgetList_isHidden(raw);
+          out[n].offset[v] = (uint8_t)(memStart + m);
           v++;
         }
       }
@@ -103,6 +104,7 @@ int WidgetList_parse(const uint8_t *bytes, int len, WidgetSlot *out, int maxSlot
       if (WidgetList_isDrawableId(b)) {
         out[n].members[0] = WidgetList_baseId(b);
         out[n].hide[0] = WidgetList_isHidden(b);
+        out[n].offset[0] = (uint8_t)i;
         out[n].count = 1; out[n].interval_code = 3; n++;
       }
       i += 1;
@@ -157,23 +159,21 @@ int WidgetList_minSubMinuteIntervalSec(const uint8_t *bytes, int len) {
   return best;
 }
 
-uint8_t WidgetSlot_activeMember(const WidgetSlot *slot, int secondsOfDay) {
-  if (slot->count <= 1) { return slot->members[0]; }
-  int sec = WidgetList_intervalSeconds(slot->interval_code);
-  if (sec <= 0) { sec = 60; }
-  int step = secondsOfDay / sec;
-  int idx = step % slot->count;
-  if (idx < 0) { idx += slot->count; }
-  return slot->members[idx];
-}
-
-bool WidgetSlot_activeHide(const WidgetSlot *slot, int secondsOfDay) {
-  if (slot->count <= 1) { return slot->hide[0]; }
+int WidgetSlot_activeIndex(const WidgetSlot *slot, int secondsOfDay) {
+  if (slot->count <= 1) { return 0; }
   int sec = WidgetList_intervalSeconds(slot->interval_code);
   if (sec <= 0) { sec = 60; }
   int idx = (secondsOfDay / sec) % slot->count;
   if (idx < 0) { idx += slot->count; }
-  return slot->hide[idx];
+  return idx;
+}
+
+uint8_t WidgetSlot_activeMember(const WidgetSlot *slot, int secondsOfDay) {
+  return slot->members[WidgetSlot_activeIndex(slot, secondsOfDay)];
+}
+
+bool WidgetSlot_activeHide(const WidgetSlot *slot, int secondsOfDay) {
+  return slot->hide[WidgetSlot_activeIndex(slot, secondsOfDay)];
 }
 
 void WidgetList_fallbackPlace(int count, int visibleCount, bool appendFits,

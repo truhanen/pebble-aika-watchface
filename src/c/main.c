@@ -3,14 +3,14 @@
 #include "messaging.h"
 #include "settings.h"
 #include "weather.h"
-#include "sidebar.h"
+#include "widget_layer.h"
 #include "util.h"
 #include "electricity.h"
 #include "crypto.h"
 #include "currency.h"
 #include "tuya.h"
 #include "tuya_leds.h"
-#include "sidebar_widgets.h"
+#include "widgets.h"
 #include "widget_list.h"
 #include "battery_days.h"
 #include "poll_state_calc.h"
@@ -28,7 +28,7 @@ static bool isPhoneConnected;
 // current time service subscription
 static bool updatingEverySecond;
 
-static AppTimer *rotationTimer = NULL;   // repaints the sidebar at sub-minute rotation boundaries
+static AppTimer *rotationTimer = NULL;   // repaints the widgets at sub-minute rotation boundaries
 
 static time_t lastDataRequest = 0;   // epoch of the last watch->phone data request
 static time_t lastColdRequest = 0;   // epoch of the last COLD (forced) request
@@ -82,7 +82,6 @@ void update_clock();
 void redrawScreen();
 void tick_handler(struct tm *tick_time, TimeUnits units_changed);
 void bluetoothStateChanged(bool newConnectionState);
-static void apply_layout(void);
 static void schedule_rotation_timer(void);
 
 
@@ -108,43 +107,24 @@ void update_clock() {
   TestHooks_applyTime(timeInfo);
 
   ClockFace_updateTime(timeInfo);
-  Sidebar_updateTime(timeInfo);
 }
 
-// Lay out the sidebar columns over the full-screen clock face. A column is shown iff
-// its list is non-empty.
+// Re-parse the widget lists and repaint the face, which draws the widgets.
 static void apply_layout(void) {
-  Layer *root_layer = window_get_root_layer(mainWindow);
-  GRect root = layer_get_bounds(root_layer);
-
-  int primaryCount, secondaryCount;
-  Sidebar_distributeWidgets(&primaryCount, &secondaryCount);
-  bool showPrimary = primaryCount > 0;
-  bool showSecondary = secondaryCount > 0;
-
-  Sidebar_setPrimaryFrame(GRect(0, 0, sidebarWidth, root.size.h));
-  Sidebar_setPrimaryHidden(!showPrimary);
-  Sidebar_setSecondaryFrame(GRect(root.size.w - sidebarWidth, 0, sidebarWidth, root.size.h));
-  Sidebar_setSecondaryHidden(!showSecondary);
-
+  WidgetLayer_reload();
   layer_mark_dirty(clock_face_layer);
-}
-
-// Recompute the layout the instant the timeline-peek banner slides in/out.
-static void unobstructed_did_change(void *context) {
-  apply_layout();
 }
 
 static void rotation_timer_cb(void *data) {
   (void)data;
   rotationTimer = NULL;
-  Sidebar_redraw();              // re-resolves active members from the clock (stable heights)
+  ClockFace_redraw();            // re-resolves active members from the clock (stable heights)
   schedule_rotation_timer();     // arm the next boundary
 }
 
 // (Re)arm the rotation timer for the next sub-minute boundary, or cancel it when no
 // sub-minute rotating group exists. >=1min rotations need no timer (the minute tick
-// already repaints the sidebar). Skipped while already second-ticking (the tick
+// already repaints the face). Skipped while already second-ticking (the tick
 // handler repaints every second).
 // Is the night window in effect right now? Reads the local hour and the watch's
 // Quiet Time state and hands both to the pure predicate.
@@ -166,14 +146,12 @@ static bool night_colors_now(void) {
 static void schedule_rotation_timer(void) {
   if (rotationTimer) { app_timer_cancel(rotationTimer); rotationTimer = NULL; }
   if (updatingEverySecond) { return; }
-  int p = WidgetList_minSubMinuteIntervalSec(settings.widgetList, settings.widgetCount);
-  int pr = WidgetList_minSubMinuteIntervalSec(settings.rightWidgetList, settings.rightWidgetCount);
-  if (pr > 0 && (p == 0 || pr < p)) { p = pr; }
+  int p = Settings_minSubMinuteIntervalSec();
   // During the night window, suppress the sub-minute timer entirely. Rotation does NOT
   // stop: the displayed member is derived from the wall clock on every draw, and the
-  // minute tick still repaints the sidebar -- so the group keeps cycling at 1/min while
-  // costing zero extra wakeups. (Freezing it outright would need a change in sidebar.c
-  // and would hide half a rotating pair all night.)
+  // minute tick still repaints the widgets -- so the group keeps cycling at 1/min while
+  // costing zero extra wakeups. (Freezing it outright
+  // would hide half a rotating pair all night.)
   // The night window now also drives the palette, so slowing rotation is opt-out
   // (default on = the behaviour the window used to imply on its own).
   p = night_window_rotation_interval(p, night_window_now() && settings.nightSlowRotation);
@@ -212,12 +190,7 @@ void redrawScreen() {
   // maybe the language changed!
   update_clock();
 
-  // update the sidebar
-  Sidebar_redraw();
-
-  ClockFace_redraw();
-
-  apply_layout();
+  apply_layout();   // re-parses the widget lists and repaints the face
 
   schedule_rotation_timer();   // re-evaluate after any settings change / tick-mode change
 }
@@ -226,22 +199,20 @@ static void main_window_load(Window *window) {
   window_set_background_color(window, theme.timeBgColor);
 
   ClockFace_init(window);
-
-  // create the sidebar
-  Sidebar_init(window);
+  WidgetLayer_init();
 
   redrawScreen();
 }
 
 static void main_window_unload(Window *window) {
   ClockFace_deinit();
-  Sidebar_deinit();
+  WidgetLayer_deinit();
 }
 
 
 // Widgets whose data comes from the phone JS on the shared poll. Crypto covers
 // every coin wid (legacy 15/16/17 and the configurable 200+ range).
-static bool isPhoneDataWidget(SidebarWidgetType w) {
+static bool isPhoneDataWidget(WidgetType w) {
   return w == ELECTRICITY || w == NEXT_CHEAP_ELEC || w == CHEAPEST_ELEC_HOUR
       || w == TUYA_LEDS
       || Crypto_isWid((uint8_t)w) || Currency_isWid((uint8_t)w) || Tuya_isWid((uint8_t)w);
@@ -249,7 +220,7 @@ static bool isPhoneDataWidget(SidebarWidgetType w) {
 
 static void phone_data_scan_cb(uint8_t w, void *ctx) {
   bool *needs = (bool *)ctx;
-  if (isPhoneDataWidget((SidebarWidgetType)w)) { *needs = true; }
+  if (isPhoneDataWidget((WidgetType)w)) { *needs = true; }
 }
 
 // True when ANY phone-fetched source is in use: weather is gated by the setting,
@@ -258,8 +229,7 @@ static void phone_data_scan_cb(uint8_t w, void *ctx) {
 // refresh so both agree on "is a phone round-trip worth anything at all".
 static bool needs_phone_data(void) {
   bool needs = !dynamicSettings.disableWeather;
-  WidgetList_forEachId(settings.widgetList, settings.widgetCount, phone_data_scan_cb, &needs);
-  WidgetList_forEachId(settings.rightWidgetList, settings.rightWidgetCount, phone_data_scan_cb, &needs);
+  Settings_forEachWidgetId(phone_data_scan_cb, &needs);
   return needs;
 }
 
@@ -339,8 +309,7 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     // largest in the system. So: double the spacing after each cold round that fails to
     // resolve the gap (10 min -> ... -> 6 h), and reset the moment nothing is missing.
     bool missing = false;
-    WidgetList_forEachId(settings.widgetList, settings.widgetCount, cold_scan_cb, &missing);
-    WidgetList_forEachId(settings.rightWidgetList, settings.rightWidgetCount, cold_scan_cb, &missing);
+    Settings_forEachWidgetId(cold_scan_cb, &missing);
     bool cold = false;
     if (!missing) {
       // everything resolved -> the next genuine gap gets the fast 10-minute response
@@ -389,7 +358,6 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   update_clock();
 
   // redraw all screen
-  Sidebar_redraw();
   ClockFace_redraw();
 }
 
@@ -428,15 +396,13 @@ void bluetoothStateChanged(bool newConnectionState) {
 
   isPhoneConnected = newConnectionState;
 
-  Sidebar_redraw();
-  apply_layout();
+  ClockFace_redraw();
 }
 
-// force the sidebar to redraw any time the battery state changes
+// force the face (battery widgets) to redraw any time the battery state changes
 void batteryStateChanged(BatteryChargeState charge_state) {
   BatteryDays_onBattery(charge_state);
-  Sidebar_redraw();
-  apply_layout();
+  ClockFace_redraw();
 }
 
 // fixes for disappearing elements after notifications
@@ -508,12 +474,9 @@ static void init() {
   // SEED the connection state directly instead of calling bluetoothStateChanged():
   // isPhoneConnected is zero-initialised at every launch, so the synthetic first call
   // read as a disconnect->connect transition and sent a data request on EVERY relaunch
-  // (a watchface is killed whenever any watchapp runs). The redraw/layout that call
-  // also did is replicated here; the disconnect vibe could never fire at launch anyway
+  // (a watchface is killed whenever any watchapp runs). The disconnect vibe could never fire at launch anyway
   // (it requires the previous state to be connected).
   isPhoneConnected = bluetooth_connection_service_peek();
-  Sidebar_redraw();
-  apply_layout();
   bluetooth_connection_service_subscribe(bluetoothStateChanged);
 
   // register with battery service
@@ -524,11 +487,6 @@ static void init() {
     .did_focus = app_focus_changed,
     .will_focus = app_focus_changing
   });
-
-  // relayout when the timeline-peek banner appears
-  unobstructed_area_service_subscribe((UnobstructedAreaHandlers){
-    .did_change = unobstructed_did_change
-  }, NULL);
 }
 
 static void deinit() {
@@ -545,7 +503,6 @@ static void deinit() {
   if (rotationTimer) { app_timer_cancel(rotationTimer); rotationTimer = NULL; }
   bluetooth_connection_service_unsubscribe();
   battery_state_service_unsubscribe();
-  unobstructed_area_service_unsubscribe();
 }
 
 int main(void) {

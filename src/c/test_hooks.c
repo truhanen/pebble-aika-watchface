@@ -3,6 +3,8 @@
 
 #ifdef TEST_HOOKS
 
+#include "settings.h"
+
 static int32_t s_time = -1;         // HHMM
 static int32_t s_battery = -1;      // percent, +1000 = charging
 static int32_t s_bt = -1;           // 0/1
@@ -11,6 +13,7 @@ static int32_t s_sleep_min = -1;
 static int32_t s_deep_sleep_min = -1;
 static int32_t s_heart_rate = -1;
 static int32_t s_scene = 0;
+static int32_t s_font[4] = { -1, -1, -1, -1 };   // by WIDGET_POS_*
 
 static bool read_key(DictionaryIterator *iter, uint32_t key, int32_t *out) {
   Tuple *t = dict_find(iter, key);
@@ -30,6 +33,22 @@ bool TestHooks_handleMessage(DictionaryIterator *iter) {
   any |= read_key(iter, MESSAGE_KEY_TestDeepSleepMin, &s_deep_sleep_min);
   any |= read_key(iter, MESSAGE_KEY_TestHeartRate, &s_heart_rate);
   any |= read_key(iter, MESSAGE_KEY_TestScene, &s_scene);
+  any |= read_key(iter, MESSAGE_KEY_TestFontLeft, &s_font[WIDGET_POS_LEFT]);
+  any |= read_key(iter, MESSAGE_KEY_TestFontRight, &s_font[WIDGET_POS_RIGHT]);
+  any |= read_key(iter, MESSAGE_KEY_TestFontTop, &s_font[WIDGET_POS_TOP]);
+  any |= read_key(iter, MESSAGE_KEY_TestFontBottom, &s_font[WIDGET_POS_BOTTOM]);
+  int32_t id;
+  if (read_key(iter, MESSAGE_KEY_TestTopWidget, &id)) {
+    settings.topWidgetCount = (id >= 0) ? 1 : 0;
+    settings.topWidgetList[0] = (uint8_t)id;
+    any = true;
+  }
+  if (read_key(iter, MESSAGE_KEY_TestBottomWidget, &id)) {
+    settings.bottomWidgetCount = (id >= 0) ? 1 : 0;
+    settings.bottomWidgetList[0] = (uint8_t)id;
+    any = true;
+  }
+  Settings_sanitizeWidgetLists();
   return any;
 }
 
@@ -41,6 +60,7 @@ void TestHooks_applyTime(struct tm *t) {
 }
 
 int TestHooks_scene(void) { return (int)s_scene; }
+int TestHooks_font(int pos) { return (int)s_font[pos]; }
 
 BatteryChargeState TestHooks_batteryPeek(void) {
   BatteryChargeState st = battery_state_service_peek();
@@ -87,5 +107,6 @@ HealthServiceAccessibilityMask TestHooks_healthAccessible(HealthMetric metric, t
 bool TestHooks_handleMessage(DictionaryIterator *iter) { (void)iter; return false; }
 void TestHooks_applyTime(struct tm *t) { (void)t; }
 int TestHooks_scene(void) { return 0; }
+int TestHooks_font(int pos) { (void)pos; return -1; }
 
 #endif

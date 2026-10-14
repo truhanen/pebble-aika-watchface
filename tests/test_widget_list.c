@@ -11,7 +11,7 @@ static void collect_cb(uint8_t id, void *ctx) { (void)ctx; collected[collectedN+
 
 int main(void) {
   // --- isDrawableId ---
-  assert(!WidgetList_isDrawableId(0));      // EMPTY not drawable
+  assert(WidgetList_isDrawableId(0));       // EMPTY holds a slot
   assert(WidgetList_isDrawableId(2));       // battery
   assert(WidgetList_isDrawableId(19));      // normal type
   assert(WidgetList_isDrawableId(20));      // DEEP_SLEEP_TIMER
@@ -64,9 +64,17 @@ int main(void) {
   { uint8_t b[] = {12, 15, 17}; int n = WidgetList_sanitize(b, 3, 16);
     assert(n == 3 && b[0] == 12 && b[1] == 15 && b[2] == 17); }
 
-  // --- sanitize: drop EMPTY + invalid plain ids ---
+  // --- sanitize: keep EMPTY, drop invalid plain ids ---
   { uint8_t b[] = {12, 0, 99, 17}; int n = WidgetList_sanitize(b, 4, 16);
-    assert(n == 2 && b[0] == 12 && b[1] == 17); }
+    assert(n == 3 && b[0] == 12 && b[1] == 0 && b[2] == 17); }
+
+  // --- parse: member byte offsets (key the per-widget fonts), EMPTY is a slot ---
+  { WidgetSlot s[MAX_WIDGET_SLOTS]; uint8_t b[] = {12, 0, 0xFF, 2, 1, 15, 16, 17};
+    int n = WidgetList_parse(b, 8, s, MAX_WIDGET_SLOTS);
+    assert(n == 4 && s[0].offset[0] == 0 && s[1].members[0] == 0 && s[1].offset[0] == 1);
+    assert(s[2].count == 2 && s[2].offset[0] == 5 && s[2].offset[1] == 6 && s[3].offset[0] == 7);
+    assert(WidgetSlot_activeIndex(&s[2], 0) == 0 && WidgetSlot_activeIndex(&s[2], 10) == 1);
+    assert(WidgetSlot_activeIndex(&s[0], 99) == 0); }
 
   // --- sanitize: valid group preserved ---
   { uint8_t b[] = {2, 0xFF, 2, 1, 15, 16, 3}; int n = WidgetList_sanitize(b, 7, 16);

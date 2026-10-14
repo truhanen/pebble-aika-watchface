@@ -167,8 +167,6 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   // does this message contain new config information?
   Tuple *timeColor_tuple = dict_find(iterator, MESSAGE_KEY_SettingColorTime);
   Tuple *bgColor_tuple = dict_find(iterator, MESSAGE_KEY_SettingColorBG);
-  Tuple *sidebarColor_tuple = dict_find(iterator, MESSAGE_KEY_SettingColorSidebar);
-  Tuple *sidebarTextColor_tuple = dict_find(iterator, MESSAGE_KEY_SettingSidebarTextColor);
   Tuple *useMetric_tuple = dict_find(iterator, MESSAGE_KEY_SettingUseMetric);
   Tuple *btVibe_tuple = dict_find(iterator, MESSAGE_KEY_SettingBluetoothVibe);
   Tuple *pollInterval_tuple = dict_find(iterator, MESSAGE_KEY_SettingPollIntervalMin);
@@ -189,13 +187,10 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   Tuple *elecFactor_tuple = dict_find(iterator, MESSAGE_KEY_SettingElecCheapFactorPct);
   Tuple *elecFloor_tuple = dict_find(iterator, MESSAGE_KEY_SettingElecCheapFloorCenti);
   Tuple *elecCeiling_tuple = dict_find(iterator, MESSAGE_KEY_SettingElecCheapCeilingCenti);
-  Tuple *sidebarBgLeft_tuple = dict_find(iterator, MESSAGE_KEY_SettingSidebarBgColorLeft);
-  Tuple *sidebarBgRight_tuple = dict_find(iterator, MESSAGE_KEY_SettingSidebarBgColorRight);
   Tuple *language_tuple = dict_find(iterator, MESSAGE_KEY_SettingLanguageID);
   Tuple *leadingZero_tuple = dict_find(iterator, MESSAGE_KEY_SettingShowLeadingZero);
   Tuple *batteryPct_tuple = dict_find(iterator, MESSAGE_KEY_SettingShowBatteryPct);
   Tuple *hourlyVibe_tuple = dict_find(iterator, MESSAGE_KEY_SettingHourlyVibe);
-  Tuple *useLargeFonts_tuple = dict_find(iterator, MESSAGE_KEY_SettingUseLargeFonts);
 
 
 
@@ -222,28 +217,6 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
 
   if(bgColor_tuple != NULL) {
     settings.timeBgColor = GColorFromHEX(bgColor_tuple->value->int32);
-  }
-
-  if(sidebarColor_tuple != NULL) {
-    settings.sidebarColor = GColorFromHEX(sidebarColor_tuple->value->int32);
-  }
-
-  if(sidebarTextColor_tuple != NULL) {
-    // text can only be black or white, so we'll enforce that here
-    settings.sidebarTextColor = GColorFromHEX(sidebarTextColor_tuple->value->int32);
-  }
-
-
-
-
-  if(sidebarBgLeft_tuple != NULL) {
-    int32_t v = sidebarBgLeft_tuple->value->int32;
-    settings.sidebarBgColorLeft = (v < 0) ? GColorClear : GColorFromHEX(v); // <0 = inherit
-  }
-
-  if(sidebarBgRight_tuple != NULL) {
-    int32_t v = sidebarBgRight_tuple->value->int32;
-    settings.sidebarBgColorRight = (v < 0) ? GColorClear : GColorFromHEX(v); // <0 = inherit
   }
 
   // Warning frame. Out-of-range values are ignored rather than clamped, matching the
@@ -349,10 +322,6 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   }
 
 
-
-  if(useLargeFonts_tuple != NULL) {
-    settings.useLargeFonts = (bool)useLargeFonts_tuple->value->int8;
-  }
 
   if(hourlyVibe_tuple != NULL && hourlyVibe_tuple->value->int8 >= NO_VIBE
      && hourlyVibe_tuple->value->int8 <= VIBE_EVERY_HALF_HOUR) {

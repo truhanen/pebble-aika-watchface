@@ -14,12 +14,8 @@
 typedef struct {
   GColor timeColor;
   GColor timeBgColor;
-  GColor sidebarColor;
-  GColor sidebarTextColor;
-  GColor sidebarBgColorLeft;   // GColorClear = inherit sidebarColor
-  GColor sidebarBgColorRight;  // GColorClear = inherit sidebarColor
-  GColor iconFillColor;        // derived from the resolved primary sidebar background
-  GColor iconStrokeColor;
+  GColor iconFillColor;        // widget icons follow the hands: fill = background,
+  GColor iconStrokeColor;      // stroke = hand colour
 } Theme;
 
 extern Theme theme;

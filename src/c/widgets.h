@@ -72,8 +72,8 @@ typedef struct {
   bool unit_inline;   // the icon is a one-line unit: it shares the value's baseline instead
 } WidgetSize;
 
-// A widget is drawn in two passes: draw_icon happens below the clock hands, draw_value
-// above them. The boxes come from widget_layer.c; the widget draws into them as given.
+// A widget is drawn in two passes: draw_icon happens below the clock hands (above them
+// for an icon-only widget, see Widgets_iconOnTop), draw_value above them. The boxes come from widget_layer.c; the widget draws into them as given.
 typedef struct {
   void (*measure)(const WidgetCtx *ctx, WidgetSize *out);
   void (*draw_icon)(GContext *g, const WidgetCtx *ctx, GRect icon_box);
@@ -83,6 +83,10 @@ typedef struct {
 // The widget for an id; a widget not ported to this API yet measures to zero and
 // draws nothing.
 const Widget *Widgets_get(uint8_t id);
+
+// True for an icon-only widget (an icon, no value or unit): the layer draws it above the
+// hands together with the values, and draw_icon gives it the background shadow.
+bool Widgets_iconOnTop(uint8_t id);
 
 void Widgets_init(void);
 void Widgets_deinit(void);

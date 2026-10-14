@@ -23,6 +23,7 @@
 #include "clock_face.h"
 #include "widget_text.h"
 #include "widget_layout_calc.h"
+#include "clock_face_calc.h"
 #include "test_hooks.h"
 #include "text_case.h"
 #include <math.h>
@@ -535,6 +536,15 @@ static GDrawCommandImage *icon_image(IconKind kind) {
 
 static uint8_t led_count(void) { return TuyaLeds_count == 0 ? 1 : TuyaLeds_count; }
 
+// Nub and body in one colour (the icon's shape, for its shadow).
+static void draw_battery_silhouette(GContext *g, GRect box, GColor color) {
+  graphics_context_set_fill_color(g, color);
+  graphics_fill_rect(g, GRect(box.origin.x + (BATTERY_ICON_WIDTH - BATTERY_ICON_NUB_WIDTH) / 2, box.origin.y,
+                              BATTERY_ICON_NUB_WIDTH, BATTERY_ICON_NUB_HEIGHT), 0, GCornerNone);
+  graphics_fill_rect(g, GRect(box.origin.x, box.origin.y + BATTERY_ICON_NUB_HEIGHT,
+                              BATTERY_ICON_WIDTH, BATTERY_ICON_HEIGHT), 2, GCornersAll);
+}
+
 static void draw_battery(GContext *g, GRect box, GColor fg, GColor bg) {
   BatteryChargeState st = battery_state_service_peek();
   uint8_t pct = battery_percent();
@@ -575,26 +585,37 @@ static void draw_battery(GContext *g, GRect box, GColor fg, GColor bg) {
   }
 }
 
-// The rune is 1 px lines inside its box; disconnected it gets a slash across, with a
-// bg halo so the slash reads over the rune.
-static void draw_bt_rune(GContext *g, GRect box, bool connected, GColor fg, GColor bg) {
+// The rune's strokes (and, disconnected, the slash across) in one colour.
+static void draw_bt_slash(GContext *g, GRect box, GColor color, uint8_t width) {
+  graphics_context_set_antialiased(g, false);
+  graphics_context_set_stroke_color(g, color);
+  graphics_context_set_stroke_width(g, width);
+  graphics_draw_line(g, GPoint(box.origin.x, box.origin.y + BT_RUNE_H - 1),
+                     GPoint(box.origin.x + BT_RUNE_W - 1, box.origin.y));
+  graphics_context_set_antialiased(g, true);
+}
+
+static void draw_bt_strokes(GContext *g, GRect box, bool connected, GColor color) {
   static const int8_t P[6][2] = { { 1, 6 }, { 9, 16 }, { 5, 22 }, { 5, 0 }, { 9, 6 }, { 1, 16 } };
   int x = box.origin.x, y = box.origin.y;
   graphics_context_set_antialiased(g, false);
-  graphics_context_set_stroke_color(g, fg);
+  graphics_context_set_stroke_color(g, color);
   graphics_context_set_stroke_width(g, 1);
   for (int i = 0; i < 5; i++) {
     graphics_draw_line(g, GPoint(x + P[i][0], y + P[i][1]), GPoint(x + P[i + 1][0], y + P[i + 1][1]));
   }
-  if (!connected) {
-    graphics_context_set_stroke_color(g, bg);
-    graphics_context_set_stroke_width(g, 3);
-    graphics_draw_line(g, GPoint(x, y + BT_RUNE_H - 1), GPoint(x + BT_RUNE_W - 1, y));
-    graphics_context_set_stroke_color(g, fg);
-    graphics_context_set_stroke_width(g, 1);
-    graphics_draw_line(g, GPoint(x, y + BT_RUNE_H - 1), GPoint(x + BT_RUNE_W - 1, y));
-  }
   graphics_context_set_antialiased(g, true);
+  if (!connected) { draw_bt_slash(g, box, color, 1); }
+}
+
+// The rune is 1 px lines inside its box; disconnected it gets a slash across, with a
+// bg halo so the slash reads over the rune.
+static void draw_bt_rune(GContext *g, GRect box, bool connected, GColor fg, GColor bg) {
+  draw_bt_strokes(g, box, true, fg);
+  if (!connected) {
+    draw_bt_slash(g, box, bg, 3);
+    draw_bt_slash(g, box, fg, 1);
+  }
 }
 
 // Outlined bar filled to the restful share of the night; the outline is drawn even at
@@ -610,6 +631,14 @@ static void draw_sleep_bar(GContext *g, GRect box, GColor fg) {
     graphics_context_set_fill_color(g, fg);
     graphics_fill_rect(g, GRect(box.origin.x + 1, box.origin.y + SLEEP_BAR_H - 1 - fill,
                                 SLEEP_BAR_W - 2, fill), 0, GCornerNone);
+  }
+}
+
+static void draw_leds_silhouette(GContext *g, GRect box, GColor color) {
+  graphics_context_set_fill_color(g, color);
+  for (int i = 0; i < led_count(); i++) {
+    graphics_fill_circle(g, GPoint(box.origin.x + i * (LED_D + LED_GAP) + LED_D / 2, box.origin.y + WL_ICON_H / 2),
+                         LED_D / 2);
   }
 }
 
@@ -686,12 +715,48 @@ static void measure(const WidgetCtx *c, WidgetSize *out) {
   }
 }
 
+// Icon-only widgets are drawn above the hands with a background shadow (the same
+// diamond as the value shadow): their silhouette in bg at every shadow offset, then the
+// icon itself. A widget with a value or a unit keeps its icon below the hands.
+bool Widgets_iconOnTop(uint8_t id) {
+  const WidgetDesc *d = desc_for(id);
+  return d && !d->value && d->icon != ICON_NONE && d->icon != ICON_UNIT;
+}
+
+// The icon's shape in one colour (no per-frame allocation: the PDC images are recoloured
+// in place and restored by the normal draw).
+static void draw_icon_silhouette(GContext *g, const WidgetCtx *c, GRect box, GColor color) {
+  const WidgetDesc *d = desc_for(c->id);
+  switch (d->icon) {
+    case ICON_BT_STATE: draw_bt_strokes(g, box, bluetooth_connection_service_peek(), color); break;
+    case ICON_BATTERY:  draw_battery_silhouette(g, box, color); break;
+    case ICON_LEDS:     draw_leds_silhouette(g, box, color); break;
+    default: {
+      GDrawCommandImage *img = icon_image(d->icon);
+      if (img) {
+        gdraw_command_image_recolor(img, color, color);
+        gdraw_command_image_draw(g, img, box.origin);
+      }
+    }
+  }
+}
+
+static void draw_icon_shadow(GContext *g, const WidgetCtx *c, GRect box, GColor bg) {
+  for (int i = 0; i < CF_SHADOW_OFFSET_COUNT; i++) {
+    GRect b = box;
+    b.origin.x += CF_SHADOW_OFFSETS[i][0];
+    b.origin.y += CF_SHADOW_OFFSETS[i][1];
+    draw_icon_silhouette(g, c, b, bg);
+  }
+}
+
 static void draw_icon(GContext *g, const WidgetCtx *c, GRect box) {
   const WidgetDesc *d = desc_for(c->id);
   if (!d || c->hide_icon) { return; }
   GColor fg = theme.timeColor, bg = theme.timeBgColor;
   IconKind kind = d->icon;
   char buf[24];
+  if (Widgets_iconOnTop(c->id)) { draw_icon_shadow(g, c, box, bg); }
   switch (kind) {
     case ICON_NONE:      break;
     case ICON_BT_STATE:  draw_bt_rune(g, box, bluetooth_connection_service_peek(), fg, bg); break;

@@ -1,6 +1,7 @@
 #pragma once
 // Widgets drawn on the clock face layer, in two passes around the hands: the icons
-// and units below them, the values (with their shadow) above them. One frame is
+// and units below them, the values (with their shadow) above them together with the
+// icon-only widgets (Widgets_iconOnTop; icon with a shadow). One frame is
 // resolved and laid out once (WidgetLayer_prepare), then drawn by both passes.
 #include <pebble.h>
 

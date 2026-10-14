@@ -1,7 +1,7 @@
 // Clock face: hour + minute hands, centre pivot, the 60 minute-boundary ticks along
 // the screen edges (separate, 5 px long on the outer edge, following the frame's rounded corners (CF_CORNER_R), with radial sides, 2 px background shadow, all in the
 // time text colour: 4 px deep for 5-minute ticks and 1 px deep for 1-minute ticks) and the widgets (icons below
-// the hands, values above), all on one full-screen layer.
+// the hands, values and icon-only widgets above), all on one full-screen layer.
 //
 // Hand dimensions are those of the Nyquist watchface (truhanen/
 // pebble-nyquist-watchface, GPL-3.0); the minute hand is lengthened so it always
@@ -165,7 +165,7 @@ static void face_update_proc(Layer *l, GContext *ctx) {
   graphics_context_set_fill_color(ctx, bg);
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
 
-  // Icons and units sit below the hands, the values above them.
+  // Icons and units of value widgets sit below the hands; the values and the icon-only widgets above them.
   WidgetLayer_prepare(bounds);
   WidgetLayer_drawIcons(ctx);
 

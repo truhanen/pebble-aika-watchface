@@ -226,7 +226,7 @@ void WidgetLayer_prepare(GRect bounds) {
 void WidgetLayer_drawIcons(GContext *ctx) {
   for (int i = 0; i < s_placed_count; i++) {
     const Placed *p = &s_placed[i];
-    if (p->has_icon) { Widgets_get(p->ctx.id)->draw_icon(ctx, &p->ctx, p->icon_box); }
+    if (p->has_icon && !Widgets_iconOnTop(p->ctx.id)) { Widgets_get(p->ctx.id)->draw_icon(ctx, &p->ctx, p->icon_box); }
   }
 }
 
@@ -235,6 +235,9 @@ void WidgetLayer_drawValues(GContext *ctx) {
     const Placed *p = &s_placed[i];
     if (p->has_value) {
       Widgets_get(p->ctx.id)->draw_value(ctx, &p->ctx, p->value_box, GTextAlignmentLeft);
+    }
+    if (p->has_icon && Widgets_iconOnTop(p->ctx.id)) {   // icon-only: above the hands, shadowed
+      Widgets_get(p->ctx.id)->draw_icon(ctx, &p->ctx, p->icon_box);
     }
   }
 }

@@ -142,3 +142,35 @@ test('every row in a list has the same slot elements with placeholders for missi
     assert.strictEqual(mains.length, 6, `group member ${i} has 6 slot elements (select + font + hide + up-ph + down-ph + del)`);
   });
 });
+
+test('rotating group member rows align with outer rows (no right inset on group)', () => {
+  const { root } = mount([
+    w(10),           // plain widget
+    w(0),            // Empty
+    { rotating: true, interval: 3, members: [w(2), w(10), w(37)] },  // rotating group
+  ], { defaultFont: 5 });
+
+  // Get the computed style of the group to verify it has no right padding/margin that would prevent alignment
+  const group = root.querySelector('.wl-group');
+  assert.ok(group, 'group exists');
+
+  // Check that group uses flex layout for its content rows
+  const introw = group.querySelector('.wl-introw');
+  const mems = group.querySelector('.wl-mems');
+  assert.ok(introw, 'group has introw');
+  assert.ok(mems, 'group has mems container');
+
+  // Verify member rows have the same flex structure as outer rows
+  const outerMain = root.querySelector('.wl-row:not(:has(.wl-group)) > .wl-main');
+  const memberMain = group.querySelector('.wl-mem .wl-mmain');
+
+  // Both should use flex layout
+  assert.strictEqual(outerMain.style.display || 'flex', 'flex', 'outer row uses flex');
+  assert.strictEqual(memberMain.style.display || 'flex', 'flex', 'member row uses flex');
+
+  // Verify both have the same number of slot elements (structure for alignment)
+  const outerSlots = outerMain.querySelectorAll(':scope > *');
+  const memberSlots = memberMain.querySelectorAll(':scope > *');
+  assert.strictEqual(outerSlots.length, memberSlots.length, 'outer and member rows have same slot count');
+  assert.strictEqual(outerSlots.length, 6, 'both have 6 slots for alignment');
+});

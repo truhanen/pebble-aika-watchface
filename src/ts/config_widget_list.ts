@@ -677,11 +677,12 @@ const widgetListComponent = {
     '.wl-fontbox-ph{width:2.5rem;height:2.6rem;margin:0 0 0 3px}' +
     '.wl-hide-ph{width:2rem;height:2.6rem;margin:0 0 0 3px}' +
     '.wl-btn-ph{width:2rem;height:2.6rem;margin:0 0 0 3px}' +
-    '.wl-group{margin:6px 0 0 12px;padding:6px 8px;border-left:3px solid #767676}' +
-    '.wl-introw{display:flex;align-items:center;margin:0 0 6px 0}' +
+    '.wl-group{margin:6px 0 0 12px;padding:0;border-left:3px solid #767676}' +
+    '.wl-introw{display:flex;align-items:center;margin:0 0 6px -12px;padding:6px 0 0 20px}' +
     '.wl-intlbl{margin:0 8px 0 0;color:#fff}' +
     '.wl-group .wl-int{flex:1 1 auto;min-width:0;height:2.6rem;background-color:#767676;color:#fff;' +
       'border:none;border-radius:0.3rem;padding:0 0.5rem;color-scheme:dark}' +
+    '.wl-mems{margin:0 0 0 -12px;padding:0 0 0 20px}' +
     '.wl-mem{margin:0 0 8px 0}' +
     '.wl-madd{min-width:0;margin:2px 0 4px 0}' +
     '.wl-add{margin:8px 0 10px 0}',

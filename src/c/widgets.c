@@ -509,7 +509,7 @@ static const WidgetDesc *desc_for(uint8_t id) {
 
 // The Bluetooth rune (2 px strokes; icon-only Bluetooth widget and the disconnect fallback),
 // same box connected or not.
-#define BT_RUNE_W 12
+#define BT_RUNE_W 14
 #define BT_RUNE_H WL_ICON_H
 
 // Share bar of the sleep + deep widget: a vertical gauge like the battery body.
@@ -584,12 +584,14 @@ static void draw_battery(GContext *g, GRect box, GColor fg, GColor bg) {
 }
 
 // The rune is drawn with 2 px strokes. graphics_context_set_stroke_width only honours odd
-// widths, so each stroke is two 1 px lines one pixel apart in x. Every segment is steep
-// (|dy| > |dx|), so each row holds exactly one pixel per line: a clean 2 px run per row.
+// widths, so each stroke is two 1 px lines one pixel apart: in x for a steep segment, in y
+// for a shallow one, so the stroke stays 2 px across its direction.
 static void draw_stroke2(GContext *g, int x0, int y0, int x1, int y1, GColor color) {
+  int ox = 1, oy = 0;
+  if (abs(x1 - x0) > abs(y1 - y0)) { ox = 0; oy = 1; }
   graphics_context_set_stroke_color(g, color);
   graphics_draw_line(g, GPoint(x0, y0), GPoint(x1, y1));
-  graphics_draw_line(g, GPoint(x0 + 1, y0), GPoint(x1 + 1, y1));
+  graphics_draw_line(g, GPoint(x0 + ox, y0 + oy), GPoint(x1 + ox, y1 + oy));
 }
 
 // The slash across a disconnected rune, from the bottom left to the top right (start
@@ -600,7 +602,7 @@ static void draw_bt_slash(GContext *g, GRect box, GColor color) {
 
 // The rune's strokes (and, disconnected, the slash) in one colour.
 static void draw_bt_strokes(GContext *g, GRect box, bool connected, GColor color) {
-  static const int8_t P[6][2] = { { 0, 6 }, { 10, 16 }, { 5, 22 }, { 5, 0 }, { 10, 6 }, { 0, 16 } };
+  static const int8_t P[6][2] = { { 0, 6 }, { 12, 16 }, { 6, 22 }, { 6, 0 }, { 12, 6 }, { 0, 16 } };
   int x = box.origin.x, y = box.origin.y;
   graphics_context_set_antialiased(g, false);
   graphics_context_set_stroke_width(g, 1);

@@ -95,6 +95,15 @@ static void test_columns(void) {
   assert(ys[0] == 6 && ys[3] + 18 == 222);
   int gap0 = ys[1] - ys[0] - 18, gap2 = ys[3] - ys[2] - 18;
   assert(gap0 == gap2 && gap0 == (216 - 72) / 3);
+  // uneven slack: the default edge column (icon, value, five Empty, icon+value).
+  // 62 px of slack over 7 gaps: gaps of 8-9 px, none of the remainder left below.
+  int16_t d[8] = { 23, 18, 18, 18, 18, 18, 18, 23 }, dys[8];
+  wl_column_layout(d, 8, 6, 222, 5, dys);
+  assert(dys[0] == 6 && dys[7] + 23 == 222);
+  for (int i = 0; i < 7; i++) {
+    int g = dys[i + 1] - dys[i] - d[i];
+    assert(g == 8 || g == 9);
+  }
   // single widget is centred
   wl_column_layout(h, 1, 6, 222, 5, ys);
   assert(ys[0] == 6 + (216 - 18) / 2);

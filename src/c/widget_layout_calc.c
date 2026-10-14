@@ -83,12 +83,20 @@ void wl_column_layout(const int16_t *heights, int n, int top, int bottom, int mi
     ys[0] = (int16_t)(top + (inner - heights[0]) / 2);
     return;
   }
-  int gap = min_gap;
-  if (total + (n - 1) * min_gap <= inner) { gap = (inner - total) / (n - 1); }
-  int y = top;
+  if (total + (n - 1) * min_gap > inner) {
+    int y = top;
+    for (int i = 0; i < n; i++) {
+      ys[i] = (int16_t)y;
+      y += heights[i] + min_gap;
+    }
+    return;
+  }
+  // Spread the slack so the gaps differ by at most 1 px and the last item ends
+  // exactly at bottom (a single floored gap left the remainder below it).
+  int slack = inner - total, y = top;
   for (int i = 0; i < n; i++) {
     ys[i] = (int16_t)y;
-    y += heights[i] + gap;
+    y += heights[i] + slack * (i + 1) / (n - 1) - slack * i / (n - 1);
   }
 }
 

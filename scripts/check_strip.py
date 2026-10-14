@@ -3,8 +3,8 @@
 
 Tick b (b = 0..59) is centred on the minute boundary at b*6 degrees: it covers
 clockwise angles [b*6 - 3, b*6 + 3) from 12 o'clock, measured from the screen
-centre to the pixel centre. Its shade is (b - 1) mod 5: 0 white, 1 25% dither,
-2 and 3 50% checkerboard, 4 black. The strip is drawn over everything (the minute
+centre to the pixel centre. Its shade is (b - 1) mod 5: 0 white, 1 ~10% dither,
+2 ~20%, 3 ~30%, 4 black. The strip is drawn over everything (the minute
 hand included), so every strip pixel must equal its plain expected shade.
 
 Prints the match/mismatch counts and every mismatching pixel (up to --limit 20).
@@ -18,11 +18,17 @@ from PIL import Image
 W, H, S = 200, 228, 4
 CX, CY = W // 2, H // 2
 
-def dither25(x, y):
-    return (x % 4 == 0 and y % 2 == 0) or ((x + 2) % 4 == 0 and (y + 1) % 2 == 0)
+def dither10(x, y):
+    return (x % 8 == 0 and y % 4 == 0) or ((x + 4) % 8 == 0 and (y + 2) % 4 == 0)
+
+def dither20(x, y):
+    return (x % 4 + y % 4 == 0) or ((x + 2) % 4 + (y + 2) % 4 == 0)
+
+def dither30(x, y):
+    return (x + y) % 2 == 0 and ((x + y) % 4 != 0 or ((x + y) % 4 == 0 and x % 2 != 0 and y % 2 != 0))
 
 def black(shade, x, y):
-    return [False, dither25(x, y), (x + y) % 2 == 0, (x + y) % 2 == 0, True][shade]
+    return [False, dither10(x, y), dither20(x, y), dither30(x, y), True][shade]
 
 def strip(x, y):
     return x < S or x >= W - S or y < S or y >= H - S

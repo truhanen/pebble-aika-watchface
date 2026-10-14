@@ -143,10 +143,12 @@ static void test_shades(void) {
   for (int b = 0; b < 10; b++) { assert(cf_strip_shade(b) == expect[b]); }
   for (int b = 0; b < 60; b += 5) { assert(cf_strip_shade(b) == 4); }
   assert(cf_strip_shade(59) == 3 && cf_strip_shade(1) == 0);
+  // Densities computed over 8x8: 0% white, ~6.25%, ~12.5%, ~37.5%, 100% black.
+  // Strictly increasing: 0 < 4 < 8 < 24 < 64.
   assert(black_count(0) == 0);
-  assert(black_count(1) == 16);
-  assert(black_count(2) == 32);
-  assert(black_count(3) == 32);
+  assert(black_count(1) == 4);
+  assert(black_count(2) == 8);
+  assert(black_count(3) == 24);
   assert(black_count(4) == 64);
 }
 

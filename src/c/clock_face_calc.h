@@ -54,8 +54,8 @@ int cf_strip_pixel_count(int w, int h);
 int cf_strip_row_spans(int y, int w, int h, int x0[2], int x1[2]);
 
 // Strip shade of tick b: (b - 1) mod 5, so every 5th tick (the minute marks, 0 =
-// 12 o'clock included) is black, then white, 25%, 50%, 50%.
-// Shades: 0 = white, 1 = 25% black dither, 2 and 3 = 50% (checkerboard), 4 = black.
+// 12 o'clock included) is black, then white, 10%, 20%, 30%.
+// Shades: 0 = white, 1 = 10% black dither, 2 = 20%, 3 = 30%, 4 = black.
 static inline int cf_strip_shade(int tick) { return (tick + 4) % 5; }
 
 // True when pixel (x, y) of `shade` is black. The dither patterns use absolute

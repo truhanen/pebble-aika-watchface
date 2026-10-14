@@ -82,17 +82,27 @@ int cf_strip_row_spans(int y, int w, int h, int x0[2], int x1[2]) {
   return 2;
 }
 
-// 25% black: two pixels per 4x2 tile.
-static bool dither_25(int x, int y) {
-  return (x % 4 == 0 && y % 2 == 0) || ((x + 2) % 4 == 0 && (y + 1) % 2 == 0);
+// 10% black: dither pattern from mathewreiss/dithering library.
+static bool dither_10(int x, int y) {
+  return (x % 8 == 0 && y % 4 == 0) || ((x + 4) % 8 == 0 && (y + 2) % 4 == 0);
+}
+
+// 20% black: dither pattern from mathewreiss/dithering library.
+static bool dither_20(int x, int y) {
+  return (x % 4 + y % 4 == 0) || ((x + 2) % 4 + (y + 2) % 4 == 0);
+}
+
+// 30% black: dither pattern from mathewreiss/dithering library.
+static bool dither_30(int x, int y) {
+  return (x + y) % 2 == 0 && ((x + y) % 4 != 0 || ((x + y) % 4 == 0 && x % 2 != 0 && y % 2 != 0));
 }
 
 bool cf_shade_is_black(int shade, int x, int y) {
   switch (shade) {
     case 0:  return false;
-    case 1:  return dither_25(x, y);
-    case 2:
-    case 3:  return (x + y) % 2 == 0;   // 50% checkerboard
+    case 1:  return dither_10(x, y);
+    case 2:  return dither_20(x, y);
+    case 3:  return dither_30(x, y);
     default: return true;
   }
 }

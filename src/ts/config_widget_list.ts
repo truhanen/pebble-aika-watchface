@@ -49,9 +49,21 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     return !(id >= 36 && id <= 38);
   }
   function hideBtnHtml(id: number, hidden: boolean, cls: string): string {
-    if (!isToggleableId(id)) { return ''; }
+    if (!isToggleableId(id)) { return hidePlaceholderHtml(); }
     return '<button type="button" class="' + cls + (hidden ? ' wl-hidden' : '') +
       '" title="Show/hide icon or unit">' + (hidden ? '⊘' : '◉') + '</button>';
+  }
+
+  function fontPlaceholderHtml(): string {
+    return '<span class="wl-placeholder wl-fontbox-ph" aria-hidden="true"></span>';
+  }
+
+  function hidePlaceholderHtml(): string {
+    return '<span class="wl-placeholder wl-hide-ph" aria-hidden="true"></span>';
+  }
+
+  function buttonPlaceholderHtml(): string {
+    return '<span class="wl-placeholder wl-btn-ph" aria-hidden="true"></span>';
   }
 
   // Static widget options. KEEP IN SYNC with src/ts/widget_options.ts STATIC_WIDGETS
@@ -300,7 +312,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   }
 
   function fontRowHtml(id: number, font: number, cls: string): string {
-    if (!hasFontId(id)) { return ''; }
+    if (!hasFontId(id)) { return fontPlaceholderHtml(); }
     // A native <select> (opacity 0) stretched over the visible "Aa" label: closed it
     // reads "Aa", tapped it opens the native picker with the full list.
     return '<span class="wl-fontbox' + (font !== FONT_DEFAULT ? ' wl-custom' : '') + '">' +
@@ -315,6 +327,8 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
       '<select class="wl-msel">' + memberOptionsHtml(e.id) + '</select>' +
       fontRowHtml(e.id, e.font, 'wl-mfont') +
       hideBtnHtml(e.id, e.hide, 'wl-mhide') +
+      buttonPlaceholderHtml() +
+      buttonPlaceholderHtml() +
       '<button type="button" class="wl-mdel" title="Remove member">&#10005;</button>' +
       '</div></div>';
   }
@@ -337,7 +351,8 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     let html = '<div class="wl-row">' +
       '<div class="wl-main">' +
       '<select class="wl-sel">' + mainOptionsHtml(mainSel) + '</select>' +
-      (isRot ? '' : fontRowHtml(e.id, e.font, 'wl-font') + hideBtnHtml(e.id, e.hide, 'wl-hide')) +
+      fontRowHtml(isRot ? 255 : e.id, isRot ? FONT_DEFAULT : e.font, 'wl-font') +
+      hideBtnHtml(isRot ? 255 : e.id, isRot ? false : e.hide, 'wl-hide') +
       '<button type="button" class="wl-up" title="Move up">&#9650;</button>' +
       '<button type="button" class="wl-down" title="Move down">&#9660;</button>' +
       '<button type="button" class="wl-del" title="Remove">&#10005;</button>' +
@@ -658,6 +673,10 @@ const widgetListComponent = {
       'border-radius:3px;background:#ff9a3c;pointer-events:none}' +
     '.wl-fontbox select{position:absolute;left:0;top:0;width:100%;height:100%;margin:0;padding:0;' +
       'opacity:0;border:none;font-size:16px}' +
+    '.wl-placeholder{flex:0 0 auto;visibility:hidden;pointer-events:none}' +
+    '.wl-fontbox-ph{width:2.5rem;height:2.6rem;margin:0 0 0 3px}' +
+    '.wl-hide-ph{width:2rem;height:2.6rem;margin:0 0 0 3px}' +
+    '.wl-btn-ph{width:2rem;height:2.6rem;margin:0 0 0 3px}' +
     '.wl-group{margin:6px 0 0 12px;padding:6px 8px;border-left:3px solid #767676}' +
     '.wl-introw{display:flex;align-items:center;margin:0 0 6px 0}' +
     '.wl-intlbl{margin:0 8px 0 0;color:#fff}' +

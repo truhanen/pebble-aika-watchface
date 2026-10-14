@@ -80,3 +80,61 @@ test('rotating members with Empty are still dropped by the encoder', () => {
   const g = { rotating: true, interval: 3, members: [w(0, 5), w(10), w(12)] };
   assert.deepStrictEqual(widgetListToPayload([g]), [255, 2, 3, 10, 31, 12, 31]);
 });
+
+test('every row in a list has the same slot elements with placeholders for missing controls', () => {
+  // Test with a mix of plain, Empty, icon-only, rotating group with members, and top-list single row
+  const { root: sideList } = mount([
+    w(10),           // plain widget
+    w(0),            // Empty (has font, no hide)
+    w(36),           // icon-only (no font, no hide)
+    w(37),           // icon-only
+    { rotating: true, interval: 3, members: [w(2), w(10), w(37)] },  // rotating group
+  ], { defaultFont: 5 });
+
+  const { root: topList } = mount([w(35)], { defaultFont: 7, max: 1 });  // single-row top list
+
+  // Check side list rows (should have: select, font, hide, up, down, del)
+  const sideRows = sideList.querySelectorAll('.wl-row > .wl-main');
+  assert.ok(sideRows.length >= 5, 'side list has at least 5 rows');
+
+  sideRows.forEach((main, i) => {
+    const slots = main.querySelectorAll(':scope > *');
+    assert.strictEqual(slots.length, 6, `side row ${i} has 6 slot elements (select + font + hide + up + down + del)`);
+
+    // First should be select
+    assert.ok(slots[0].classList.contains('wl-sel'), `side row ${i} slot 0 is select`);
+
+    // Check that font slot exists (either real or placeholder)
+    const fontSlot = slots[1];
+    assert.ok(
+      fontSlot.classList.contains('wl-fontbox') || fontSlot.classList.contains('wl-fontbox-ph'),
+      `side row ${i} slot 1 is font (real or placeholder)`
+    );
+
+    // Check that hide slot exists (either real button or placeholder)
+    const hideSlot = slots[2];
+    assert.ok(
+      hideSlot.tagName === 'BUTTON' || hideSlot.classList.contains('wl-hide-ph'),
+      `side row ${i} slot 2 is hide button or placeholder`
+    );
+
+    // Buttons should be the last 3 slots
+    assert.ok(slots[3].classList.contains('wl-up') || slots[3].classList.contains('wl-btn-ph'), `side row ${i} slot 3 is up button or placeholder`);
+    assert.ok(slots[4].classList.contains('wl-down') || slots[4].classList.contains('wl-btn-ph'), `side row ${i} slot 4 is down button or placeholder`);
+    assert.ok(slots[5].tagName === 'BUTTON', `side row ${i} slot 5 is del button`);
+  });
+
+  // Check top list rows (single slot list)
+  const topRows = topList.querySelectorAll('.wl-row > .wl-main');
+  assert.ok(topRows.length === 1, 'top list has 1 row');
+  const topSlots = topRows[0].querySelectorAll(':scope > *');
+  assert.strictEqual(topSlots.length, 6, 'top row has 6 slot elements');
+
+  // Check group members (should have: select, font, hide, up-placeholder, down-placeholder, del)
+  const groupRows = sideList.querySelectorAll('.wl-mems .wl-mem');
+  assert.ok(groupRows.length >= 2, 'rotating group has at least 2 members');
+  groupRows.forEach((mem, i) => {
+    const mains = mem.querySelectorAll('.wl-mmain > *');
+    assert.strictEqual(mains.length, 6, `group member ${i} has 6 slot elements (select + font + hide + up-ph + down-ph + del)`);
+  });
+});

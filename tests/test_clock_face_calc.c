@@ -110,31 +110,60 @@ static double perimeter_of_boundary(int b) {
   }
 }
 
-static void tick_of(int b, CfPoint out[CF_TICK_PIXELS]) {
+static int tick_of(int b, CfPoint out[CF_TICK_MAX_PIXELS]) {
   double a = rad_of_minute(b);
   int edge;
   float t;
   cf_boundary_hit(W, H, (float)sin(a), (float)cos(a), &edge, &t);
-  cf_tick_pixels(W, H, edge, t, out);
+  return cf_tick_pixels(W, H, edge, t, out);
 }
 
 static int g_owner[H][W];
 
+// Float perimeter position (doubled-free, ring-index units) -> point on the
+// rectangle of outer-ring pixel centres [0.5,W-0.5] x [0.5,H-0.5].
+static void ring_point(double q, double *x, double *y) {
+  double A = W - 1, B = H - 1, len = 2 * A + 2 * B;
+  q = fmod(fmod(q, len) + len, len);
+  if (q < A)      { *x = 0.5 + q; *y = 0.5; }
+  else if (q < A + B)     { *x = W - 0.5; *y = 0.5 + q - A; }
+  else if (q < 2 * A + B) { *x = W - 0.5 - (q - A - B); *y = H - 0.5; }
+  else            { *x = 0.5; *y = H - 0.5 - (q - 2 * A - B); }
+}
+
+// Clockwise angle (radians, [0,2pi)) of the direction from the centre to (x,y).
+static double cw_angle(double x, double y) {
+  double a = atan2(x - CX, -(y - CY));
+  return a < 0 ? a + 2 * M_PI : a;
+}
+
+// Float: is pixel (px,py) strictly between the rays to E1 and E2 (clockwise)?
+// Returns -1/1 when clearly out/in, 0 when within 1e-9 rad of a ray.
+static int in_sector(double a1, double a2, int px, int py) {
+  double v = cw_angle(px + 0.5, py + 0.5);
+  double span = fmod(a2 - a1 + 2 * M_PI, 2 * M_PI), off = fmod(v - a1 + 2 * M_PI, 2 * M_PI);
+  if (fabs(off) < 1e-9 || fabs(off - span) < 1e-9) { return 0; }
+  return off < span ? 1 : -1;
+}
+
 static void test_ticks_geometry(void) {
-  assert(CF_TICK_COUNT == 60 && CF_TICK_PIXELS == 24);
-  int corner_ticks = 0;
+  assert(CF_TICK_COUNT == 60 && CF_TICK_LEN == 5);
+  int corner_ticks = 0, min_n = 1000, max_n = 0;
   for (int b = 0; b < CF_TICK_COUNT; b++) {
-    CfPoint px[CF_TICK_PIXELS];
-    tick_of(b, px);
-    int on_ring0[CF_TICK_LEN], n0 = 0;
-    for (int i = 0; i < CF_TICK_PIXELS; i++) {
+    CfPoint px[CF_TICK_MAX_PIXELS];
+    int n = tick_of(b, px);
+    assert(n > 0 && n <= CF_TICK_MAX_PIXELS);
+    if (n < min_n) { min_n = n; }
+    if (n > max_n) { max_n = n; }
+    int on_ring0[CF_TICK_MAX_PIXELS], n0 = 0;
+    for (int i = 0; i < n; i++) {
       assert(px[i].x >= 0 && px[i].x < W && px[i].y >= 0 && px[i].y < H);
       assert(min_edge_dist(px[i]) < CF_STRIP_W);        // inside the strip
-      assert(g_owner[px[i].y][px[i].x] == 0);           // 24 distinct, none shared
+      assert(g_owner[px[i].y][px[i].x] == 0);           // none shared
       g_owner[px[i].y][px[i].x] = b + 1;
       if (min_edge_dist(px[i]) == 0) { on_ring0[n0++] = ring0_index(px[i]); }
     }
-    // Exactly 6 outer pixels: a run of consecutive ring cells.
+    // Exactly 5 outer pixels: a run of consecutive ring cells.
     assert(n0 == CF_TICK_LEN);
     int first = -1;
     for (int i = 0; i < n0; i++) {
@@ -148,14 +177,26 @@ static void test_ticks_geometry(void) {
       for (int i = 0; i < n0; i++) { found |= on_ring0[i] == idx; }
       assert(found);
     }
-    // Centre of the 6 cells [first, first + 6) vs the exact boundary point.
+    // Centre of the 5 cells [first, first + 5) vs the exact boundary point.
     double centre = first + CF_TICK_LEN / 2.0;
     double diff = fmod(centre - perimeter_of_boundary(b) + 1.5 * RING0, RING0) - RING0 / 2.0;
     assert(fabs(diff) <= 0.5 + 1e-3);
+    // Float angular check, over every strip pixel: member iff between the end rays.
+    double e1x, e1y, e2x, e2y;
+    ring_point(first - 0.5, &e1x, &e1y);
+    ring_point(first + CF_TICK_LEN - 0.5, &e2x, &e2y);
+    double a1 = cw_angle(e1x, e1y), a2 = cw_angle(e2x, e2y);
+    for (int y = 0; y < H; y++) {
+      for (int x = 0; x < W; x++) {
+        if (min_edge_dist((CfPoint){ (int16_t)x, (int16_t)y }) >= CF_STRIP_W) { continue; }
+        int s = in_sector(a1, a2, x, y), member = g_owner[y][x] == b + 1;
+        if (s != 0) { assert(member == (s > 0)); }
+      }
+    }
     // Does it wrap a corner: some pixel in a 4x4 corner square, plus pixels on both
     // adjoining edges outside it.
     int in_corner = 0, horiz = 0, vert = 0;
-    for (int i = 0; i < CF_TICK_PIXELS; i++) {
+    for (int i = 0; i < n; i++) {
       int xe = px[i].x < CF_STRIP_W || px[i].x >= W - CF_STRIP_W;
       int ye = px[i].y < CF_STRIP_W || px[i].y >= H - CF_STRIP_W;
       in_corner |= xe && ye;
@@ -164,16 +205,17 @@ static void test_ticks_geometry(void) {
     }
     if (in_corner && horiz && vert) { corner_ticks++; }
   }
-  // The right/left-edge ticks 7, 23, 37 and 53 start or end at a screen corner.
-  assert(corner_ticks == 4);
-  // No two ticks touch: every 8-neighbour of a tick pixel is free or the same tick.
+  printf("tick pixel count range: %d..%d\n", min_n, max_n);
+  (void)corner_ticks;
+  // No two ticks touch on the outer row: >= 1 free pixel between neighbours.
   for (int y = 0; y < H; y++) {
     for (int x = 0; x < W; x++) {
-      if (!g_owner[y][x]) { continue; }
+      if (!g_owner[y][x] || min_edge_dist((CfPoint){ (int16_t)x, (int16_t)y }) != 0) { continue; }
       for (int dy = -1; dy <= 1; dy++) {
         for (int dx = -1; dx <= 1; dx++) {
           int nx = x + dx, ny = y + dy;
           if (nx < 0 || ny < 0 || nx >= W || ny >= H) { continue; }
+          if (min_edge_dist((CfPoint){ (int16_t)nx, (int16_t)ny }) != 0) { continue; }
           assert(g_owner[ny][nx] == 0 || g_owner[ny][nx] == g_owner[y][x]);
         }
       }
@@ -181,35 +223,68 @@ static void test_ticks_geometry(void) {
   }
 }
 
-static int has_pixel(const CfPoint *p, int x, int y) {
-  for (int i = 0; i < CF_TICK_PIXELS; i++) { if (p[i].x == x && p[i].y == y) { return 1; } }
+static int has_pixel(const CfPoint *p, int n, int x, int y) {
+  for (int i = 0; i < n; i++) { if (p[i].x == x && p[i].y == y) { return 1; } }
   return 0;
 }
 
-// A tick centred right on the top-right corner: cell k = 199 -> ring cells 196..201.
+// A tick centred on the top-right corner (cell k = 199, the corner pixel): outer ring
+// cells 197..201 = top x=197,198, the corner, right y=1,2.
 static void test_corner_wrap(void) {
-  CfPoint px[CF_TICK_PIXELS];
-  cf_tick_pixels(W, H, CF_EDGE_TOP, 199.2f, px);
-  for (int x = 196; x <= 199; x++) { assert(has_pixel(px, x, 0)); }   // top, outer layer
-  assert(has_pixel(px, 199, 1) && has_pixel(px, 199, 2));             // continues down the right
-  assert(!has_pixel(px, 195, 0) && !has_pixel(px, 199, 3));
-  // Inner layer 1 turns at its own corner pixel (198,1): ring cells 195..200 are
-  // top x=196,197, the corner, then right y=2..4.
-  assert(has_pixel(px, 196, 1) && has_pixel(px, 197, 1) && has_pixel(px, 198, 1));
-  assert(has_pixel(px, 198, 2) && has_pixel(px, 198, 4));
-  assert(!has_pixel(px, 195, 1) && !has_pixel(px, 198, 5));
-  // Same on the other three corners (rotated cases): exact pixel count each.
-  int bases[4][2] = { { CF_EDGE_RIGHT, H }, { CF_EDGE_BOTTOM, W }, { CF_EDGE_LEFT, H },
+  CfPoint px[CF_TICK_MAX_PIXELS];
+  int n = cf_tick_pixels(W, H, CF_EDGE_TOP, 199.2f, px);
+  assert(n <= CF_TICK_MAX_PIXELS);
+  assert(has_pixel(px, n, 197, 0) && has_pixel(px, n, 198, 0) && has_pixel(px, n, 199, 0));
+  assert(has_pixel(px, n, 199, 1) && has_pixel(px, n, 199, 2));
+  assert(!has_pixel(px, n, 196, 0) && !has_pixel(px, n, 199, 3));
+  // All four corners: pixels distinct, in the strip, outer row exactly 5.
+  int bases[4][2] = { { CF_EDGE_RIGHT, H - 1 }, { CF_EDGE_BOTTOM, W - 1 }, { CF_EDGE_LEFT, H - 1 },
                       { CF_EDGE_TOP, 0 } };
   for (int c = 0; c < 4; c++) {
-    cf_tick_pixels(W, H, bases[c][0], (float)bases[c][1], px);
-    for (int i = 0; i < CF_TICK_PIXELS; i++) {
-      for (int j = i + 1; j < CF_TICK_PIXELS; j++) {
-        assert(px[i].x != px[j].x || px[i].y != px[j].y);
-      }
+    n = cf_tick_pixels(W, H, bases[c][0], (float)bases[c][1] + 0.5f, px);
+    assert(n > 0 && n <= CF_TICK_MAX_PIXELS);
+    int n0 = 0;
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) { assert(px[i].x != px[j].x || px[i].y != px[j].y); }
       assert(min_edge_dist(px[i]) < CF_STRIP_W);
+      n0 += min_edge_dist(px[i]) == 0;
+    }
+    assert(n0 == CF_TICK_LEN);
+  }
+}
+
+static uint8_t g_scratch[2 * ((W * H + 7) / 8)];
+static CfPoint g_shadow[CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK];
+
+// The shadow is exactly the on-screen non-tick 4-neighbours of tick pixels.
+static void test_shadow(void) {
+  static CfPoint all[CF_TICK_COUNT * CF_TICK_MAX_PIXELS];
+  static int is_tick[H][W], is_shadow[H][W], expect[H][W];
+  int n = 0;
+  for (int b = 0; b < CF_TICK_COUNT; b++) { n += tick_of(b, all + n); }
+  for (int i = 0; i < n; i++) { is_tick[all[i].y][all[i].x] = 1; }
+  for (int i = 0; i < n; i++) {
+    static const int dx[4] = { 1, -1, 0, 0 }, dy[4] = { 0, 0, 1, -1 };
+    for (int k = 0; k < 4; k++) {
+      int x = all[i].x + dx[k], y = all[i].y + dy[k];
+      if (x >= 0 && y >= 0 && x < W && y < H && !is_tick[y][x]) { expect[y][x] = 1; }
     }
   }
+  int sn = cf_shadow_pixels(W, H, all, n, g_scratch, g_shadow, CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK);
+  assert(sn > 0 && sn < CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK);
+  for (int i = 0; i < sn; i++) {
+    int x = g_shadow[i].x, y = g_shadow[i].y;
+    assert(x >= 0 && y >= 0 && x < W && y < H);   // on screen
+    assert(!is_tick[y][x]);                        // never overlaps a tick
+    assert(!is_shadow[y][x]);                      // listed once
+    is_shadow[y][x] = 1;
+  }
+  int expected = 0;
+  for (int y = 0; y < H; y++) {
+    for (int x = 0; x < W; x++) { assert(is_shadow[y][x] == expect[y][x]); expected += expect[y][x]; }
+  }
+  assert(expected == sn);
+  printf("shadow pixels: %d (%.1f per tick)\n", sn, sn / 60.0);
 }
 
 static void test_boundary_hit(void) {
@@ -247,6 +322,7 @@ int main(void) {
   test_boundary_hit();
   test_ticks_geometry();
   test_corner_wrap();
+  test_shadow();
   test_tick_colour();
   printf("test_clock_face_calc: OK\n");
   return 0;

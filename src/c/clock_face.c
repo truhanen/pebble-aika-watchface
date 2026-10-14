@@ -1,5 +1,5 @@
 // Clock face: hour + minute hands, centre pivot, the 60 minute-boundary ticks along
-// the screen edges (separate, equal-length, black on every 5th and light gray
+// the screen edges (separate, 5 px long with radial sides, 1 px background shadow, black on every 5th and light gray
 // otherwise) and the widgets (icons below the hands, values above), all on one
 // full-screen layer.
 //
@@ -61,12 +61,18 @@ static void draw_hand_fill(GContext *ctx, const CfHandPose *p, GColor color) {
   gpath_draw_filled(ctx, &s_path);
 }
 
-// Colour of every tick pixel, computed once at init.
+// Colour of every tick pixel, and the shadow pixels around the ticks, all computed
+// once at init.
 typedef struct { uint8_t x, y, argb; } TickPixel;
-static TickPixel s_tick_pixels[CF_TICK_COUNT * CF_TICK_PIXELS];
+typedef struct { uint8_t x, y; } ShadowPixel;
+static TickPixel s_tick_pixels[CF_TICK_COUNT * CF_TICK_MAX_PIXELS];
+static int s_tick_pixel_count;
+static ShadowPixel s_shadow_pixels[CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK];
+static int s_shadow_pixel_count;
 
 static void build_tick_table(int w, int h) {
   int n = 0;
+  CfPoint *all = malloc(sizeof(CfPoint) * CF_TICK_COUNT * CF_TICK_MAX_PIXELS);
   for (int b = 0; b < CF_TICK_COUNT; b++) {
     int32_t angle = b * TRIG_MAX_ANGLE / CF_TICK_COUNT;
     float sin_a = (float)sin_lookup(angle) / TRIG_MAX_RATIO;
@@ -74,24 +80,43 @@ static void build_tick_table(int w, int h) {
     int edge;
     float t;
     cf_boundary_hit(w, h, sin_a, cos_a, &edge, &t);
-    CfPoint px[CF_TICK_PIXELS];
-    cf_tick_pixels(w, h, edge, t, px);
+    CfPoint px[CF_TICK_MAX_PIXELS];
+    int count = cf_tick_pixels(w, h, edge, t, px);
     GColor color = cf_tick_is_black(b) ? GColorBlack : GColorLightGray;
-    for (int i = 0; i < CF_TICK_PIXELS; i++) {
+    for (int i = 0; i < count; i++) {
+      all[n] = px[i];
       s_tick_pixels[n++] = (TickPixel){
         (uint8_t)px[i].x, (uint8_t)px[i].y, color.argb };
     }
   }
+  s_tick_pixel_count = n;
+
+  uint8_t *scratch = malloc(2 * ((w * h + 7) / 8));
+  CfPoint *shadow = malloc(sizeof(CfPoint) * CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK);
+  int sn = cf_shadow_pixels(w, h, all, n, scratch, shadow, CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK);
+  for (int i = 0; i < sn; i++) {
+    s_shadow_pixels[i] = (ShadowPixel){ (uint8_t)shadow[i].x, (uint8_t)shadow[i].y };
+  }
+  s_shadow_pixel_count = sn;
+  free(shadow);
+  free(scratch);
+  free(all);
 }
 
-// Writes the tick pixels straight into the framebuffer, over whatever is underneath
-// (including the minute hand). Everything else in the strip area is left as drawn.
-static void draw_ticks(GContext *ctx) {
+// Writes the shadow pixels (background colour), then the tick pixels, straight into
+// the framebuffer over whatever is underneath (including the minute hand). Everything
+// else in the strip area is left as drawn.
+static void draw_ticks(GContext *ctx, GColor bg) {
   GBitmap *fb = graphics_capture_frame_buffer(ctx);
   if (!fb) { return; }
   int last_y = -1;
   GBitmapDataRowInfo row = { 0 };
-  for (int i = 0; i < CF_TICK_COUNT * CF_TICK_PIXELS; i++) {
+  for (int i = 0; i < s_shadow_pixel_count; i++) {
+    const ShadowPixel *p = &s_shadow_pixels[i];
+    if (p->y != last_y) { row = gbitmap_get_data_row_info(fb, p->y); last_y = p->y; }
+    row.data[p->x] = bg.argb;
+  }
+  for (int i = 0; i < s_tick_pixel_count; i++) {
     const TickPixel *p = &s_tick_pixels[i];
     if (p->y != last_y) { row = gbitmap_get_data_row_info(fb, p->y); last_y = p->y; }
     row.data[p->x] = p->argb;
@@ -160,7 +185,7 @@ static void face_update_proc(Layer *l, GContext *ctx) {
 
   WidgetLayer_drawValues(ctx);
 
-  draw_ticks(ctx);
+  draw_ticks(ctx, bg);
   draw_warn_border(ctx, bounds);
 }
 

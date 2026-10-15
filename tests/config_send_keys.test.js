@@ -111,3 +111,18 @@ test('the night palette settings reach the watch', () => {
 test('the removed SettingShowBatteryPct is no longer sent', () => {
   assert.strictEqual(STRAIGHT_THROUGH_KEYS.indexOf('SettingShowBatteryPct'), -1);
 });
+
+test('SettingPrecipUnit is a mm/inch radiogroup (default mm) sent straight through', () => {
+  const it = flattenConfig(configArr).find((i) => i && i.messageKey === 'SettingPrecipUnit');
+  assert.ok(it, 'SettingPrecipUnit must be in the config');
+  assert.strictEqual(it.type, 'radiogroup');
+  assert.strictEqual(it.label, 'Precipitation unit');
+  assert.strictEqual(it.defaultValue, '0');
+  assert.deepStrictEqual(it.options.map((o) => [o.label, o.value]), [['mm', '0'], ['inch', '1']]);
+  assert.ok(STRAIGHT_THROUGH_KEYS.indexOf('SettingPrecipUnit') !== -1);
+});
+
+test('rain message keys are declared at the end of package.json messageKeys', () => {
+  const keys = require('../package.json').pebble.messageKeys;
+  assert.deepStrictEqual(keys.slice(-2), ['WeatherRainMax', 'SettingPrecipUnit']);
+});

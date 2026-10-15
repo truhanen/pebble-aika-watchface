@@ -37,6 +37,7 @@ run_one t_widget_layout_calc tests/test_widget_layout_calc.c src/c/widget_layout
 run_one t_sleep_calc         tests/test_sleep_calc.c         src/c/sleep_calc.c
 run_one t_data_slots         tests/test_data_slots.c         src/c/data_slots.c
 run_one t_tuya_leds_parse    tests/test_tuya_leds_parse.c    src/c/tuya_leds_parse.c
+run_one t_rain_calc          tests/test_rain_calc.c          src/c/rain_calc.c
 run_one t_text_case          tests/test_text_case.c          src/c/text_case.c
 
 echo "--- all host C tests passed ---"

@@ -22,7 +22,8 @@
 // three lists).
 // KEEP IN SYNC with src/c/widget_list.c.
 export const MAX_LIST_BYTES = 64;
-const MAX_WIDGET_TYPE = 38;         // BLUETOOTH_ICON
+const MAX_WIDGET_TYPE = 44;         // RAIN_MAX_12H
+const RETIRED_BATTERY_PCT = 39;     // retired id inside the range (40..44 are the rain widgets)
 const CRYPTO_WID_BASE = 200;
 const MAX_CRYPTO = 16;
 const CURRENCY_WID_BASE = 216;
@@ -48,7 +49,7 @@ interface Slot { members: Entry[]; interval: number; group: boolean; }
 function isValidId(id: number): boolean {
   if (id === 0) { return true; }
   if (id === 2 || id === 3) { return true; }
-  if (id >= 5 && id <= MAX_WIDGET_TYPE) { return true; }
+  if (id >= 5 && id <= MAX_WIDGET_TYPE && id !== RETIRED_BATTERY_PCT) { return true; }
   if (id >= CRYPTO_WID_BASE && id < CRYPTO_WID_BASE + MAX_CRYPTO) { return true; }
   if (id >= CURRENCY_WID_BASE && id < CURRENCY_WID_BASE + MAX_CURRENCY) { return true; }
   if (id >= TUYA_WID_BASE && id < TUYA_WID_BASE + MAX_TUYA) { return true; }

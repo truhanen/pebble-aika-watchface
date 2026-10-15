@@ -12,6 +12,7 @@
 #include "theme.h"
 #include "util.h"
 #include "weather.h"
+#include "rain_calc.h"
 #include "electricity.h"
 #include "electricity_calc.h"
 #include "crypto.h"
@@ -31,7 +32,7 @@
 
 typedef enum {
   ICON_NONE, ICON_BATTERY, ICON_BT_OFF, ICON_BT_STATE, ICON_STEPS, ICON_HEART, ICON_WEATHER,
-  ICON_FORECAST, ICON_SLEEP, ICON_DEEP_SLEEP, ICON_SLEEP_BAR, ICON_LEDS
+  ICON_FORECAST, ICON_RAIN, ICON_SLEEP, ICON_DEEP_SLEEP, ICON_SLEEP_BAR, ICON_LEDS
 } IconKind;
 
 typedef struct {
@@ -42,7 +43,7 @@ typedef struct {
                                                             // false = none to show now
 } WidgetDesc;
 
-static GDrawCommandImage *s_steps_image, *s_heart_image, *s_sleep_image, *s_deep_sleep_image;
+static GDrawCommandImage *s_steps_image, *s_heart_image, *s_sleep_image, *s_deep_sleep_image, *s_rain_image;
 
 // The time the date / time widgets show: the face's own, test-hook override included.
 static struct tm s_tm;
@@ -91,6 +92,7 @@ void Widgets_init(void) {
   s_heart_image = icon_image_create_with_resource(RESOURCE_ID_HEALTH_HEART);
   s_sleep_image = icon_image_create_with_resource(RESOURCE_ID_HEALTH_SLEEP);
   s_deep_sleep_image = icon_image_create_with_resource(RESOURCE_ID_HEALTH_DEEP_SLEEP);
+  s_rain_image = icon_image_create_with_resource(RESOURCE_ID_WEATHER_LIGHT_RAIN);
   health_service_events_subscribe(hr_health_handler, NULL);
   hr_seed_from_history();
 }
@@ -100,6 +102,7 @@ void Widgets_deinit(void) {
   gdraw_command_image_destroy(s_heart_image);
   gdraw_command_image_destroy(s_sleep_image);
   gdraw_command_image_destroy(s_deep_sleep_image);
+  gdraw_command_image_destroy(s_rain_image);
   health_service_events_unsubscribe();
 }
 
@@ -254,6 +257,19 @@ static bool value_uv(const WidgetCtx *c, char *buf, size_t n) {
   } else {
     snprintf(buf, n, "--");
   }
+  return true;
+}
+
+// Max rain in the next N hours (ids 40..44 = window 0..4), mm/h or in/h.
+static bool value_rain(const WidgetCtx *c, char *buf, size_t n) {
+  int i = c->id - RAIN_MAX_1H;
+  uint16_t v = (i >= 0 && i < RAIN_WINDOWS) ? Weather_weatherInfo.rainMax[i] : RAIN_UNKNOWN;
+  rain_format_value(v, settings.precipUnit, settings.decimalSeparator, buf, n);
+  return true;
+}
+
+static bool unit_rain(const WidgetCtx *c, char *buf, size_t n) {
+  rain_format_unit(c->id - RAIN_MAX_1H, settings.precipUnit, buf, n);
   return true;
 }
 
@@ -471,6 +487,7 @@ static const WidgetDesc DESC_HEART = { value_heart, ICON_HEART, unit_heart };
 static const WidgetDesc DESC_WEATHER = { value_weather, ICON_WEATHER, unit_temperature };
 static const WidgetDesc DESC_WEATHER_ICON = { NULL, ICON_WEATHER, NULL };
 static const WidgetDesc DESC_FORECAST = { value_forecast, ICON_FORECAST, unit_temperature };
+static const WidgetDesc DESC_RAIN = { value_rain, ICON_RAIN, unit_rain };
 static const WidgetDesc DESC_UV = { value_uv, ICON_NONE, unit_uv };
 static const WidgetDesc DESC_ALT_TIME = { value_alt_time, ICON_NONE, unit_alt_time };
 static const WidgetDesc DESC_SECONDS = { value_seconds, ICON_NONE, NULL };
@@ -517,6 +534,8 @@ static const WidgetDesc *desc_for(uint8_t id) {
     case BATTERY_ICON:         return &DESC_BATTERY_ICON;
     case WEATHER_ICON:         return &DESC_WEATHER_ICON;
     case BLUETOOTH_ICON:       return &DESC_BT_ICON;
+    case RAIN_MAX_1H: case RAIN_MAX_3H: case RAIN_MAX_6H: case RAIN_MAX_9H: case RAIN_MAX_12H:
+                               return &DESC_RAIN;
     default:                   return NULL;   // unknown id: draws nothing
   }
 }
@@ -557,6 +576,7 @@ static GDrawCommandImage *icon_image(IconKind kind) {
     case ICON_DEEP_SLEEP: return s_deep_sleep_image;
     case ICON_WEATHER:  return Weather_currentWeatherIcon;
     case ICON_FORECAST: return Weather_forecastWeatherIcon;
+    case ICON_RAIN:     return s_rain_image;
     default:            return NULL;
   }
 }
@@ -739,7 +759,7 @@ static void measure(const WidgetCtx *c, WidgetSize *out) {
       out->icon_h = BT_RUNE_H;
       break;
     case ICON_STEPS: case ICON_HEART: case ICON_WEATHER: case ICON_FORECAST:
-    case ICON_SLEEP: case ICON_DEEP_SLEEP: {
+    case ICON_RAIN: case ICON_SLEEP: case ICON_DEEP_SLEEP: {
       GDrawCommandImage *img = icon_image(d->icon);
       if (img) {
         GSize s = gdraw_command_image_get_bounds_size(img);

@@ -1,5 +1,6 @@
 #pragma once
 #include <pebble.h>
+#include "rain_calc.h"
 
 // persistent storage
 #define WEATHER_PERSIST_KEY 223
@@ -17,6 +18,10 @@ typedef struct {
 
   // nearest observation station name (FMI only; empty otherwise)
   char stationName[24];
+
+  // max hourly rain over the next 1/3/6/9/12 h, hundredths of mm; RAIN_UNKNOWN = unknown.
+  // Kept LAST: an older persisted blob is shorter and simply lacks it.
+  uint16_t rainMax[RAIN_WINDOWS];
 } WeatherInfo;
 
 typedef enum {

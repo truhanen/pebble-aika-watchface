@@ -35,6 +35,11 @@ export const STATIC_WIDGETS: WidgetOption[] = [
   { id: 37, label: 'WEATHER condition icon' },
   { id: 8, label: 'WEATHER forecast high/low' },
   { id: 13, label: 'WEATHER UV index' },
+  { id: 40, label: 'WEATHER max rain 1 h' },
+  { id: 41, label: 'WEATHER max rain 3 h' },
+  { id: 42, label: 'WEATHER max rain 6 h' },
+  { id: 43, label: 'WEATHER max rain 9 h' },
+  { id: 44, label: 'WEATHER max rain 12 h' },
   { id: 10, label: 'HEALTH steps' },
   { id: 21, label: 'HEALTH distance' },
   { id: 12, label: 'HEALTH heart rate' },
@@ -111,8 +116,8 @@ export function memberOptions(rows: any): WidgetOption[] {
 // config_widget_list.ts. Widgets with neither (Empty, seconds, dates, beats) and the
 // icon-only ones (36..38: nothing to switch off) are not toggleable.
 export type WidgetIdent = 'icon' | 'unit' | 'none';
-const IDENT_ICON_IDS: number[] = [2, 7, 8, 9, 10, 12, 20, 21, 22, 23, 24, 25];
-const IDENT_UNIT_IDS: number[] = [2, 3, 6, 7, 8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 24, 25, 35];
+const IDENT_ICON_IDS: number[] = [2, 7, 8, 9, 10, 12, 20, 21, 22, 23, 24, 25, 40, 41, 42, 43, 44];
+const IDENT_UNIT_IDS: number[] = [2, 3, 6, 7, 8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 24, 25, 35, 40, 41, 42, 43, 44];
 
 // The modes the config button cycles through for a widget id, in cycle order; [] = the
 // widget has no identifier (the button is a placeholder).

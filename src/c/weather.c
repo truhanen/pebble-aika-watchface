@@ -83,12 +83,17 @@ void Weather_init() {
   Weather_weatherInfo.currentUVIndex = INT32_MIN;
   Weather_weatherInfo.todaysHighTemp = INT32_MIN;
   Weather_weatherInfo.todaysLowTemp = INT32_MIN;
+  for (int i = 0; i < RAIN_WINDOWS; i++) { Weather_weatherInfo.rainMax[i] = RAIN_UNKNOWN; }
 
   // if possible, load weather data from persistent storage
   if (persist_exists(WEATHER_PERSIST_KEY)) {
-    WeatherInfo storedWeather;
-    persist_read_data(WEATHER_PERSIST_KEY, &storedWeather, sizeof(storedWeather));
-    memcpy(&Weather_weatherInfo, &storedWeather, sizeof(storedWeather));
+    // Read at most what was stored: an older, shorter blob leaves the fields it lacks
+    // (rainMax) at the "unknown" defaults set above.
+    int stored = persist_get_size(WEATHER_PERSIST_KEY);
+    if (stored > (int)sizeof(WeatherInfo)) { stored = (int)sizeof(WeatherInfo); }
+    if (stored > 0) {
+      persist_read_data(WEATHER_PERSIST_KEY, &Weather_weatherInfo, stored);
+    }
     s_hasData = true;
   }
 

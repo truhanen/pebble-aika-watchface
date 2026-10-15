@@ -29,6 +29,7 @@ static void set_defaults(void) {
   settings.autoBatteryThreshold = 10;
   strncpy(settings.altclockName, "ALT", sizeof(settings.altclockName));
   settings.decimalSeparator = '.';
+  settings.precipUnit = 0;
   settings.fallbackColumn = 0;
   settings.fallbackPosition = 1;
 
@@ -89,6 +90,7 @@ void Settings_loadFromStorage() {
   if (settings.decimalSeparator != '.' && settings.decimalSeparator != ',') {
     settings.decimalSeparator = '.';
   }
+  if (settings.precipUnit > 1) { settings.precipUnit = 0; }
   settings.altclockName[sizeof(settings.altclockName) - 1] = '\0';
   if (settings.pollIntervalMin < 5 || settings.pollIntervalMin > 240) { settings.pollIntervalMin = 30; }
   if (settings.elecQuietStart > 23) { settings.elecQuietStart = 23; }
@@ -136,7 +138,8 @@ void Settings_saveToStorage() {
 
 static void dyn_scan_cb(uint8_t w, void *ctx) {
   (void)ctx;
-  if (w == WEATHER_CURRENT || w == WEATHER_FORECAST_TODAY || w == WEATHER_UV_INDEX || w == WEATHER_ICON) {
+  if (w == WEATHER_CURRENT || w == WEATHER_FORECAST_TODAY || w == WEATHER_UV_INDEX || w == WEATHER_ICON
+      || (w >= RAIN_MAX_1H && w <= RAIN_MAX_12H)) {
     dynamicSettings.disableWeather = false;
   }
   if (w == SECONDS) { dynamicSettings.updateScreenEverySecond = true; }

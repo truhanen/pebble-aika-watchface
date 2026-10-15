@@ -252,6 +252,8 @@ static bool widget_source_missing(uint8_t w) {
     case WEATHER_FORECAST_TODAY:
     case WEATHER_UV_INDEX:
       return !Weather_hasData();
+    case RAIN_MAX_1H: case RAIN_MAX_3H: case RAIN_MAX_6H: case RAIN_MAX_9H: case RAIN_MAX_12H:
+      return !Weather_hasData() || Weather_weatherInfo.rainMax[w - RAIN_MAX_1H] == RAIN_UNKNOWN;
     case TUYA_LEDS:
       return TuyaLeds_count == 0;
     default:

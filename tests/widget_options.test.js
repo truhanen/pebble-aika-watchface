@@ -3,7 +3,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const { STATIC_WIDGETS, buildOptions } = require('../src/pkjs/widget_options');
+const { STATIC_WIDGETS, buildOptions, identModes } = require('../src/pkjs/widget_options');
 
 test('STATIC_WIDGETS contains no crypto coin entries (those are dynamic)', () => {
   const ids = STATIC_WIDGETS.map((o) => o.id);
@@ -27,7 +27,7 @@ test('STATIC_WIDGETS includes the Distance widget (id 21)', () => {
 test('STATIC_WIDGETS offers exactly the contract ids (no 1, no retired 4, no legacy 15/16/17)', () => {
   const ids = STATIC_WIDGETS.map((o) => o.id).sort((a, b) => a - b);
   assert.deepStrictEqual(ids, [0, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 18, 19, 20, 21, 22, 23, 24, 25,
-    26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 255]);
+    26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 40, 41, 42, 43, 44, 255]);
   assert.strictEqual(new Set(ids).size, ids.length, 'ids are unique');
 });
 
@@ -42,6 +42,20 @@ test('STATIC_WIDGETS labels for the Phase 4 widgets', () => {
   assert.strictEqual(label(36), 'BATTERY icon');
   assert.strictEqual(label(37), 'WEATHER condition icon');
   assert.strictEqual(label(38), 'MISC bluetooth icon');
+});
+
+test('the rain max widgets 40..44 are labelled and sit in the WEATHER group after the UV index', () => {
+  const labels = { 40: '1 h', 41: '3 h', 42: '6 h', 43: '9 h', 44: '12 h' };
+  Object.keys(labels).forEach((id) => {
+    const o = STATIC_WIDGETS.find((x) => x.id === Number(id));
+    assert.strictEqual(o.label, 'WEATHER max rain ' + labels[id]);
+  });
+  const at = (id) => STATIC_WIDGETS.findIndex((x) => x.id === id);
+  assert.strictEqual(at(40), at(13) + 1);
+  assert.deepStrictEqual([40, 41, 42, 43, 44].map(at), [at(40), at(40) + 1, at(40) + 2, at(40) + 3, at(40) + 4]);
+  [40, 41, 42, 43, 44].forEach((id) => {
+    assert.deepStrictEqual(identModes(id), ['icon', 'unit', 'none']);
+  });
 });
 
 test("the retired \"Today's Date\" widget (4) is not offered", () => {

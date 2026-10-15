@@ -113,6 +113,13 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
     weatherDataUpdated = true;
   }
 
+  Tuple *weatherRainMax_tuple = dict_find(iterator, MESSAGE_KEY_WeatherRainMax);
+  if (weatherRainMax_tuple != NULL
+      && rain_parse(weatherRainMax_tuple->value->data, weatherRainMax_tuple->length,
+                    Weather_weatherInfo.rainMax)) {
+    weatherDataUpdated = true;
+  }
+
   // only save new weather if weather info was recieved
   if(weatherDataUpdated) {
     Weather_saveData();
@@ -375,6 +382,11 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   if(fallbackColumn_tuple != NULL) {
     int v = fallbackColumn_tuple->value->int32;
     if (v >= 0 && v <= 2) { settings.fallbackColumn = (uint8_t)v; }
+  }
+  Tuple *precipUnit_tuple = dict_find(iterator, MESSAGE_KEY_SettingPrecipUnit);
+  if (precipUnit_tuple != NULL) {
+    int v = precipUnit_tuple->value->int32;
+    if (v == RAIN_UNIT_MM || v == RAIN_UNIT_INCH) { settings.precipUnit = (uint8_t)v; }
   }
   if(fallbackPosition_tuple != NULL) {
     int v = fallbackPosition_tuple->value->int32;

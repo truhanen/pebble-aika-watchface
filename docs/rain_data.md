@@ -1,8 +1,19 @@
 # Rain data (phone to watch)
 
-Phone-side data for the "maximum hourly precipitation in the next N hours"
-widgets. The watch-side widgets are separate work; this describes what they
-receive.
+Data for the "maximum hourly precipitation in the next N hours" widgets (ids
+40..44): what the phone sends and how the watch shows it.
+
+## Watch side
+
+- `src/c/rain_calc.{c,h}` (pure, host-tested in `tests/test_rain_calc.c`): parse, value
+  text, unit label.
+- `WeatherInfo.rainMax[5]` (last field, persisted with the weather blob; an older, shorter
+  blob loads with all values unknown). `settings.precipUnit` (0 mm, 1 inch).
+- Value: mm with one decimal (`1.4`, `0.0`), inch with two (`0.06`), the configured
+  decimal separator, `--` when unknown. Unit: `mm/h` / `in/h` for 1 h (stacked `mm` over
+  `h`), otherwise `hi mm/3 h` (stacked `hi mm` over `3 h`). Icon: the light-rain PDC.
+- Placed ids count as weather widgets (`disableWeather`), and a rain widget is "source
+  missing" while its value is unknown, so a cold poll fills it.
 
 ## Message key
 
@@ -53,8 +64,8 @@ rain widget is placed.
 Index into the byte array = `id - 40`. Phone side already treats these ids as
 needing weather: `index.ts` sets `disable_weather = 'no'` when any is placed, and
 `config_clay_custom.ts` shows the Weather section (location, data source) plus
-`SettingPrecipUnit` when any is placed. The ids are not yet in `widget_options.ts`
-/ `config_widget_list.ts` / `widget_contract.md` (owned by the label work).
+`SettingPrecipUnit` when any is placed. The ids are in `widget_options.ts`,
+`config_widget_list.ts` (labels `WEATHER max rain N h`) and `widget_contract.md`.
 
 ## The hourly series p[0..11]
 

@@ -43,6 +43,7 @@ typedef struct {
   char altclockName[8];
   int altclockOffset;
   char decimalSeparator;
+  uint8_t precipUnit;            // RAIN_UNIT_MM (0, default) or RAIN_UNIT_INCH (1)
 
   // Fallback (auto-battery / BT-disconnect) placement:
   //   fallbackColumn: 0 = Automatic, 1 = Left list, 2 = Right list.

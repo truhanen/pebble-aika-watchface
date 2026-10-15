@@ -78,6 +78,11 @@ test('every STATIC_WIDGETS id (except Empty and Rotating) exists in the C Widget
   const maxVal = (mx[1] in values) ? values[mx[1]] : parseInt(mx[1], 10);
   assert.ok(maxVal >= Math.max.apply(null, ids),
     'MAX_WIDGET_TYPE (' + maxVal + ') must be >= the highest static widget id');
+  // the numeric mirrors of MAX_WIDGET_TYPE in widget_list.h and widget_list_payload.ts
+  const wl = /#define\s+WL_MAX_WIDGET_TYPE\s+(\d+)/.exec(read('src/c/widget_list.h'));
+  assert.strictEqual(parseInt(wl[1], 10), maxVal, 'WL_MAX_WIDGET_TYPE mirrors MAX_WIDGET_TYPE');
+  const ts = /const MAX_WIDGET_TYPE = (\d+);/.exec(read('src/ts/widget_list_payload.ts'));
+  assert.strictEqual(parseInt(ts[1], 10), maxVal, 'widget_list_payload.ts MAX_WIDGET_TYPE mirrors it');
 });
 
 test('FONT_KEYS in src/c/widget_fonts.c has exactly the 17 contract fonts, in order', () => {

@@ -27,9 +27,9 @@ int main(void) {
   assert(WidgetList_isDrawableId(26));      // first new date widget
   assert(WidgetList_isDrawableId(35));      // digital time
   assert(WidgetList_isDrawableId(38));      // BLUETOOTH_ICON
-  assert(WidgetList_isDrawableId(38));      // BLUETOOTH_ICON = MAX_WIDGET_TYPE
-  assert(!WidgetList_isDrawableId(39));     // the separate Battery % widget is gone (40..44 are reserved)
-  assert(!WidgetList_isDrawableId(40));
+  assert(!WidgetList_isDrawableId(39));     // the separate Battery % widget is gone
+  assert(WidgetList_isDrawableId(40) && WidgetList_isDrawableId(44));   // rain max 1 h .. 12 h
+  assert(!WidgetList_isDrawableId(45));
   assert(WidgetList_isDrawableId(128) && WidgetList_isDrawableId(143) && !WidgetList_isDrawableId(144));
   assert(WidgetList_isDrawableId(200) && WidgetList_isDrawableId(215));
   assert(WidgetList_isDrawableId(216) && WidgetList_isDrawableId(222) && !WidgetList_isDrawableId(223));

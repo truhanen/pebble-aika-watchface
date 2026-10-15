@@ -45,6 +45,7 @@ Each widget declares which identifiers it has (an icon, a unit, or both). When t
 | 7 temperature | weather icon, value `19°` | value `19` + `°C` / `°F` (`SettingUseMetric`); NONE shows the bare `19` |
 | 8 forecast | forecast icon, `18/11` | `18/11` + `°C` / `°F` |
 | 13 UV | (no icon; shows the unit) | `UVI` |
+| 40..44 max rain | light-rain icon, value `1.4` (mm/h) or `0.06` (in/h), `--` unknown | stacked `mm` / `h` (1 h) or `hi mm` / `3 h` (N h); inch: `in` |
 | 9, 20, 24, 25 sleep | sleep icon / deep icon / bar | `h` |
 | 10 steps | steps icon | `steps` |
 | 21 distance | steps icon | `km` / `mi` |
@@ -117,6 +118,7 @@ These ids are kept, ported to the new API, and listed on the config page:
 | 11 | Swatch beats | TIME swatch beats |
 | 12 | Heart rate | HEALTH heart rate |
 | 13 | UV index | WEATHER UV index |
+| 40..44 | Max rain in the next 1 / 3 / 6 / 9 / 12 h | WEATHER max rain 1 h / 3 h / 6 h / 9 h / 12 h |
 | 14 | Electricity price | ELECTR price |
 | 18 | Next cheap electricity | ELECTR next cheap |
 | 19 | Cheapest electricity hour | ELECTR cheapest hour |

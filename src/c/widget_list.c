@@ -28,6 +28,7 @@ uint8_t WidgetList_cleanFlags(uint8_t flags) {
 bool WidgetList_isDrawableId(uint8_t id) {
   if (id == 0) { return true; }                        // EMPTY: draws nothing, but holds a slot
   if (id == WL_RETIRED_DATE_ID) { return false; }
+  if (id == WL_RETIRED_BATTERY_PCT_ID) { return false; }   // the merged Battery % widget
   if (id <= WL_MAX_WIDGET_TYPE) { return true; }
   if (id >= WL_CRYPTO_WID_BASE && id < WL_CRYPTO_WID_BASE + WL_MAX_CRYPTO) { return true; }
   if (id >= WL_CURRENCY_WID_BASE && id < WL_CURRENCY_WID_BASE + WL_MAX_CURRENCY) { return true; }

@@ -53,7 +53,7 @@ test('Empty (0) is a valid slot', () => {
 
 test('every contract id is accepted, in order', () => {
   const ok = [0, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-    25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38];
+    25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 40, 41, 42, 43, 44];
   // list in two halves so the 64-byte cap does not truncate
   const half = widgetListToPayload(ok.slice(0, 20).map((id) => w(id)));
   assert.deepStrictEqual(half.filter((_, i) => i % 2 === 0), ok.slice(0, 20));
@@ -66,8 +66,8 @@ test('accepts the dynamic ranges: tuya 128..143, crypto 200..215, currency 216..
   assert.deepStrictEqual(widgetListToPayload(ids.map((id) => w(id))).filter((_, i) => i % 2 === 0), ids);
 });
 
-test('drops ids outside the contract: 1 (internal), 4 (retired), 40+, gaps, 144..199, 223+', () => {
-  [1, 4, 40, 63, 64, 100, 127, 144, 199, 223, 254, 255, 256, -1].forEach((id) => {
+test('drops ids outside the contract: 1 (internal), 4 (retired), 39, 45+, gaps, 144..199, 223+', () => {
+  [1, 4, 39, 45, 46, 63, 64, 100, 127, 144, 199, 223, 254, 255, 256, -1].forEach((id) => {
     assert.deepStrictEqual(widgetListToPayload([w(id)]), [], 'id ' + id + ' must be dropped');
   });
   assert.deepStrictEqual(widgetListToPayload([w(7), w(99), w(10)]), [7, 31, 10, 31]);
@@ -234,6 +234,11 @@ test('ident works for rotating members; the encoder never sets both bits or bit 
   widgetListToPayload([wi(2, 'unit'), wi(7, 'none'), wi(10, 'icon')]).forEach((b, i) => {
     if (i % 2 === 1) { assert.strictEqual(b & 0x80, 0); assert.notStrictEqual(b & 0x60, 0x60); }
   });
+});
+
+test('rain max ids 40..44 encode with their identifier modes', () => {
+  assert.deepStrictEqual(widgetListToPayload([wi(40, 'unit'), wi(44, 'none'), wi(42, 'icon', 5)]),
+    [40, 0x40 | 31, 44, 0x20 | 31, 42, 5]);
 });
 
 test('id 39 (the retired Battery % widget) is no longer valid; 38 still is', () => {

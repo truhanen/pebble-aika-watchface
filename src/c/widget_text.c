@@ -1,7 +1,6 @@
 #include "widget_text.h"
 #include "widget_fonts.h"
 #include "widget_layout_calc.h"
-#include "clock_face_calc.h"
 #include <string.h>
 
 #define MAX_RUNS 6
@@ -37,7 +36,7 @@ int WidgetText_inkHeight(int font) { return wl_metrics(font)->digit_h; }
 // A string split into runs, each with its font, text, width and box top measured once.
 typedef struct {
   int n;
-  struct { char buf[40]; GFont font; int w, y, h; } run[MAX_RUNS];
+  struct { char buf[40]; GFont font; uint8_t font_idx; int w, y, h; } run[MAX_RUNS];
 } PreparedText;
 
 static void prepare(PreparedText *pt, const char *text, int font, int baseline) {
@@ -52,17 +51,22 @@ static void prepare(PreparedText *pt, const char *text, int font, int baseline) 
     memcpy(pt->run[i].buf, text + runs[i].start, len);
     pt->run[i].buf[len] = '\0';
     pt->run[i].font = WidgetFonts_get((uint8_t)f);
+    pt->run[i].font_idx = (uint8_t)f;
     pt->run[i].w = advance(pt->run[i].buf, len, f);
     pt->run[i].y = wl_run_box_top(m, wl_metrics(f), primary_top);
     pt->run[i].h = wl_metrics(f)->base + 16;
   }
 }
 
+static void draw_run(GContext *ctx, const PreparedText *pt, int i, int x, int dy) {
+  // box wider than the text so the Fill overflow mode never wraps it
+  graphics_draw_text(ctx, pt->run[i].buf, pt->run[i].font, GRect(x, pt->run[i].y + dy, pt->run[i].w + 16, pt->run[i].h),
+                     GTextOverflowModeFill, GTextAlignmentLeft, NULL);
+}
+
 static void draw_prepared(GContext *ctx, const PreparedText *pt, int x, int dy) {
   for (int i = 0; i < pt->n; i++) {
-    // box wider than the text so the Fill overflow mode never wraps it
-    graphics_draw_text(ctx, pt->run[i].buf, pt->run[i].font, GRect(x, pt->run[i].y + dy, pt->run[i].w + 16, pt->run[i].h),
-                       GTextOverflowModeFill, GTextAlignmentLeft, NULL);
+    draw_run(ctx, pt, i, x, dy);
     x += pt->run[i].w;
   }
 }
@@ -78,15 +82,34 @@ void WidgetText_draw(GContext *ctx, const char *text, int font, int x, int ink_t
   WidgetText_drawAtBaseline(ctx, text, font, x, ink_top - m->digit_top + m->base);
 }
 
-// Measured once; the 12 shadow passes and the value only move the boxes.
+// Value shadow offsets {dx, dy} (y grows down), chosen per run font. Font 0 has 1 px
+// strokes, so it gets a 1 px ring (the 8 neighbours). Thicker fonts need only the
+// distance-2 ring, plus one left and one down to fill the gaps it leaves.
+static const int8_t SHADOW_THIN[][2] = {
+  { -1, -1 }, { 0, -1 }, { 1, -1 }, { -1, 0 }, { 1, 0 }, { -1, 1 }, { 0, 1 }, { 1, 1 },
+};
+static const int8_t SHADOW_THICK[][2] = {
+  { -2, 0 }, { 2, 0 }, { 0, -2 }, { 0, 2 }, { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 },
+  { -1, 0 }, { 0, 1 },
+};
+
+// Measured once; the shadow passes and the value only move the boxes.
 void WidgetText_drawValue(GContext *ctx, const char *text, int font, int x, int ink_top,
                           GColor fg, GColor bg) {
   const WidgetFontMetrics *m = wl_metrics(font);
   PreparedText pt;
   prepare(&pt, text, font, ink_top - m->digit_top + m->base);
   graphics_context_set_text_color(ctx, bg);
-  for (int i = 0; i < CF_SHADOW_OFFSET_COUNT; i++) {
-    draw_prepared(ctx, &pt, x + CF_SHADOW_OFFSETS[i][0], CF_SHADOW_OFFSETS[i][1]);
+  int rx = x;
+  for (int i = 0; i < pt.n; i++) {
+    bool thin = pt.run[i].font_idx == WIDGET_FONT_UNIT;
+    int count = thin ? (int)(sizeof(SHADOW_THIN) / sizeof(SHADOW_THIN[0]))
+                     : (int)(sizeof(SHADOW_THICK) / sizeof(SHADOW_THICK[0]));
+    const int8_t (*offs)[2] = thin ? SHADOW_THIN : SHADOW_THICK;
+    for (int k = 0; k < count; k++) {
+      draw_run(ctx, &pt, i, rx + offs[k][0], offs[k][1]);
+    }
+    rx += pt.run[i].w;
   }
   graphics_context_set_text_color(ctx, fg);
   draw_prepared(ctx, &pt, x, 0);

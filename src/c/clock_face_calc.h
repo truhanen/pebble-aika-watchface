@@ -95,8 +95,9 @@ bool cf_in_band(int w, int h, int r, int x, int y, int depth);
 // corners the outer row follows the arc and its pixel count varies slightly around 5.
 int cf_tick_pixels(int w, int h, int r, float hx, float hy, int depth, int inset, CfPoint out[CF_TICK_MAX_PIXELS]);
 
-// Shadow reach in px: every shadow (ticks, widget values, icon-only widgets) covers the
-// pixels within this Manhattan distance of the shape: all offsets (dx,dy) with
+// Shadow reach in px: the shadow of ticks and icon-only widgets covers the pixels within
+// this Manhattan distance of the shape (widget value text uses its own per-font offset
+// sets, see widget_text.c): all offsets (dx,dy) with
 // 1 <= |dx|+|dy| <= CF_SHADOW_R, a diamond (12 offsets for 2). A diamond keeps the shadow
 // 2 px wide along straight edges and avoids the notched corners a plain 4-direction
 // offset leaves on diagonals.

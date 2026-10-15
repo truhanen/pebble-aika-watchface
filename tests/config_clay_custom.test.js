@@ -642,3 +642,23 @@ test('no removed settings or sidebar wording remain in the config', () => {
   });
   assert.ok(!/sidebar/i.test(json), 'no "sidebar" wording in user-facing config text');
 });
+
+test('rain widgets 40..44 show the weather section and the precipitation unit', () => {
+  [40, 41, 42, 43, 44].forEach((id) => {
+    const c = render([id]);
+    openSectionFor(c, 'SettingPrecipUnit');
+    assert.strictEqual(c.byId['heading-weather'].shown, true, 'id ' + id);
+    assert.strictEqual(c.byKey['weather_loc_mode'].shown, true);
+    assert.strictEqual(c.byKey['weather_datasource'].shown, true);
+    assert.strictEqual(c.byKey['SettingPrecipUnit'].shown, true);
+    assert.strictEqual(c.byKey['SettingUseMetric'].shown, false, 'temperature unit is not needed');
+  });
+});
+
+test('precipitation unit stays hidden without a rain widget', () => {
+  const c = render([7, 13]);
+  openSectionFor(c, 'SettingUseMetric');
+  assert.strictEqual(c.byKey['SettingPrecipUnit'].shown, false);
+  const none = render([]);
+  assert.strictEqual(none.byKey['SettingPrecipUnit'].shown, false);
+});

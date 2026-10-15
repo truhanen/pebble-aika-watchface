@@ -89,3 +89,14 @@ test('a failed delivery is retried rather than remembered', () => {
   weather.sendWeatherToPebble(DICT);
   assert.strictEqual(sent.length, 2, 'an unacknowledged payload must not be treated as sent');
 });
+
+test('WeatherRainMax byte array participates in unchanged-suppression', () => {
+  const { weather, sent } = setup();
+  const rain = [20, 0, 20, 0, 140, 0, 140, 0, 140, 0];
+  weather.sendWeatherToPebble({ WeatherTemperature: 12, WeatherRainMax: rain.slice() });
+  weather.sendWeatherToPebble({ WeatherTemperature: 12, WeatherRainMax: rain.slice() });
+  assert.strictEqual(sent.length, 1, 'identical rain bytes are suppressed');
+  weather.sendWeatherToPebble({ WeatherTemperature: 12, WeatherRainMax: [21].concat(rain.slice(1)) });
+  assert.strictEqual(sent.length, 2, 'a changed rain value is sent');
+  assert.deepStrictEqual(sent[1].WeatherRainMax[0], 21);
+});

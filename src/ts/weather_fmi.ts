@@ -22,6 +22,7 @@ import { smartSymbolToIcon } from './weather_fmi_parse';
 import { parseFmiForecastTvp, abbreviateLocationName } from './weather_fmi_fc_parse';
 import { parseFmiUvObs } from './weather_fmi_uv_parse';
 import { isUvWidgetConfigured } from './uv_widget';
+import { rainMaxBytes } from './rain_max';
 
 const STORED_QUERY = 'fmi::forecast::edited::weather::scandinavia::point::timevaluepair';
 const UV_STORED_QUERY = 'fmi::observations::radiation::timevaluepair';
@@ -43,7 +44,12 @@ export function getWeatherFromCoords(pos: GeoPosition): void {
 
   const now = new Date();
   const start = new Date(now); start.setHours(0, 0, 0, 0);   // local start of today
-  const end = new Date(now); end.setHours(23, 59, 0, 0);     // local end of today
+  const dayEnd = new Date(now); dayEnd.setHours(23, 59, 0, 0);   // local end of today
+  // The rain widgets need the next 12 hourly values (Precipitation1h is stamped at the
+  // END of its hour, so up to now-rounded-down + 12 h), which can run past midnight.
+  // Extend the window; the parser still limits the day high/low to dayEnd.
+  const rainEnd = new Date(Math.floor(now.getTime() / 3600000) * 3600000 + 12 * 3600000);
+  const end = rainEnd.getTime() > dayEnd.getTime() ? rainEnd : dayEnd;
   // FMI represents the day's forecast condition with the ~15:00-local reading
   // (see weather_fmi_fc_parse.parseFmiForecastTvp); compute that instant here
   // where the phone's local timezone is available.
@@ -53,7 +59,7 @@ export function getWeatherFromCoords(pos: GeoPosition): void {
   const url = 'https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0' +
     '&request=getFeature&storedquery_id=' + STORED_QUERY +
     '&latlon=' + lat + ',' + lon +
-    '&parameters=temperature,smartsymbol' +
+    '&parameters=temperature,smartsymbol,Precipitation1h' +
     '&timestep=60' +
     '&starttime=' + start.toISOString() +
     '&endtime=' + end.toISOString();
@@ -61,7 +67,8 @@ export function getWeatherFromCoords(pos: GeoPosition): void {
   console.log('FMI forecast URL: ' + url);
 
   weatherCommon.xhrRequest(url, 'GET', (responseText) => {
-    const f = parseFmiForecastTvp(responseText, Math.floor(now.getTime() / 1000), fcSymbolEpochSec);
+    const f = parseFmiForecastTvp(responseText, Math.floor(now.getTime() / 1000), fcSymbolEpochSec,
+      Math.floor(dayEnd.getTime() / 1000));
 
     if (!f.ok) {
       console.log('FMI: no usable data, falling back to Open-Meteo');
@@ -77,6 +84,7 @@ export function getWeatherFromCoords(pos: GeoPosition): void {
       WeatherForecastLowTemp: f.forecastLow,
       WeatherForecastCondition: smartSymbolToIcon(f.forecastSymbol, icons),
       WeatherUVIndex: UV_NO_DATA,   // FMI forecast has no UV; filled from observations below
+      WeatherRainMax: rainMaxBytes(f.precip, Math.floor(now.getTime() / 1000)),
       WeatherStationName: abbreviateLocationName(f.name, LOCATION_NAME_MAXLEN),
     };
 

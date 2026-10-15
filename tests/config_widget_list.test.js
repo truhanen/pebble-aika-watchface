@@ -60,7 +60,7 @@ test('Empty rows have a font control and its value is read and encoded', () => {
   assert.strictEqual(sel.value, '2');
   sel.value = '11';
   const v = component.manipulator.get.call(self);
-  assert.deepStrictEqual(v, [{ id: 0, hide: false, font: 11 }]);
+  assert.deepStrictEqual(v, [{ id: 0, ident: 'icon', font: 11 }]);
   assert.deepStrictEqual(widgetListToPayload(v), [0, 11]);
 });
 
@@ -173,4 +173,92 @@ test('rotating group member rows align with outer rows (no right inset on group)
   const memberSlots = memberMain.querySelectorAll(':scope > *');
   assert.strictEqual(outerSlots.length, memberSlots.length, 'outer and member rows have same slot count');
   assert.strictEqual(outerSlots.length, 6, 'both have 6 slots for alignment');
+});
+
+// ----------------------------------------------------------- identifier button
+
+const { identModes, STATIC_WIDGETS } = require('../src/pkjs/widget_options');
+const wid = (id, ident) => ({ id, ident, font: 31 });
+const identBtn = (root, i) => root.querySelectorAll('.wl-row')[i || 0].querySelector('.wl-main .wl-hide');
+const click = (el) => el.dispatchEvent(new (el.ownerDocument.defaultView.MouseEvent)('click', { bubbles: true }));
+
+test('the identifier button cycles icon -> unit -> none -> icon for a widget with both', () => {
+  const { self, root } = mount([wid(12, 'icon')]);
+  const b = identBtn(root);
+  assert.deepStrictEqual([b.textContent, b.getAttribute('data-ident')], ['\u25c9', 'icon']);
+  click(b);
+  assert.deepStrictEqual([identBtn(root).textContent, identBtn(root).getAttribute('data-ident')], ['U', 'unit']);
+  assert.ok(/unit/i.test(identBtn(root).title));
+  click(identBtn(root));
+  assert.deepStrictEqual([identBtn(root).textContent, identBtn(root).getAttribute('data-ident')], ['\u2298', 'none']);
+  assert.deepStrictEqual(component.manipulator.get.call(self), [wid(12, 'none')]);
+  click(identBtn(root));
+  assert.strictEqual(identBtn(root).getAttribute('data-ident'), 'icon');
+});
+
+test('a unit-only widget cycles only unit <-> none and starts on the unit', () => {
+  const { self, root } = mount([wid(13, 'icon')]);      // UV: no icon, default requested icon
+  assert.strictEqual(identBtn(root).getAttribute('data-ident'), 'unit');
+  click(identBtn(root));
+  assert.strictEqual(identBtn(root).getAttribute('data-ident'), 'none');
+  click(identBtn(root));
+  assert.strictEqual(identBtn(root).getAttribute('data-ident'), 'unit');
+  assert.deepStrictEqual(component.manipulator.get.call(self), [wid(13, 'unit')]);
+});
+
+test('widgets without an identifier get the placeholder, not a button', () => {
+  const { root } = mount([wid(0, 'icon'), wid(5, 'icon'), wid(26, 'icon'), wid(36, 'icon'), wid(11, 'icon')]);
+  root.querySelectorAll('.wl-row').forEach((r) => {
+    assert.strictEqual(r.querySelectorAll('.wl-main .wl-hide').length, 0);
+    assert.strictEqual(r.querySelectorAll('.wl-main .wl-hide-ph').length, 1);
+  });
+});
+
+test('rotating members get the same button and cycle the same modes', () => {
+  const { self, root } = mount([{ rotating: true, interval: 3, members: [wid(7, 'icon'), wid(13, 'unit')] }]);
+  const mem = root.querySelectorAll('.wl-mem');
+  const b0 = mem[0].querySelector('.wl-mhide');
+  click(b0);
+  assert.strictEqual(mem[0].querySelector('.wl-mhide').getAttribute('data-ident'), 'unit');
+  const v = component.manipulator.get.call(self);
+  assert.deepStrictEqual(v[0].members, [wid(7, 'unit'), wid(13, 'unit')]);
+  click(root.querySelectorAll('.wl-mem')[1].querySelector('.wl-mhide'));
+  assert.deepStrictEqual(component.manipulator.get.call(self)[0].members[1], wid(13, 'none'));
+});
+
+test('legacy stored values load: hide -> none, otherwise icon', () => {
+  const { self, root } = mount([{ id: 7, hide: true, font: 31 }, { id: 12, hide: false, font: 31 }, 34]);
+  assert.strictEqual(identBtn(root, 0).getAttribute('data-ident'), 'none');
+  assert.strictEqual(identBtn(root, 1).getAttribute('data-ident'), 'icon');
+  assert.deepStrictEqual(component.manipulator.get.call(self).map((e) => e.ident), ['none', 'icon', 'none']);
+});
+
+test('the button of every offered widget cycles exactly identModes()', () => {
+  STATIC_WIDGETS.forEach((o) => {
+    if (o.id === 0 || o.id === 255) { return; }
+    const modes = identModes(o.id);
+    const { root } = mount([wid(o.id, 'icon')]);
+    const b = identBtn(root);
+    if (modes.length === 0) { assert.strictEqual(b, null, 'no button for ' + o.id); return; }
+    const seen = [];
+    let cur = identBtn(root);
+    for (let i = 0; i < modes.length; i++) {
+      seen.push(cur.getAttribute('data-ident'));
+      click(cur);
+      cur = identBtn(root);
+    }
+    assert.deepStrictEqual(seen, modes, 'modes of widget ' + o.id);
+    assert.strictEqual(cur.getAttribute('data-ident'), modes[0], 'wraps around for ' + o.id);
+  });
+});
+
+test('identModes: the documented widgets', () => {
+  assert.deepStrictEqual(identModes(2), ['icon', 'unit', 'none']);
+  assert.deepStrictEqual(identModes(22), ['icon', 'unit', 'none']);
+  assert.deepStrictEqual(identModes(7), ['icon', 'unit', 'none']);
+  assert.deepStrictEqual(identModes(13), ['unit', 'none']);
+  assert.deepStrictEqual(identModes(210), ['unit', 'none']);
+  assert.deepStrictEqual(identModes(23), ['icon', 'none']);
+  assert.deepStrictEqual(identModes(5), []);
+  assert.deepStrictEqual(identModes(30), []);
 });

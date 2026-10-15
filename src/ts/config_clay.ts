@@ -89,7 +89,7 @@ const ALT_CLOCK_OFFSETS: ClayOption[] = [
   { label: 'UTC+14:00 (Kiritimati, Line Islands)', value: 14 },
 ];
 
-function emptySlot() { return { id: 0, hide: false, font: 31 }; }
+function emptySlot() { return { id: 0, ident: 'icon', font: 31 }; }
 
 const config = [
   // ------------------------------------------------------------------ Clock
@@ -138,12 +138,12 @@ const config = [
         '<b>font</b> of its value (Default = Gothic medium at the edges, Bitham large ' +
         'at the top / bottom), reorder with ▲ / ▼, remove with ✕, and add more with ' +
         '“+ Add widget”. The top and bottom lists hold one widget each.<br><br>' +
-        'The <b>◉ / ⊘</b> button after the dropdown shows or hides that ' +
-        'widget’s <b>identifier</b> — the icon (battery, weather, steps, heart ' +
-        'rate, …) or the short title label (UV, week number, electricity, a coin ' +
-        'code, …). <b>◉</b> = shown (default); <b>⊘</b> = hidden, leaving ' +
-        'only the value and making the widget shorter so you can fit more along the ' +
-        'edge.<br>' +
+        'The <b>◉ / U / ⊘</b> button after the dropdown picks that widget’s ' +
+        '<b>identifier</b>: <b>◉</b> = its icon (battery, weather, steps, heart rate, …), ' +
+        '<b>U</b> = its unit (%, °C, h, bpm, UVI, a coin code, …), <b>⊘</b> = none, ' +
+        'leaving only the value and making the widget shorter so you can fit more along the ' +
+        'edge. A widget offers only the identifiers it has; one without an icon shows its ' +
+        'unit by default.<br>' +
         '(Widgets with no separate identifier — Empty, the dates, Seconds and the ' +
         'icon-only widgets — have no such button.)' },
       { type: 'text', id: 'widgets-power-warning', defaultValue:
@@ -158,23 +158,23 @@ const config = [
         'longer are free</b> — they ride the refresh the watchface does anyway.' },
       // Defaults: font 31 = "Default" (the watch maps it per list: Gothic medium on
       // the edges, Bitham large at the top / bottom). Each edge groups an icon-only
-      // widget over its value (icon hidden) in the top corner and one widget in the
+      // widget over its value (temperature: no identifier; battery: the % unit) in the top corner and one widget in the
       // bottom corner; five Empty slots push them apart. Ids: 37 weather icon,
       // 7 weather, 0 Empty, 10 steps, 36 battery icon, 2 battery, 12 heart rate,
       // 30 date "Wkday dd". Must match the watch defaults in src/c/settings.c.
       { type: 'text', defaultValue: '<b>Left edge</b>' },
       { type: 'widgetList', messageKey: 'WidgetList', defaultFont: 5,
-        defaultValue: [{ id: 37, hide: false, font: 31 }, { id: 7, hide: true, font: 31 },
+        defaultValue: [{ id: 37, ident: 'icon', font: 31 }, { id: 7, ident: 'none', font: 31 },
           emptySlot(), emptySlot(), emptySlot(), emptySlot(), emptySlot(),
-          { id: 10, hide: false, font: 31 }] },
+          { id: 10, ident: 'icon', font: 31 }] },
       { type: 'text', defaultValue: '<b>Right edge</b>' },
       { type: 'widgetList', messageKey: 'WidgetListRight', defaultFont: 5,
-        defaultValue: [{ id: 36, hide: false, font: 31 }, { id: 39, hide: false, font: 31 },
+        defaultValue: [{ id: 36, ident: 'icon', font: 31 }, { id: 2, ident: 'unit', font: 31 },
           emptySlot(), emptySlot(), emptySlot(), emptySlot(), emptySlot(),
-          { id: 12, hide: false, font: 31 }] },
+          { id: 12, ident: 'icon', font: 31 }] },
       { type: 'text', defaultValue: '<b>Top center</b>' },
       { type: 'widgetList', messageKey: 'WidgetListTop', max: 1, defaultFont: 7,
-        defaultValue: [{ id: 30, hide: false, font: 31 }] },
+        defaultValue: [{ id: 30, ident: 'icon', font: 31 }] },
       { type: 'text', defaultValue: '<b>Bottom center</b>' },
       { type: 'widgetList', messageKey: 'WidgetListBottom', max: 1, defaultFont: 7, defaultValue: [] },
       { type: 'radiogroup', messageKey: 'SettingDisableAutobattery', label: 'Auto-show battery meter',

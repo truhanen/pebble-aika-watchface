@@ -6,8 +6,10 @@
    group (main <select> == 255) that expands into an interval <select> + a member
    sub-list, each member with its own widget + font selects. The component value is
    an array of slot objects:
-     { id, hide, font }                                   plain widget
-     { rotating: true, interval, members: [{id, hide, font}, ...] }
+     { id, ident, font }                                  plain widget
+     { rotating: true, interval, members: [{id, ident, font}, ...] }
+   `ident` is 'icon' | 'unit' | 'none': what stands beside the value; the button on the
+   row cycles the modes the widget offers (older entries: hide -> 'none').
    `font` is 0..16 (widget_options.ts FONT_OPTIONS) or 31 = the position's default
    font. Older stored values (a flat marker-encoded int array: 255, count, interval,
    members..., hide flag as 0x20 in the id, no font) are still parsed (valueToSlots).
@@ -34,25 +36,42 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   const cfgDefFont = parseInt(self.config && self.config.defaultFont, 10);
   const MAX_FONT = 16;
   const LEGACY_HIDE_FLAG = 0x20;  // old stored values: hide flag OR-ed into the id
-  // Toggleable = has an icon or a unit to hide. No-op for Empty(0), Bluetooth(1),
-  // Seconds(5), the date widgets (26..34), the icon-only widgets (36..38) and the
-  // Rotating head(255).
-  function isToggleableId(id: number): boolean {
-    if (id === 0 || id === 1 || id === 5 || id === ROTATING) { return false; }
-    if (id >= 26 && id <= 34) { return false; }
-    if (id >= 36 && id <= 38) { return false; }
-    // 39 (Battery %) is toggleable (hides the % unit)
-    return true;
+  // Identifier modes. KEEP IN SYNC with identModes() in widget_options.ts (the test
+  // config_widget_list.test.js compares them for every offered id).
+  const IDENT_ICON_IDS: number[] = [2, 7, 8, 9, 10, 12, 20, 21, 22, 23, 24, 25];
+  const IDENT_UNIT_IDS: number[] = [2, 3, 6, 7, 8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 24, 25, 35];
+  // The modes the button cycles for an id, in order; [] = no identifier (placeholder).
+  function identModes(id: number): string[] {
+    const slot = (id >= 128 && id <= 143) || (id >= 200 && id <= 222) || (id >= 15 && id <= 17);
+    const out: string[] = [];
+    if (IDENT_ICON_IDS.indexOf(id) !== -1) { out.push('icon'); }
+    if (slot || IDENT_UNIT_IDS.indexOf(id) !== -1) { out.push('unit'); }
+    if (out.length) { out.push('none'); }
+    return out;
   }
+  // A stored ident as shown for this id: itself when offered, else the watch's fallback.
+  function resolveIdent(id: number, ident: string): string {
+    const modes = identModes(id);
+    if (modes.length === 0) { return 'icon'; }
+    if (ident === 'none' || modes.indexOf(ident) !== -1) { return ident; }
+    return modes[0];
+  }
+  function normIdent(raw: any): string {
+    if (raw && (raw.ident === 'icon' || raw.ident === 'unit' || raw.ident === 'none')) { return raw.ident; }
+    return (raw && raw.hide) ? 'none' : 'icon';
+  }
+  const IDENT_GLYPH: any = { icon: '◉', unit: 'U', none: '⊘' };
+  const IDENT_TITLE: any = { icon: 'Identifier: icon', unit: 'Identifier: unit', none: 'Identifier: none' };
   // Has a font setting: text widgets and Empty (the font sets the slot height), not
   // the icon-only widgets nor a rotating group's header (its members have their own).
   function hasFontId(id: number): boolean {
     return !(id >= 36 && id <= 38) && id !== ROTATING;
   }
-  function hideBtnHtml(id: number, hidden: boolean, cls: string): string {
-    if (!isToggleableId(id)) { return hidePlaceholderHtml(); }
-    return '<button type="button" class="' + cls + (hidden ? ' wl-hidden' : '') +
-      '" title="Show/hide icon or unit">' + (hidden ? '⊘' : '◉') + '</button>';
+  function hideBtnHtml(id: number, ident: string, cls: string): string {
+    if (identModes(id).length === 0) { return hidePlaceholderHtml(); }
+    const m = resolveIdent(id, ident);
+    return '<button type="button" class="' + cls + (m === 'none' ? ' wl-hidden' : '') +
+      '" data-ident="' + m + '" title="' + IDENT_TITLE[m] + '">' + IDENT_GLYPH[m] + '</button>';
   }
 
   function fontPlaceholderHtml(): string {
@@ -99,7 +118,6 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     { id: 24, label: 'SLEEP + deep hours' },
     { id: 25, label: 'SLEEP hours + deep bar' },
     { id: 2, label: 'BATTERY percentage' },
-    { id: 39, label: 'BATTERY percentage with % unit' },
     { id: 36, label: 'BATTERY icon' },
     { id: 22, label: 'BATTERY days left' },
     { id: 14, label: 'ELECTR price' },
@@ -280,24 +298,24 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     return html;
   }
 
-  // ---- slot model: {id,hide,font} (plain) | {rotating:true, interval, members:[{id,hide,font}]}
+  // ---- slot model: {id,ident,font} (plain) | {rotating:true, interval, members:[{id,ident,font}]}
 
   function normFont(raw: any): number {
     const f = parseInt(raw, 10);
     return (!isNaN(f) && ((f >= 0 && f <= MAX_FONT) || f === FONT_DEFAULT)) ? f : FONT_DEFAULT;
   }
 
-  // Stored entry -> {id, hide, font}. Accepts an entry object or a legacy int (hide
+  // Stored entry -> {id, ident, font} (older entries: hide -> 'none'). Accepts an entry object or a legacy int (hide
   // flag in 0x20; stored ids 33..57 can only be hidden ids 1..25 there).
-  function normEntry(raw: any): { id: number; hide: boolean; font: number } {
+  function normEntry(raw: any): { id: number; ident: string; font: number } {
     if (raw && typeof raw === 'object') {
-      return { id: parseInt(raw.id, 10) || 0, hide: !!raw.hide, font: normFont(raw.font) };
+      return { id: parseInt(raw.id, 10) || 0, ident: normIdent(raw), font: normFont(raw.font) };
     }
     const v = parseInt(raw, 10) || 0;
     if (v > LEGACY_HIDE_FLAG && v <= (LEGACY_HIDE_FLAG | 25)) {
-      return { id: v - LEGACY_HIDE_FLAG, hide: true, font: FONT_DEFAULT };
+      return { id: v - LEGACY_HIDE_FLAG, ident: 'none', font: FONT_DEFAULT };
     }
-    return { id: v, hide: false, font: FONT_DEFAULT };
+    return { id: v, ident: 'icon', font: FONT_DEFAULT };
   }
 
   function fontOptionsHtml(selected: number): string {
@@ -328,7 +346,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
       '<div class="wl-mmain">' +
       '<select class="wl-msel">' + memberOptionsHtml(e.id) + '</select>' +
       fontRowHtml(e.id, e.font, 'wl-mfont') +
-      hideBtnHtml(e.id, e.hide, 'wl-mhide') +
+      hideBtnHtml(e.id, e.ident, 'wl-mhide') +
       buttonPlaceholderHtml() +
       buttonPlaceholderHtml() +
       '<button type="button" class="wl-mdel" title="Remove member">&#10005;</button>' +
@@ -354,7 +372,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
       '<div class="wl-main">' +
       '<select class="wl-sel">' + mainOptionsHtml(mainSel) + '</select>' +
       fontRowHtml(isRot ? 255 : e.id, isRot ? FONT_DEFAULT : e.font, 'wl-font') +
-      hideBtnHtml(isRot ? 255 : e.id, isRot ? false : e.hide, 'wl-hide') +
+      hideBtnHtml(isRot ? 255 : e.id, isRot ? 'icon' : e.ident, 'wl-hide') +
       '<button type="button" class="wl-up" title="Move up">&#9650;</button>' +
       '<button type="button" class="wl-down" title="Move down">&#9660;</button>' +
       '<button type="button" class="wl-del" title="Remove">&#10005;</button>' +
@@ -390,14 +408,14 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
           const base = msel ? (parseInt(msel.value, 10) || 0) : 0;
           const mhb = mEl.querySelector('.wl-mhide') as HTMLButtonElement;
           const mfont = mEl.querySelector('.wl-mfont') as HTMLSelectElement;
-          members.push({ id: base, hide: !!(mhb && mhb.classList.contains('wl-hidden')),
+          members.push({ id: base, ident: mhb ? normIdent({ ident: mhb.getAttribute('data-ident') }) : 'icon',
             font: mfont ? normFont(mfont.value) : FONT_DEFAULT });
         }
         slots.push({ rotating: true, interval: interval, members: members });
       } else {
         const hb = row.querySelector('.wl-main .wl-hide') as HTMLButtonElement;
         const font = row.querySelector('.wl-font') as HTMLSelectElement;
-        slots.push({ id: mainVal, hide: !!(hb && hb.classList.contains('wl-hidden')),
+        slots.push({ id: mainVal, ident: hb ? normIdent({ ident: hb.getAttribute('data-ident') }) : 'icon',
           font: font ? normFont(font.value) : FONT_DEFAULT });
       }
     }
@@ -415,7 +433,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
         for (let m = 0; m < arr.length && mems.length < MAX_MEMBERS; m++) {
           const e = normEntry(arr[m]);
           if (e.id !== 0 && e.id !== ROTATING) {
-            mems.push({ id: e.id, hide: e.hide && isToggleableId(e.id), font: e.font });
+            mems.push({ id: e.id, ident: resolveIdent(e.id, e.ident), font: e.font });
           }
         }
         const iv = (s.interval >= 0 && s.interval <= 5) ? s.interval : DEFAULT_INTERVAL;
@@ -427,7 +445,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
       } else if (s) {
         const e = normEntry(s);
         if (e.id !== ROTATING) {
-          out.push({ id: e.id, hide: e.hide && isToggleableId(e.id), font: e.font });
+          out.push({ id: e.id, ident: resolveIdent(e.id, e.ident), font: e.font });
         }
       }
     }
@@ -538,14 +556,21 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
 
     if (target.classList.contains('wl-add')) {
       const slots = readSlots();
-      if (slots.length < MAX) { slots.push({ id: 0, hide: false, font: FONT_DEFAULT }); renderSlots(slots); self.trigger('change'); }
+      if (slots.length < MAX) { slots.push({ id: 0, ident: 'icon', font: FONT_DEFAULT }); renderSlots(slots); self.trigger('change'); }
       return;
     }
 
     if (target.classList.contains('wl-hide') || target.classList.contains('wl-mhide')) {
-      const nowHidden = !target.classList.contains('wl-hidden');
-      if (nowHidden) { target.classList.add('wl-hidden'); } else { target.classList.remove('wl-hidden'); }
-      target.innerHTML = nowHidden ? '⊘' : '◉';
+      // cycle through the modes this widget offers (icon -> unit -> none)
+      const idSel = (target.parentNode as HTMLElement).querySelector('.wl-sel, .wl-msel') as HTMLSelectElement;
+      const modes = identModes(idSel ? (parseInt(idSel.value, 10) || 0) : 0);
+      if (modes.length === 0) { return; }
+      const cur = target.getAttribute('data-ident') || 'icon';
+      const next = modes[(modes.indexOf(cur) + 1) % modes.length];
+      if (next === 'none') { target.classList.add('wl-hidden'); } else { target.classList.remove('wl-hidden'); }
+      target.setAttribute('data-ident', next);
+      target.setAttribute('title', IDENT_TITLE[next]);
+      target.innerHTML = IDENT_GLYPH[next];
       self.trigger('change');
       return;
     }
@@ -567,7 +592,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     } else if (target.classList.contains('wl-madd')) {
       const s = slots[idx];
       if (s && s.rotating && s.members.length < MAX_MEMBERS) {
-        s.members.push({ id: firstMemberId(), hide: false, font: FONT_DEFAULT }); renderSlots(slots); self.trigger('change');
+        s.members.push({ id: firstMemberId(), ident: 'icon', font: FONT_DEFAULT }); renderSlots(slots); self.trigger('change');
       }
     } else if (target.classList.contains('wl-mdel')) {
       const s = slots[idx];
@@ -610,10 +635,10 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
         if (newVal === ROTATING) {
           if (!slots[idx].rotating) {
             const a = firstMemberId();
-            slots[idx] = { rotating: true, interval: DEFAULT_INTERVAL, members: [{ id: a, hide: false, font: FONT_DEFAULT }, { id: a, hide: false, font: FONT_DEFAULT }] };
+            slots[idx] = { rotating: true, interval: DEFAULT_INTERVAL, members: [{ id: a, ident: 'icon', font: FONT_DEFAULT }, { id: a, ident: 'icon', font: FONT_DEFAULT }] };
           }
         } else {
-          slots[idx] = { id: newVal, hide: false, font: slots[idx].rotating ? FONT_DEFAULT : slots[idx].font };
+          slots[idx] = { id: newVal, ident: 'icon', font: slots[idx].rotating ? FONT_DEFAULT : slots[idx].font };
         }
         renderSlots(slots);
       }

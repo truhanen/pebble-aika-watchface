@@ -209,3 +209,33 @@ test('widgetListIds honours the centre slot limit and legacy hide flags', () => 
   assert.deepStrictEqual(widgetListIds([w(30), w(7)], 'center'), [30]);
   assert.deepStrictEqual(widgetListIds([7 | 0x20, 255, 2, 3, 14, 18]), [7, 14, 18]);
 });
+
+// ----------------------------------------------------------- identifier modes
+
+const wi = (id, ident, font) => ({ id: id, ident: ident, font: font === undefined ? 31 : font });
+
+test('ident icon / unit / none go into bits 5-6 (none 0x20, unit 0x40)', () => {
+  assert.deepStrictEqual(widgetListToPayload([wi(2, 'icon')]), [2, 31]);
+  assert.deepStrictEqual(widgetListToPayload([wi(2, 'unit')]), [2, 0x40 | 31]);
+  assert.deepStrictEqual(widgetListToPayload([wi(7, 'none', 5)]), [7, 0x20 | 5]);
+  assert.deepStrictEqual(widgetListToPayload([wi(12, 'unit', 0)]), [12, 0x40]);
+});
+
+test('ident wins over the older hide field; hide alone still means none', () => {
+  assert.deepStrictEqual(widgetListToPayload([{ id: 7, ident: 'unit', hide: true, font: 31 }]), [7, 0x40 | 31]);
+  assert.deepStrictEqual(widgetListToPayload([{ id: 7, hide: true, font: 31 }]), [7, 0x20 | 31]);
+  assert.deepStrictEqual(widgetListToPayload([{ id: 7, hide: false, font: 31 }]), [7, 31]);
+  assert.deepStrictEqual(widgetListToPayload([{ id: 7, ident: 'bogus', font: 31 }]), [7, 31]);
+});
+
+test('ident works for rotating members; the encoder never sets both bits or bit 7', () => {
+  const g = { rotating: true, interval: 3, members: [wi(2, 'unit'), wi(12, 'none')] };
+  assert.deepStrictEqual(widgetListToPayload([g]), [255, 2, 3, 2, 0x40 | 31, 12, 0x20 | 31]);
+  widgetListToPayload([wi(2, 'unit'), wi(7, 'none'), wi(10, 'icon')]).forEach((b, i) => {
+    if (i % 2 === 1) { assert.strictEqual(b & 0x80, 0); assert.notStrictEqual(b & 0x60, 0x60); }
+  });
+});
+
+test('id 39 (the retired Battery % widget) is no longer valid; 38 still is', () => {
+  assert.deepStrictEqual(widgetListToPayload([wi(39, 'icon'), wi(38, 'icon')]), [38, 31]);
+});

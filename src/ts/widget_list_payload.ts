@@ -7,10 +7,13 @@
 //   plain widget   : id, flags
 //   rotating group : 0xFF, count (2..6), interval_code (0..5), (id, flags) x count
 //   flags          : bits 0-4 font index (0..16, 31 = position default),
-//                    bit 5 hide identifier, bits 6-7 reserved (0).
+//                    bit 5 no identifier ('none'), bit 6 the unit ('unit'; neither bit =
+//                    the icon), bit 7 reserved (0).
 // The Clay value is an array of slot objects:
-//   { id, hide, font }                                  plain slot
-//   { rotating: true, interval, members: [{id, hide, font}, ...] }
+//   { id, ident: 'icon'|'unit'|'none', font }           plain slot
+//   { rotating: true, interval, members: [{id, ident, font}, ...] }
+// Values stored by older versions carry `hide: boolean` instead of `ident`
+// (hide -> 'none', else 'icon').
 // For values stored by older versions a flat marker-encoded int array is still
 // accepted (255, count, interval, members...; the hide flag as 0x20 OR-ed into the
 // id; no font -> position default).
@@ -21,7 +24,7 @@
 // KEEP IN SYNC with src/c/widget_list.c.
 export const MAX_SIDE_LIST_BYTES = 64;
 export const MAX_CENTER_LIST_BYTES = 16;
-const MAX_WIDGET_TYPE = 39;         // BATTERY_PERCENT
+const MAX_WIDGET_TYPE = 38;         // BLUETOOTH_ICON
 const CRYPTO_WID_BASE = 200;
 const MAX_CRYPTO = 16;
 const CURRENCY_WID_BASE = 216;
@@ -33,13 +36,15 @@ const MAX_GROUP_MEMBERS = 6;
 const DEFAULT_INTERVAL = 3;         // 1 min
 const FONT_DEFAULT = 31;
 const MAX_FONT = 16;
-const FLAG_HIDE = 0x20;
+const FLAG_NONE = 0x20;
+const FLAG_UNIT = 0x40;
 const LEGACY_HIDE_FLAG = 0x20;      // old encoding: hide flag OR-ed into the id
 const LEGACY_MAX_TYPE = 25;
 
 export type WidgetListKind = 'side' | 'center';
 
-interface Entry { id: number; hide: boolean; font: number; }
+export type WidgetIdent = 'icon' | 'unit' | 'none';
+interface Entry { id: number; ident: WidgetIdent; font: number; }
 interface Slot { members: Entry[]; interval: number; group: boolean; }
 
 // Offerable ids plus the legacy crypto ids 15/16/17. 1 (BT, internal) and 4 (retired
@@ -64,24 +69,30 @@ function intervalOf(raw: any): number {
   return (!isNaN(n) && n >= 0 && n <= 5) ? n : DEFAULT_INTERVAL;
 }
 
+// The identifier mode of a stored entry: `ident` when valid, else the older `hide`.
+function identOf(o: any): WidgetIdent {
+  if (o && (o.ident === 'icon' || o.ident === 'unit' || o.ident === 'none')) { return o.ident; }
+  return (o && o.hide) ? 'none' : 'icon';
+}
+
 function entryFromObject(o: any): Entry | null {
   if (!o || typeof o !== 'object') { return null; }
   const id = parseInt(o.id, 10);
   if (isNaN(id) || !isValidId(id)) { return null; }
-  return { id: id, hide: !!o.hide, font: fontOf(o.font) };
+  return { id: id, ident: identOf(o), font: fontOf(o.font) };
 }
 
 // Legacy flat value: an id possibly carrying the 0x20 hide flag (ids 33..57 can only
 // be a hidden id 1..25 there, since ids 26+ did not exist yet).
 function entryFromLegacy(v: number): Entry | null {
   let id = v;
-  let hide = false;
+  let ident: WidgetIdent = 'icon';
   if (v > LEGACY_HIDE_FLAG && v <= (LEGACY_HIDE_FLAG | LEGACY_MAX_TYPE)) {
     id = v - LEGACY_HIDE_FLAG;
-    hide = true;
+    ident = 'none';
   }
   if (!isValidId(id)) { return null; }
-  return { id: id, hide: hide, font: FONT_DEFAULT };
+  return { id: id, ident: ident, font: FONT_DEFAULT };
 }
 
 function memberEntry(m: any): Entry | null {
@@ -135,7 +146,7 @@ function parseSlots(list: any): Slot[] {
 }
 
 function flagsOf(e: Entry): number {
-  return e.font | (e.hide ? FLAG_HIDE : 0);
+  return e.font | (e.ident === 'none' ? FLAG_NONE : (e.ident === 'unit' ? FLAG_UNIT : 0));
 }
 
 export function widgetListToPayload(list: any, kind?: WidgetListKind): number[] {

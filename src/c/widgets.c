@@ -214,9 +214,10 @@ static int to_display_temp(int celsius) {
   return settings.useMetric ? celsius : (int)roundf(celsius * 1.8f + 32);
 }
 
-// The temperature carries its own degree sign unless the unit ("°C" / "°F") stands beside it.
+// The temperature carries its own degree sign only beside its icon; with the unit
+// ("°C" / "°F") or with no identifier it is the bare number.
 static const char *degree(const WidgetCtx *c) {
-  return ident_of(c) == WL_IDENT_UNIT ? "" : "\xc2\xb0";
+  return ident_of(c) != WL_IDENT_ICON ? "" : "\xc2\xb0";
 }
 
 static bool value_weather(const WidgetCtx *c, char *buf, size_t n) {

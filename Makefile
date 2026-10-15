@@ -71,6 +71,12 @@ create_hand_position_screenshots:
 		printf '%s ' "$$(basename $$f)"; python3 scripts/check_strip.py "$$f" | tail -1; \
 	done
 
+# Regenerate the README screenshots + hero GIF (screenshots/readme/, ~5 min; rebuilds
+# with test hooks and leaves a plain release build in build/).
+.PHONY: screenshots
+screenshots:
+	scripts/screenshots.sh
+
 # Regenerate src/c/widget_font_metrics.h from emulator font specimens (~10 min).
 .PHONY: measure_fonts
 measure_fonts:

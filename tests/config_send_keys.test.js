@@ -124,5 +124,6 @@ test('SettingPrecipUnit is a mm/inch radiogroup (default mm) sent straight throu
 
 test('rain message keys are declared at the end of package.json messageKeys', () => {
   const keys = require('../package.json').pebble.messageKeys;
-  assert.deepStrictEqual(keys.slice(-2), ['WeatherRainMax', 'SettingPrecipUnit']);
+  // TestDate (emulator test hook) was appended after them.
+  assert.deepStrictEqual(keys.slice(-3), ['WeatherRainMax', 'SettingPrecipUnit', 'TestDate']);
 });

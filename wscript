@@ -40,6 +40,8 @@ def build(ctx):
             defines.append('SCREENSHOT_FIXTURES')  # seed demo data for appstore screenshots
         if os.environ.get('TEST_HOOKS'):
             defines.append('TEST_HOOKS')  # emulator test-hook AppMessages (src/c/test_hooks.c)
+        if os.environ.get('ROTATION_FAKE_SECONDS'):
+            defines.append('ROTATION_FAKE_SECONDS=' + os.environ['ROTATION_FAKE_SECONDS'])  # pin rotating-slot members (scripts/screenshots.sh)
         ctx.pbl_build(source=ctx.path.ant_glob('src/c/**/*.c'), target=app_elf, bin_type='app', defines=defines)
 
         if build_worker:

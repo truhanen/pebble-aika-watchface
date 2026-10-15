@@ -14,6 +14,7 @@ static int32_t s_sleep_min = -1;
 static int32_t s_deep_sleep_min = -1;
 static int32_t s_heart_rate = -1;
 static int32_t s_scene = 0;
+static int32_t s_date = -1;         // YYYYMMDD
 static int32_t s_font[WIDGET_POS_COUNT] = { -1, -1, -1 };   // by WIDGET_POS_*
 
 static bool read_key(DictionaryIterator *iter, uint32_t key, int32_t *out) {
@@ -34,6 +35,7 @@ bool TestHooks_handleMessage(DictionaryIterator *iter) {
   any |= read_key(iter, MESSAGE_KEY_TestDeepSleepMin, &s_deep_sleep_min);
   any |= read_key(iter, MESSAGE_KEY_TestHeartRate, &s_heart_rate);
   any |= read_key(iter, MESSAGE_KEY_TestScene, &s_scene);
+  any |= read_key(iter, MESSAGE_KEY_TestDate, &s_date);
   any |= read_key(iter, MESSAGE_KEY_TestFontLeft, &s_font[WIDGET_POS_LEFT]);
   any |= read_key(iter, MESSAGE_KEY_TestFontRight, &s_font[WIDGET_POS_RIGHT]);
   any |= read_key(iter, MESSAGE_KEY_TestFontCenter, &s_font[WIDGET_POS_CENTER]);
@@ -47,6 +49,21 @@ bool TestHooks_handleMessage(DictionaryIterator *iter) {
 }
 
 void TestHooks_applyTime(struct tm *t) {
+  if (s_date >= 0) {
+    // Fixed calendar date (screenshots must not change with the day they are taken).
+    static const int cum[12] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
+    int y = (int)(s_date / 10000), m = (int)(s_date / 100 % 100), d = (int)(s_date % 100);
+    if (m < 1 || m > 12) { m = 1; }
+    bool leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+    t->tm_year = y - 1900;
+    t->tm_mon = m - 1;
+    t->tm_mday = d;
+    t->tm_yday = cum[m - 1] + d - 1 + ((leap && m > 2) ? 1 : 0);
+    // Sakamoto's weekday formula (0 = Sunday).
+    static const int tt[12] = { 0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4 };
+    int yy = (m < 3) ? y - 1 : y;
+    t->tm_wday = (yy + yy / 4 - yy / 100 + yy / 400 + tt[m - 1] + d) % 7;
+  }
   if (s_time < 0) { return; }
   t->tm_hour = (s_time / 100) % 24;
   t->tm_min = (s_time % 100) % 60;

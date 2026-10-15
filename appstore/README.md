@@ -1,4 +1,4 @@
-# Pebble appstore listing — Sykerö TimeStyle
+# Pebble appstore listing — Nyquist
 
 Listing material for the Pebble appstore, kept under version control so it is
 ready to upload. **Watchface** listing (lighter asset set than a watchapp).
@@ -18,13 +18,13 @@ appstore (the listing looks bare without one).
 ## Assets
 
 - **Icons (committed here):** `icon-144.png` (large) + `icon-80.png` (small),
-  from the kellotaulu artwork (Einstein holding a light-green clock) — matches the
-  Sykerö Track Work Time / MIDI Recorder family.
-- **Banner** — optional for a watchface. `project_banner.png` exists in the repo
-  root.
+  the original Nyquist launcher icon redrawn at full size by
+  `tools/make_store_icons.py` (`python3 -I tools/make_store_icons.py appstore`).
+- **Banner** — optional for a watchface; none yet.
 - **Screenshots** — ≥1 per supported platform, **unframed**, native resolution.
-  Generated on the emulator with `scripts/pebble-appstore-screenshots.sh`; output
-  is gitignored (regenerable).
+  Generated on the emulator with `scripts/screenshots.sh` (`make screenshots`);
+  the output (`screenshots/readme/NN-name.png`, 200x228) is version-controlled
+  because the main README shows it too.
 
 ## Status
 

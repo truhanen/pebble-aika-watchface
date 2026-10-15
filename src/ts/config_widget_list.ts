@@ -260,6 +260,14 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     return out;
   }
 
+  // Label for a selected id with no option: a coin whose row isn't built yet, or an
+  // id this page doesn't know.
+  function missingLabel(id: number): string {
+    if (id >= 200 && id <= 222) { return 'RATE #' + id; }
+    if (id >= 128 && id <= 143) { return 'MISC #' + id; }
+    return 'Unknown #' + id;
+  }
+
   // Options for the MAIN select (includes Empty + Rotating). `selected` preserved
   // even if its option isn't built yet (crypto rows build later).
   function mainOptionsHtml(selected: number): string {
@@ -272,7 +280,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
       html += '<option value="' + o.id + '"' + (o.id === selected ? ' selected' : '') + '>' + o.label + '</option>';
     }
     if (!found && selected !== 0) {
-      html += '<option value="' + selected + '" selected>Crypto #' + selected + '</option>';
+      html += '<option value="' + selected + '" selected>' + missingLabel(selected) + '</option>';
     }
     return html;
   }
@@ -289,7 +297,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
       html += '<option value="' + o.id + '"' + (o.id === selected ? ' selected' : '') + '>' + o.label + '</option>';
     }
     if (!found && selected !== 0 && selected !== ROTATING) {
-      html += '<option value="' + selected + '" selected>Crypto #' + selected + '</option>';
+      html += '<option value="' + selected + '" selected>' + missingLabel(selected) + '</option>';
     }
     return html;
   }
@@ -322,7 +330,11 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   // flag in 0x20; stored ids 33..57 can only be hidden ids 1..25 there).
   function normEntry(raw: any): { id: number; ident: string; font: number } {
     if (raw && typeof raw === 'object') {
-      return { id: parseInt(raw.id, 10) || 0, ident: normIdent(raw), font: normFont(raw.font) };
+      const id = parseInt(raw.id, 10) || 0;
+      const ident = normIdent(raw);
+      // The retired "Battery %" widget (39) is now battery (2) in unit mode.
+      if (id === 39) { return { id: 2, ident: ident === 'none' ? 'none' : 'unit', font: normFont(raw.font) }; }
+      return { id: id, ident: ident, font: normFont(raw.font) };
     }
     const v = parseInt(raw, 10) || 0;
     if (v > LEGACY_HIDE_FLAG && v <= (LEGACY_HIDE_FLAG | 25)) {

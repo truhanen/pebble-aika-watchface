@@ -281,3 +281,17 @@ test('choosing a max-rain widget starts it in unit mode; other widgets start in 
   assert.strictEqual(v[1].members[0].id, 43);
   assert.strictEqual(v[1].members[0].ident, 'unit');
 });
+
+test('a saved retired Battery % (39) loads as battery (2) in unit mode, never as "Crypto #39"', () => {
+  const { root, self } = mount([{ id: 39, ident: 'icon', font: 31 }, { id: 39, ident: 'none', font: 5 }]);
+  const v = component.manipulator.get.call(self);
+  assert.deepStrictEqual(v[0], { id: 2, ident: 'unit', font: 31 });
+  assert.deepStrictEqual(v[1], { id: 2, ident: 'none', font: 5 });
+  assert.ok(!/Crypto #/.test(root.innerHTML));
+});
+
+test('an unknown id is labelled "Unknown #N", not as a crypto rate', () => {
+  const { root } = mount([{ id: 99, ident: 'icon', font: 31 }]);
+  assert.ok(/Unknown #99/.test(root.innerHTML));
+  assert.ok(!/Crypto #/.test(root.innerHTML));
+});

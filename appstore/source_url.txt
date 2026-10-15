@@ -1,1 +1,1 @@
-https://github.com/Sykero-Software/TimeStylePebble
+https://github.com/truhanen/pebble-nyquist-watchface-2

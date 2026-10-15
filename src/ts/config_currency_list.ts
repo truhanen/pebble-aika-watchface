@@ -12,8 +12,7 @@
 
    Serialized via toSource() + re-eval'd in the webview -> fully self-contained: no
    runtime imports, no spread/destructuring, no module-scope helpers, no TS
-   downlevel helpers. Native DOM + native array methods only. See
-   docs/superpowers/specs/2026-07-01-timestyle-currency-exchange-widget-design.md */
+   downlevel helpers. Native DOM + native array methods only. */
 
 function currencyListInitialize(this: any, _minified: any, _clayConfig: any): void {
   const self = this;

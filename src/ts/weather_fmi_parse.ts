@@ -94,7 +94,7 @@ export function parseFmiForecast(
   };
 }
 
-// Map an FMI smartsymbol code to a TimeStyle WeatherIcons value. `icons` is the
+// Map an FMI smartsymbol code to a WeatherIcons value. `icons` is the
 // WeatherIcons map (injected so this stays pure/testable). Night = code >= 100.
 export function smartSymbolToIcon(code: unknown, icons: WeatherIcons): number {
   if (typeof code !== 'number' || isNaN(code)) { return icons.WEATHER_GENERIC; }

@@ -15,8 +15,7 @@
 // projection rate total_seconds / total_percent = the average sec/% you will
 // experience going forward; a PERCENT horizon spanning ~2 days of drop therefore
 // folds in idle nights alongside active days. The average survives charge cycles
-// (only the charge LEVEL resets, the learned rate persists). See
-// docs/superpowers/specs/2026-07-06-timestyle-battery-estimate-fullcycle-design.md.
+// (only the charge LEVEL resets, the learned rate persists).
 //
 // NB: weighting by percent (not by wall-clock time) is deliberate. A time-weighted
 // average of sec/% over-weights slow idle segments and projects too FEW percent per

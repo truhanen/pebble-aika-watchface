@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (c) 2026 Tuomas Airaksinen
 
-/* Clay-native configuration for the TimeStyle watchface. Replaces the hosted
+/* Clay-native configuration for the Nyquist watchface. Replaces the hosted
    Jekyll HTML config page. Every watch `messageKey` matches package.json's
    messageKeys list; every option `value` matches the integer/string the C side
    expects (cross-checked against the historical index.js webviewclosed mapping).

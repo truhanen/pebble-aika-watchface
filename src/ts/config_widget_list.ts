@@ -19,8 +19,7 @@
    Clay serializes this object via toSource() and re-evals it in
    the config webview, so EVERY function here MUST be self-contained: no module-scope
    helper, no import at runtime, no TS downlevel helper (__spreadArray/_this), no
-   spread/destructuring. Native DOM + native array methods only.
-   See docs/superpowers/specs/2026-06-24-timestyle-rotating-widget-design.md */
+   spread/destructuring. Native DOM + native array methods only. */
 
 function widgetListInitialize(this: any, _minified: any, clayConfig: any): void {
   const self = this;

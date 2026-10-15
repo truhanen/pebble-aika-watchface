@@ -16,8 +16,7 @@
    Serialized via toSource() + re-eval'd in the webview -> fully self-contained:
    no imports at runtime, no spread/destructuring, no module-scope helpers, no
    TS downlevel helpers. Native DOM + native array methods only. The row
-   controls are the source of truth, read back on `get`. See
-   docs/superpowers/specs/2026-06-13-timestyle-generic-crypto-widgets-design.md */
+   controls are the source of truth, read back on `get`. */
 
 function cryptoListInitialize(this: any, _minified: any, _clayConfig: any): void {
   const self = this;

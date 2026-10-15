@@ -13,9 +13,7 @@
    Keep to native array methods; NO spread / destructuring / for...of. Widget-id
    gating rationale (verified against src/c/widgets.c): widget 14 (current
    price) uses none of the electricity inputs; 19 (cheapest hour) uses quiet hours
-   only; 18 (next cheap) uses quiet hours + cheap factor/floor/ceiling.
-   See docs/superpowers/specs/2026-07-07-timestyle-config-accordion-design.md and
-   docs/superpowers/specs/2026-06-11-timestyle-conditional-config-settings-design.md */
+   only; 18 (next cheap) uses quiet hours + cheap factor/floor/ceiling. */
 
 interface ClayElement {
   on(event: string, cb: () => void): void;

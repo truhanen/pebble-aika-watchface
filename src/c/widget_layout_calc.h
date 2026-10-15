@@ -54,7 +54,7 @@ int wl_inline_unit_ink_top(const WidgetFontMetrics *value, int value_ink_top,
 // --- vertical extent of a widget ---
 // Ink may never reach the 5-minute tick strip (WL_TICK_DEPTH) or its shadow
 // (WL_TICK_SHADOW), so every column lives between that clearance and the screen's far side.
-#define WL_TICK_DEPTH 4
+#define WL_TICK_DEPTH 5
 #define WL_TICK_SHADOW 2
 #define WL_UNIT_FONT 0   // GOTHIC_14, the font of every inline unit (widget_fonts.h WIDGET_FONT_UNIT)
 

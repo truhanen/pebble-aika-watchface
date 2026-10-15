@@ -69,7 +69,7 @@ Each widget declares which identifiers it has (an icon, a unit, or both). When t
 - Every list is a column laid out top to bottom, "space-between": the first slot at the column top, the last ending at the column bottom, a single slot centred, the slack spread evenly (gaps differ by at most 1 px). With no slack the slots are 5 px apart from the top and those that do not fit are not drawn.
 - Left edge: value at the left edge, icon / unit to its right. Right edge: mirrored. Centre column: value and icon / unit are centred horizontally as one group, the icon / unit to the RIGHT of the value. A rotating group works in any column.
 - A slot's height is the extent of everything the widget draws: value glyphs (descenders included when the text has any of `g j p q y , ; ( )`), an inline unit with its descender (Gothic 14 metrics, `desc_bottom`), a fraction unit, an icon. Nothing is drawn outside the column bounds.
-- The column bounds keep at least 6 px (the 4 px 5-minute tick plus its 2 px shadow) from the top and bottom of the screen, so ink never enters the tick strip.
+- The column bounds keep at least 7 px (the 5 px 5-minute tick plus its 2 px shadow) from the top and bottom of the screen, so ink never enters the tick strip.
 - An inline unit shares the value's baseline, an icon is centred on the value's ink.
 - The default font of the centre column is 7 (Bitham large).
 - The automatic battery / Bluetooth-disconnect substitution only works on the edge columns.

@@ -29,12 +29,12 @@
 // others (which also sit CF_MINOR_TICK_INSET px in from the edge), with sides along
 // rays from the screen centre. Only tick pixels are ever drawn.
 // The ring follows the visible area, a rectangle with rounded corners (see CF_CORNER_R).
-#define CF_STRIP_W           4   // depth of 5-minute (black) ticks
+#define CF_STRIP_W           5   // depth of 5-minute (black) ticks
 #define CF_MINOR_TICK_DEPTH  1   // depth of minor (light gray) ticks
 #define CF_MINOR_TICK_INSET  1   // gap between the screen edge and a minor tick (its shadow covers it)
 #define CF_TICK_LEN          5
 #define CF_TICK_COUNT       60
-#define CF_TICK_MAX_PIXELS  24   // upper bound on one tick's pixel count (tests check it)
+#define CF_TICK_MAX_PIXELS  28   // upper bound on one tick's pixel count (tests check it)
 
 // Corner radius (px) of the visible area. The Pebble Time 2's physical frame has rounded
 // corners that hide the screen's corner pixels, so the tick ring follows a rounded

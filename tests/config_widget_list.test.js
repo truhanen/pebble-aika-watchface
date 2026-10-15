@@ -262,3 +262,22 @@ test('identModes: the documented widgets', () => {
   assert.deepStrictEqual(identModes(5), []);
   assert.deepStrictEqual(identModes(30), []);
 });
+
+test('choosing a max-rain widget starts it in unit mode; other widgets start in icon mode', () => {
+  const { root, self } = mount([w(10), { rotating: true, interval: 3, members: [w(10), w(12)] }]);
+  const change = (el) => el.dispatchEvent(new (el.ownerDocument.defaultView.Event)('change', { bubbles: true }));
+  const sel = root.querySelector('.wl-row .wl-sel');
+  sel.value = '41'; change(sel);
+  let v = component.manipulator.get.call(self);
+  assert.strictEqual(v[0].id, 41);
+  assert.strictEqual(v[0].ident, 'unit');
+  const sel2 = root.querySelector('.wl-row .wl-sel');
+  sel2.value = '12'; change(sel2);
+  v = component.manipulator.get.call(self);
+  assert.strictEqual(v[0].ident, 'icon');
+  const msel = root.querySelector('.wl-mem .wl-msel');
+  msel.value = '43'; change(msel);
+  v = component.manipulator.get.call(self);
+  assert.strictEqual(v[1].members[0].id, 43);
+  assert.strictEqual(v[1].members[0].ident, 'unit');
+});

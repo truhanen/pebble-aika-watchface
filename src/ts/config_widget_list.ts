@@ -49,6 +49,14 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     if (out.length) { out.push('none'); }
     return out;
   }
+  // The ident a freshly chosen widget starts with: its unit where the unit is the point
+  // of the widget (the max-rain windows), else the first offered mode.
+  const UNIT_FIRST_IDS: number[] = [40, 41, 42, 43, 44];
+  function defaultIdent(id: number): string {
+    const modes = identModes(id);
+    if (UNIT_FIRST_IDS.indexOf(id) !== -1 && modes.indexOf('unit') !== -1) { return 'unit'; }
+    return modes.length ? modes[0] : 'icon';
+  }
   // A stored ident as shown for this id: itself when offered, else the watch's fallback.
   function resolveIdent(id: number, ident: string): string {
     const modes = identModes(id);
@@ -630,6 +638,15 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
       if ((parseInt((t as HTMLSelectElement).value, 10)) !== FONT_DEFAULT) { box.classList.add('wl-custom'); }
       else { box.classList.remove('wl-custom'); }
     }
+    if (t.classList.contains('wl-msel')) {
+      // member select changed: the member starts in its widget's default identifier mode.
+      const mem = t.parentNode as HTMLElement;
+      const hb = mem ? mem.querySelector('[data-ident]') as HTMLElement : null;
+      if (hb) {
+        hb.setAttribute('data-ident', defaultIdent(parseInt((t as HTMLSelectElement).value, 10) || 0));
+        renderSlots(readSlots());
+      }
+    }
     if (t.classList.contains('wl-sel')) {
       // main select changed: reconcile rotating <-> plain, seeding a fresh group.
       const slots = readSlots();
@@ -643,7 +660,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
             slots[idx] = { rotating: true, interval: DEFAULT_INTERVAL, members: [{ id: a, ident: 'icon', font: FONT_DEFAULT }, { id: a, ident: 'icon', font: FONT_DEFAULT }] };
           }
         } else {
-          slots[idx] = { id: newVal, ident: 'icon', font: slots[idx].rotating ? FONT_DEFAULT : slots[idx].font };
+          slots[idx] = { id: newVal, ident: defaultIdent(newVal), font: slots[idx].rotating ? FONT_DEFAULT : slots[idx].font };
         }
         renderSlots(slots);
       }

@@ -15,13 +15,13 @@ test('STATIC_WIDGETS contains no crypto coin entries (those are dynamic)', () =>
 test('STATIC_WIDGETS includes the Deep Sleep widget (id 20)', () => {
   const opt = STATIC_WIDGETS.find((o) => o.id === 20);
   assert.ok(opt, 'Deep Sleep option present');
-  assert.strictEqual(opt.label, 'Deep Sleep');
+  assert.strictEqual(opt.label, 'SLEEP deep hours');
 });
 
 test('STATIC_WIDGETS includes the Distance widget (id 21)', () => {
   const opt = STATIC_WIDGETS.find((o) => o.id === 21);
   assert.ok(opt, 'Distance option present');
-  assert.strictEqual(opt.label, 'Distance');
+  assert.strictEqual(opt.label, 'HEALTH distance');
 });
 
 test('STATIC_WIDGETS offers exactly the contract ids (no 1, no retired 4, no legacy 15/16/17)', () => {
@@ -33,15 +33,15 @@ test('STATIC_WIDGETS offers exactly the contract ids (no 1, no retired 4, no leg
 
 test('STATIC_WIDGETS labels for the Phase 4 widgets', () => {
   const label = (id) => STATIC_WIDGETS.find((o) => o.id === id).label;
-  assert.strictEqual(label(2), 'Battery');
-  assert.strictEqual(label(39), 'Battery %');
+  assert.strictEqual(label(2), 'BATTERY percentage');
+  assert.strictEqual(label(39), 'BATTERY percentage with % unit');
   assert.deepStrictEqual([26, 27, 28, 29, 30, 31, 32, 33, 34].map(label), [
-    'Date d.m.', 'Date dd.mm.', 'Date dd.mm', 'Date d.m.yyyy', 'Date Wkday dd',
-    'Date Wkday d.m.', 'Date Wkday', 'Date dd Mon', 'Date yyyy-mm-dd']);
-  assert.strictEqual(label(35), 'Digital time');
-  assert.strictEqual(label(36), 'Battery (icon only)');
-  assert.strictEqual(label(37), 'Weather (icon only)');
-  assert.strictEqual(label(38), 'Bluetooth (icon only)');
+    'DATE d.m.', 'DATE dd.mm.', 'DATE dd.mm', 'DATE d.m.yyyy', 'DATE wkday dd',
+    'DATE wkday d.m.', 'DATE wkday', 'DATE dd mon', 'DATE yyyy-mm-dd']);
+  assert.strictEqual(label(35), 'TIME digital');
+  assert.strictEqual(label(36), 'BATTERY icon');
+  assert.strictEqual(label(37), 'WEATHER condition icon');
+  assert.strictEqual(label(38), 'MISC bluetooth icon');
 });
 
 test("the retired \"Today's Date\" widget (4) is not offered", () => {
@@ -53,16 +53,16 @@ test('FONT_OPTIONS has the 17 contract labels; FONT_DEFAULT is 31', () => {
   const { FONT_OPTIONS, FONT_DEFAULT } = require('../src/pkjs/widget_options');
   assert.strictEqual(FONT_DEFAULT, 31);
   assert.strictEqual(FONT_OPTIONS.length, 17);
-  assert.strictEqual(FONT_OPTIONS[0], 'Gothic 3x-small');
-  assert.strictEqual(FONT_OPTIONS[5], 'Gothic medium');
-  assert.strictEqual(FONT_OPTIONS[7], 'Bitham large');
-  assert.strictEqual(FONT_OPTIONS[16], 'Leco 5x-large');
+  assert.strictEqual(FONT_OPTIONS[0], '3XS Gothic');
+  assert.strictEqual(FONT_OPTIONS[5], 'M Gothic');
+  assert.strictEqual(FONT_OPTIONS[7], 'L Bitham');
+  assert.strictEqual(FONT_OPTIONS[16], '5XL Leco');
 });
 
 test('STATIC_WIDGETS includes the Battery Days widget (id 22)', () => {
   const opt = STATIC_WIDGETS.find((o) => o.id === 22);
   assert.ok(opt, 'Battery Days option present');
-  assert.strictEqual(opt.label, 'Battery (days left)');
+  assert.strictEqual(opt.label, 'BATTERY days left');
 });
 
 test('buildOptions appends one option per crypto row, labelled by label||coin', () => {

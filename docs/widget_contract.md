@@ -44,23 +44,23 @@ The label is shown on the config page. Size details are noted with the Pebble fo
 
 | # | Label | Pebble font |
 |---|---|---|
-| 0 | Gothic 3x-small | GOTHIC_14 |
-| 1 | Gothic 2x-small | GOTHIC_14_BOLD |
-| 2 | Gothic x-small | GOTHIC_18_BOLD |
-| 3 | Gothic small | GOTHIC_24_BOLD |
-| 4 | Roboto small | ROBOTO_CONDENSED_21 |
-| 5 | Gothic medium | GOTHIC_28_BOLD |
-| 6 | Leco medium | LECO_20_BOLD_NUMBERS |
-| 7 | Bitham large | BITHAM_30_BLACK |
-| 8 | Droid serif large | DROID_SERIF_28_BOLD |
-| 9 | Leco large | LECO_26_BOLD_NUMBERS_AM_PM |
-| 10 | Leco x-large | LECO_32_BOLD_NUMBERS |
-| 11 | Bitham 2x-large | BITHAM_42_BOLD |
-| 12 | Leco 2x-large 36 | LECO_36_BOLD_NUMBERS |
-| 13 | Leco 2x-large 38 | LECO_38_BOLD_NUMBERS |
-| 14 | Leco 3x-large | LECO_42_NUMBERS |
-| 15 | Leco 4x-large | LECO_60_NUMBERS_AM_PM |
-| 16 | Leco 5x-large | LECO_60_BOLD_NUMBERS_AM_PM |
+| 0 | 3XS Gothic | GOTHIC_14 |
+| 1 | 2XS Gothic | GOTHIC_14_BOLD |
+| 2 | XS Gothic | GOTHIC_18_BOLD |
+| 3 | S Gothic | GOTHIC_24_BOLD |
+| 4 | S Roboto | ROBOTO_CONDENSED_21 |
+| 5 | M Gothic | GOTHIC_28_BOLD |
+| 6 | M Leco | LECO_20_BOLD_NUMBERS |
+| 7 | L Bitham | BITHAM_30_BLACK |
+| 8 | L Droid serif | DROID_SERIF_28_BOLD |
+| 9 | L Leco | LECO_26_BOLD_NUMBERS_AM_PM |
+| 10 | XL Leco | LECO_32_BOLD_NUMBERS |
+| 11 | 2XL Bitham | BITHAM_42_BOLD |
+| 12 | 2XL Leco 36 | LECO_36_BOLD_NUMBERS |
+| 13 | 2XL Leco 38 | LECO_38_BOLD_NUMBERS |
+| 14 | 3XL Leco | LECO_42_NUMBERS |
+| 15 | 4XL Leco | LECO_60_NUMBERS_AM_PM |
+| 16 | 5XL Leco | LECO_60_BOLD_NUMBERS_AM_PM |
 
 ## Widget ids
 
@@ -68,29 +68,29 @@ The label is shown on the config page. Size details are noted with the Pebble fo
 
 These ids are kept, ported to the new API, and listed on the config page:
 
-| Id | Widget |
-|---|---|
-| 0 | Empty |
-| 2 | Battery |
-| 3 | Alternate time zone |
-| 5 | Seconds |
-| 6 | Week number |
-| 7 | Current weather |
-| 8 | Today's forecast |
-| 9 | Sleep |
-| 10 | Steps |
-| 11 | Swatch beats |
-| 12 | Heart rate |
-| 13 | UV index |
-| 14 | Electricity price |
-| 18 | Next cheap electricity |
-| 19 | Cheapest electricity hour |
-| 20 | Deep sleep |
-| 21 | Distance |
-| 22 | Battery days left |
-| 23 | Tuya LEDs |
-| 24 | Sleep + deep sleep |
-| 25 | Sleep + deep bar |
+| Id | Widget | Config label |
+|---|---|---|
+| 0 | Empty | EMPTY |
+| 2 | Battery | BATTERY percentage |
+| 3 | Alternate time zone | TIME alt time zone |
+| 5 | Seconds | TIME seconds |
+| 6 | Week number | DATE week number |
+| 7 | Current weather | WEATHER temperature |
+| 8 | Today's forecast | WEATHER forecast high/low |
+| 9 | Sleep | SLEEP hours |
+| 10 | Steps | HEALTH steps |
+| 11 | Swatch beats | TIME swatch beats |
+| 12 | Heart rate | HEALTH heart rate |
+| 13 | UV index | WEATHER UV index |
+| 14 | Electricity price | ELECTR price |
+| 18 | Next cheap electricity | ELECTR next cheap |
+| 19 | Cheapest electricity hour | ELECTR cheapest hour |
+| 20 | Deep sleep | SLEEP deep hours |
+| 21 | Distance | HEALTH distance |
+| 22 | Battery days left | BATTERY days left |
+| 23 | Tuya LEDs | MISC Tuya LEDs |
+| 24 | Sleep + deep sleep | SLEEP + deep hours |
+| 25 | Sleep + deep bar | SLEEP hours + deep bar |
 
 These are dynamic ranges, unchanged:
 
@@ -108,22 +108,22 @@ Other existing ids:
 
 ### New ids
 
-| Id | Widget | Example / notes |
-|---|---|---|
-| 26 | Date `d.m.` | 4.7. |
-| 27 | Date `dd.mm.` | 04.07. |
-| 28 | Date `dd.mm` | 04.07 |
-| 29 | Date `d.m.yyyy` | 4.7.2026 |
-| 30 | Date `Wkday dd` | Fr 04 |
-| 31 | Date `Wkday d.m.` | Fr 4.7. |
-| 32 | Date `Wkday` | Fr |
-| 33 | Date `dd Mon` | 04 Jul |
-| 34 | Date `yyyy-mm-dd` | 2026-07-04 |
-| 35 | Digital time | Follows `clock_is_24h_style()`. In 12 h mode AM/PM is drawn as a unit. The leading zero follows `SettingShowLeadingZero`. |
-| 36 | Battery icon only | |
-| 37 | Weather icon only | |
-| 38 | Bluetooth icon only | Shows a connected or disconnected glyph. |
-| 39 | Battery % | Value is the battery percentage; identifier is the `%` unit, inline with the value. Hide flag hides the unit. Turkish: value is `%NN` (percent-prefix) with no separate unit. |
+| Id | Widget | Config label | Example / notes |
+|---|---|---|---|
+| 26 | Date `d.m.` | DATE d.m. | 4.7. |
+| 27 | Date `dd.mm.` | DATE dd.mm. | 04.07. |
+| 28 | Date `dd.mm` | DATE dd.mm | 04.07 |
+| 29 | Date `d.m.yyyy` | DATE d.m.yyyy | 4.7.2026 |
+| 30 | Date `Wkday dd` | DATE wkday dd | Fr 04 |
+| 31 | Date `Wkday d.m.` | DATE wkday d.m. | Fr 4.7. |
+| 32 | Date `Wkday` | DATE wkday | Fr |
+| 33 | Date `dd Mon` | DATE dd mon | 04 Jul |
+| 34 | Date `yyyy-mm-dd` | DATE yyyy-mm-dd | 2026-07-04 |
+| 35 | Digital time | TIME digital | Follows `clock_is_24h_style()`. In 12 h mode AM/PM is drawn as a unit. The leading zero follows `SettingShowLeadingZero`. |
+| 36 | Battery icon only | BATTERY icon | |
+| 37 | Weather icon only | WEATHER condition icon | |
+| 38 | Bluetooth icon only | MISC bluetooth icon | Shows a connected or disconnected glyph. |
+| 39 | Battery % | BATTERY percentage with % unit | Value is the battery percentage; identifier is the `%` unit, inline with the value. Hide flag hides the unit. Turkish: value is `%NN` (percent-prefix) with no separate unit. |
 
 - Weekday and month names are localised (`languages.c`).
 - `MAX_WIDGET_TYPE` becomes 39.

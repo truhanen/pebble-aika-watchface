@@ -39,9 +39,9 @@ test('every font-capable row has one "Aa" control named Font, in the main line',
 
 test('Default option names the list default font (side 5, top/bottom 7)', () => {
   const side = mount([w(10)], { defaultFont: 5 });
-  assert.strictEqual(defaultLabel(side.root), 'Default (Gothic medium)');
+  assert.strictEqual(defaultLabel(side.root), 'Default (M Gothic)');
   const top = mount([w(30)], { defaultFont: 7, max: 1 });
-  assert.strictEqual(defaultLabel(top.root), 'Default (Bitham large)');
+  assert.strictEqual(defaultLabel(top.root), 'Default (L Bitham)');
   const none = mount([w(10)]);
   assert.strictEqual(defaultLabel(none.root), 'Default');
 });

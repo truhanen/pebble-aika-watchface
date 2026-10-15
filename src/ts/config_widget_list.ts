@@ -71,64 +71,64 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   // and src/c/widgets.h. Includes Empty(0) + Rotating(255) for the MAIN
   // select; member selects filter those two out (memberOptionsHtml).
   const STATIC_OPTIONS: { id: number; label: string }[] = [
-    { id: 0, label: 'Empty' },
+    { id: 0, label: 'EMPTY' },
     { id: 255, label: '🔁 Rotating' },
-    { id: 35, label: 'Digital time' },
-    { id: 26, label: 'Date d.m.' },
-    { id: 27, label: 'Date dd.mm.' },
-    { id: 28, label: 'Date dd.mm' },
-    { id: 29, label: 'Date d.m.yyyy' },
-    { id: 30, label: 'Date Wkday dd' },
-    { id: 31, label: 'Date Wkday d.m.' },
-    { id: 32, label: 'Date Wkday' },
-    { id: 33, label: 'Date dd Mon' },
-    { id: 34, label: 'Date yyyy-mm-dd' },
-    { id: 3, label: 'Alternate Time Zone' },
-    { id: 5, label: 'Seconds' },
-    { id: 11, label: 'Swatch Internet Time' },
-    { id: 6, label: 'Week Number' },
-    { id: 7, label: 'Current Weather' },
-    { id: 37, label: 'Weather (icon only)' },
-    { id: 8, label: "Today's Forecast" },
-    { id: 13, label: 'UV Index' },
-    { id: 14, label: 'Electricity price' },
-    { id: 18, label: 'Next cheap electricity' },
-    { id: 19, label: 'Cheapest electricity hour' },
-    { id: 9, label: 'Sleep' },
-    { id: 20, label: 'Deep Sleep' },
-    { id: 24, label: 'Sleep + Deep Sleep' },
-    { id: 25, label: 'Sleep + Deep Bar' },
-    { id: 10, label: 'Steps' },
-    { id: 21, label: 'Distance' },
-    { id: 12, label: 'Heart Rate' },
-    { id: 2, label: 'Battery' },
-    { id: 36, label: 'Battery (icon only)' },
-    { id: 22, label: 'Battery (days left)' },
-    { id: 39, label: 'Battery %' },
-    { id: 38, label: 'Bluetooth (icon only)' },
-    { id: 23, label: 'Tuya LEDs' },
+    { id: 35, label: 'TIME digital' },
+    { id: 3, label: 'TIME alt time zone' },
+    { id: 5, label: 'TIME seconds' },
+    { id: 11, label: 'TIME swatch beats' },
+    { id: 30, label: 'DATE wkday dd' },
+    { id: 31, label: 'DATE wkday d.m.' },
+    { id: 32, label: 'DATE wkday' },
+    { id: 26, label: 'DATE d.m.' },
+    { id: 27, label: 'DATE dd.mm.' },
+    { id: 28, label: 'DATE dd.mm' },
+    { id: 29, label: 'DATE d.m.yyyy' },
+    { id: 33, label: 'DATE dd mon' },
+    { id: 34, label: 'DATE yyyy-mm-dd' },
+    { id: 6, label: 'DATE week number' },
+    { id: 7, label: 'WEATHER temperature' },
+    { id: 37, label: 'WEATHER condition icon' },
+    { id: 8, label: 'WEATHER forecast high/low' },
+    { id: 13, label: 'WEATHER UV index' },
+    { id: 10, label: 'HEALTH steps' },
+    { id: 21, label: 'HEALTH distance' },
+    { id: 12, label: 'HEALTH heart rate' },
+    { id: 9, label: 'SLEEP hours' },
+    { id: 20, label: 'SLEEP deep hours' },
+    { id: 24, label: 'SLEEP + deep hours' },
+    { id: 25, label: 'SLEEP hours + deep bar' },
+    { id: 2, label: 'BATTERY percentage' },
+    { id: 39, label: 'BATTERY percentage with % unit' },
+    { id: 36, label: 'BATTERY icon' },
+    { id: 22, label: 'BATTERY days left' },
+    { id: 14, label: 'ELECTR price' },
+    { id: 18, label: 'ELECTR next cheap' },
+    { id: 19, label: 'ELECTR cheapest hour' },
+    { id: 38, label: 'MISC bluetooth icon' },
+    { id: 23, label: 'MISC Tuya LEDs' },
   ];
 
   // Font choices; index == font index in the payload. KEEP IN SYNC with
   // src/ts/widget_options.ts FONT_OPTIONS and docs/widget_contract.md.
   const FONT_OPTIONS: string[] = [
-    'Gothic 3x-small',
-    'Gothic 2x-small',
-    'Gothic x-small',
-    'Gothic small',
-    'Roboto small',
-    'Gothic medium',
-    'Leco medium',
-    'Bitham large',
-    'Droid serif large',
-    'Leco large',
-    'Leco x-large',
-    'Bitham 2x-large',
-    'Leco 2x-large 36',
-    'Leco 2x-large 38',
-    'Leco 3x-large',
-    'Leco 4x-large',
-    'Leco 5x-large',
+    '3XS Gothic',
+    '2XS Gothic',
+    'XS Gothic',
+    'S Gothic',
+    'S Roboto',
+    'M Gothic',
+    'M Leco',
+    'L Bitham',
+    'L Droid serif',
+    'L Leco',
+    'XL Leco',
+    '2XL Bitham',
+    '2XL Leco 36',
+    '2XL Leco 38',
+    '3XL Leco',
+    '4XL Leco',
+    '5XL Leco',
   ];
 
   const INTERVAL_OPTIONS: { code: number; label: string }[] = [
@@ -204,7 +204,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
       if (isNaN(wid) || wid === 0) { continue; }
       const coin = (typeof r.coin === 'string') ? r.coin : '';
       const label = (typeof r.label === 'string' && r.label !== '') ? r.label : coin.toUpperCase();
-      out.push({ id: wid, label: label });
+      out.push({ id: wid, label: 'RATE ' + label });
     }
     const carr = readCurrencyRows();
     for (let i = 0; i < carr.length; i++) {
@@ -215,7 +215,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
       const base = (typeof r.base === 'string') ? r.base : '';
       const quote = (typeof r.quote === 'string') ? r.quote : '';
       const label = (typeof r.label === 'string' && r.label !== '') ? r.label : (base + '/' + quote);
-      out.push({ id: cwid, label: label });
+      out.push({ id: cwid, label: 'RATE ' + label });
     }
     const tarr = readTuyaRows();
     for (let i = 0; i < tarr.length; i++) {
@@ -224,7 +224,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
       const twid = r.wid;
       if (isNaN(twid) || twid === 0) { continue; }
       const label = (typeof r.label === 'string' && r.label !== '') ? r.label : (r.code || 'Tuya');
-      out.push({ id: twid, label: label });
+      out.push({ id: twid, label: 'MISC ' + label });
     }
     return out;
   }

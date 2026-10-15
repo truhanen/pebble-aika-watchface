@@ -13,6 +13,7 @@ typedef struct {
   WidgetCtx ctx;
   WidgetSize size;
   int16_t slot_h;
+  WlItemDims dims;   // of the active member
 } Active;
 
 // An item with its final boxes.
@@ -44,8 +45,16 @@ void WidgetLayer_reload(void) {
   }
 }
 
-static int widget_height(const WidgetSize *s) {
-  return s->ink_h > s->icon_h ? s->ink_h : s->icon_h;
+static WlItemDims dims_of(const WidgetCtx *c, const WidgetSize *s) {
+  WlItemDims d = { c->font, s->value_w, s->ink_h, s->icon_w, s->icon_h, s->unit_inline,
+                   s->value_desc, s->unit_desc };
+  return d;
+}
+
+// Height a widget reserves: everything it draws, descenders included.
+static int widget_height(const WidgetCtx *c, const WidgetSize *s) {
+  WlItemDims d = dims_of(c, s);
+  return wl_item_height(&d);
 }
 
 // The font of a member: the test-hook override, else the one in its flags, else the
@@ -72,8 +81,8 @@ static void resolve_slot(int pos, const WidgetSlot *slot, int sod, Active *a) {
     WidgetCtx c;
     WidgetSize s;
     measure_member(pos, slot, m, &c, &s);
-    if (m == active) { a->ctx = c; a->size = s; }
-    if (widget_height(&s) > a->slot_h) { a->slot_h = (int16_t)widget_height(&s); }
+    if (m == active) { a->ctx = c; a->size = s; a->dims = dims_of(&c, &s); }
+    if (widget_height(&c, &s) > a->slot_h) { a->slot_h = (int16_t)widget_height(&c, &s); }
   }
 }
 
@@ -116,7 +125,8 @@ static void set_fallback(int pos, Active *a, uint8_t id, int font) {
   a->ctx.font = (uint8_t)font;
   a->ctx.ident = WL_IDENT_ICON;
   Widgets_get(id)->measure(&a->ctx, &a->size);
-  a->slot_h = (int16_t)widget_height(&a->size);
+  a->dims = dims_of(&a->ctx, &a->size);
+  a->slot_h = (int16_t)widget_height(&a->ctx, &a->size);
   (void)pos;
 }
 
@@ -162,30 +172,25 @@ static void apply_fallback(Active col[2][MAX_WIDGET_SLOTS + 1], int n[2], int in
   }
 }
 
-// Place an item whose slot is slot_h high from slot_top. The value's ink is centred in
-// the slot and the icon / fraction unit on the value's ink, an inline unit on the value's baseline; a widget without a value (icon
-// only) is centred in the slot as it is.
+// Place an item whose slot is slot_h high from slot_top (wl_place_v keeps everything it
+// draws, descenders included, inside the slot; a widget without a value is centred as it is).
 static void place(const Active *a, int pos, int screen_w, int slot_top, int slot_h) {
   if (s_placed_count >= MAX_PLACED) { return; }
   WlHPlace hp;
   wl_place_h((WlPosition)pos, screen_w, CF_STRIP_W, a->size.value_w, a->size.icon_w, &hp);
+  WlVPlace vp;
+  wl_place_v(&a->dims, slot_h, &vp);
   Placed *p = &s_placed[s_placed_count++];
-  int ink_top = slot_top + wl_center_offset(slot_h, a->size.ink_h);
-  int icon_top = a->size.ink_h > 0 ? ink_top + wl_center_offset(a->size.ink_h, a->size.icon_h)
-                                   : slot_top + wl_center_offset(slot_h, a->size.icon_h);
-  if (a->size.unit_inline && a->size.value_w > 0 && a->size.ink_h > 0) {
-    // an inline unit is written on the value's line: same baseline
-    icon_top = wl_inline_unit_ink_top(wl_metrics(a->ctx.font), ink_top, wl_metrics(WIDGET_FONT_UNIT));
-  }
   p->ctx = a->ctx;
   p->has_value = a->size.value_w > 0;
   p->has_icon = a->size.icon_w > 0;
-  p->value_box = GRect(hp.value_x, ink_top, a->size.value_w, a->size.ink_h);
-  p->icon_box = GRect(hp.icon_x, icon_top, a->size.icon_w, a->size.icon_h);
+  p->value_box = GRect(hp.value_x, slot_top + vp.ink_top, a->size.value_w, a->size.ink_h);
+  p->icon_box = GRect(hp.icon_x, slot_top + vp.icon_top, a->size.icon_w, a->size.icon_h);
 }
 
 static void place_column(const Active *col, int n, int pos, GRect bounds) {
-  int top = CF_STRIP_W + WL_EDGE_INSET, bottom = bounds.size.h - top;
+  int top, bottom;
+  wl_column_bounds(bounds.size.h, CF_STRIP_W, &top, &bottom);
   int16_t h[MAX_WIDGET_SLOTS + 1], ys[MAX_WIDGET_SLOTS + 1];
   column_heights(col, n, h);
   int shown = wl_column_visible(h, n, bottom - top, WL_MIN_COLUMN_GAP);
@@ -199,7 +204,9 @@ static void place_column(const Active *col, int n, int pos, GRect bounds) {
 void WidgetLayer_prepare(GRect bounds) {
   s_placed_count = 0;
   int sod = seconds_of_day();
-  int inner = bounds.size.h - 2 * (CF_STRIP_W + WL_EDGE_INSET);
+  int ctop, cbottom;
+  wl_column_bounds(bounds.size.h, CF_STRIP_W, &ctop, &cbottom);
+  int inner = cbottom - ctop;
 
   static Active col[WIDGET_POS_COUNT][MAX_WIDGET_SLOTS + 1];
   int n[WIDGET_POS_COUNT];

@@ -179,7 +179,77 @@ static void test_fraction(void) {
   assert(fr.h == fr.den_top + u->cap_h);
 }
 
+// Heart rate in unit mode: Gothic medium value, inline "bpm" (descender on the p).
+static WlItemDims bpm_dims(void) {
+  WlItemDims d = { 5, 30, 18, 25, 9, true, false, true };
+  return d;
+}
+
+static void test_descender_extent(void) {
+  assert(wl_text_has_descender("bpm") && wl_text_has_descender("Aug") && wl_text_has_descender("1,5"));
+  assert(wl_text_has_descender("steps"));
+  assert(!wl_text_has_descender("km") && !wl_text_has_descender("72") && !wl_text_has_descender(""));
+
+  WlItemDims d = bpm_dims();
+  int t, b;
+  wl_item_extent(&d, &t, &b);
+  const WidgetFontMetrics *u = wl_metrics(WL_UNIT_FONT);
+  int unit_top = wl_inline_unit_ink_top(wl_metrics(5), 0, u);
+  assert(t == 0);
+  assert(b == unit_top - u->digit_top + u->desc_bottom);      // the descender of the unit
+  assert(b > 18);                                              // taller than the digits alone
+  assert(wl_item_height(&d) == b);
+
+  // without the descender the old height (digit ink) stays
+  d.unit_desc = false;
+  assert(wl_item_height(&d) == 18);
+
+  // a value with a descender ("Aug") reaches the font's desc_bottom
+  WlItemDims v = { 7, 40, 21, 0, 0, false, true, false };
+  wl_item_extent(&v, &t, &b);
+  assert(t == 0 && b == wl_metrics(7)->desc_bottom - wl_metrics(7)->digit_top);
+
+  // the last slot of a column ends at or above the bottom, ink included
+  int top, bottom;
+  wl_column_bounds(228, STRIP, &top, &bottom);
+  assert(top >= WL_TICK_DEPTH + WL_TICK_SHADOW && 228 - bottom >= WL_TICK_DEPTH + WL_TICK_SHADOW);
+  WlItemDims first = bpm_dims(), last = bpm_dims();
+  int16_t h[2] = { (int16_t)wl_item_height(&first), (int16_t)wl_item_height(&last) }, ys[2];
+  wl_column_layout(h, 2, top, bottom, WL_MIN_COLUMN_GAP, ys);
+  WlVPlace vp;
+  wl_place_v(&last, h[1], &vp);
+  int et, eb;
+  wl_item_extent(&last, &et, &eb);
+  assert(ys[1] + vp.ink_top + eb <= bottom);                    // the descender of "bpm"
+  assert(ys[1] + vp.icon_top - u->digit_top + u->desc_bottom <= bottom);
+  assert(ys[0] + vp.ink_top + et >= top);                        // the first slot's top
+  assert(ys[0] >= top);
+  // baseline sharing is kept: the unit's baseline equals the value's baseline
+  assert(vp.icon_top - u->digit_top + u->base == vp.ink_top - wl_metrics(5)->digit_top + wl_metrics(5)->base);
+
+  // a taller member in a group never leaves its slot: a short plain widget is centred, a
+  // member with a descender in a slot of the same height is pushed up, not clipped
+  WlItemDims plain = { 5, 30, 18, 0, 0, false, false, false };
+  wl_place_v(&plain, 21, &vp);
+  assert(vp.ink_top == 1);
+  WlItemDims desc = { 5, 30, 18, 0, 0, false, true, false };
+  wl_item_extent(&desc, &t, &b);
+  wl_place_v(&desc, b, &vp);
+  assert(vp.ink_top == 0 && vp.ink_top + b <= b);
+
+  // icon centred on the ink of a non-inline widget (fraction / icon)
+  WlItemDims ic = { 5, 30, 18, 23, 23, false, false, false };
+  wl_place_v(&ic, wl_item_height(&ic), &vp);
+  assert(wl_item_height(&ic) == 23);
+  assert(vp.icon_top == 0 && vp.ink_top == 3);                  // 18 px ink centred on the 23 px icon
+  // icon-only item: centred, no ink
+  WlItemDims io = { 5, 0, 0, 23, 23, false, false, false };
+  wl_place_v(&io, 30, &vp);
+  assert(vp.icon_top == 3);
+}
+
 int main(void) {
+  test_descender_extent();
   test_metrics_table();
   test_cp_and_coverage();
   test_runs();

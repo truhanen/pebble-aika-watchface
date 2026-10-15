@@ -51,6 +51,44 @@ int wl_run_box_top(const WidgetFontMetrics *primary, const WidgetFontMetrics *ru
 int wl_inline_unit_ink_top(const WidgetFontMetrics *value, int value_ink_top,
                            const WidgetFontMetrics *unit);
 
+// --- vertical extent of a widget ---
+// Ink may never reach the 5-minute tick strip (WL_TICK_DEPTH) or its shadow
+// (WL_TICK_SHADOW), so every column lives between that clearance and the screen's far side.
+#define WL_TICK_DEPTH 4
+#define WL_TICK_SHADOW 2
+#define WL_UNIT_FONT 0   // GOTHIC_14, the font of every inline unit (widget_fonts.h WIDGET_FONT_UNIT)
+
+// Column bounds: first row top and one past the last row bottom. Never closer to a
+// screen edge than max(strip_w + WL_EDGE_INSET, WL_TICK_DEPTH + WL_TICK_SHADOW).
+void wl_column_bounds(int screen_h, int strip_w, int *top, int *bottom);
+
+// True when the text has a glyph that hangs below the baseline (g j p q y , ; ( )).
+bool wl_text_has_descender(const char *text);
+
+// What a widget draws, as the layout needs it.
+typedef struct {
+  int value_font;       // font index of the value
+  int value_w, ink_h;   // value advance width, digit ink height (0 = no value ink)
+  int icon_w, icon_h;   // icon / unit box (0 = none)
+  bool unit_inline;     // the icon box is a one-line unit on the value's baseline
+  bool value_desc;      // the value text has a descender
+  bool unit_desc;       // the unit text has a descender
+} WlItemDims;
+
+// Vertical extent [top, bottom) of everything the item draws (value glyphs with
+// descenders, inline unit with its descender, fraction, icon), relative to the top of
+// the value's digit ink (or of the icon, when the item has no value ink).
+void wl_item_extent(const WlItemDims *d, int *top, int *bottom);
+// Height of the extent: the height a column reserves for the item.
+int wl_item_height(const WlItemDims *d);
+
+// Y of the value's ink and of the icon / unit relative to slot_top, for an item in a
+// slot slot_h high: the ink (or icon-only item) is centred, then moved only as far as
+// needed to keep the whole extent inside the slot. The icon is centred on the ink; an
+// inline unit shares the value's baseline.
+typedef struct { int16_t ink_top, icon_top; } WlVPlace;
+void wl_place_v(const WlItemDims *d, int slot_h, WlVPlace *out);
+
 // --- edge columns ---
 // Top y of each of n items of the given heights, distributed "space-between" over
 // [top, bottom): the first at top, the last ending at bottom; a single item is

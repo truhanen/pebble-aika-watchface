@@ -70,6 +70,8 @@ typedef struct {
   int16_t icon_w;     // width of the icon or unit beside the value (0 = none / hidden)
   int16_t icon_h;     // its height; the icon is centred on the value's ink
   bool unit_inline;   // the icon is a one-line unit: it shares the value's baseline instead
+  bool value_desc;    // the value text has a glyph below the baseline (g p y ...)
+  bool unit_desc;     // so has the inline unit text
 } WidgetSize;
 
 // A widget is drawn in two passes: draw_icon happens below the clock hands (above them

@@ -711,6 +711,7 @@ static void measure(const WidgetCtx *c, WidgetSize *out) {
   }
   if (d->value && d->value(c, buf, sizeof(buf))) {
     out->value_w = (int16_t)WidgetText_width(buf, c->font);
+    out->value_desc = wl_text_has_descender(buf);
   }
   WlIdent mode = ident_of(c);
   if (mode == WL_IDENT_NONE) { return; }
@@ -721,6 +722,7 @@ static void measure(const WidgetCtx *c, WidgetSize *out) {
       out->icon_w = (int16_t)w;
       out->icon_h = (int16_t)h;
       out->unit_inline = WidgetUnit_isInline(buf);
+      out->unit_desc = out->unit_inline && wl_text_has_descender(buf);
     }
     return;
   }

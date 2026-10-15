@@ -101,7 +101,9 @@ function clayConfigCustom(this: ClayConfigThis, minified: unknown): void {
   // ---- Gating: per-item visibility decisions (a key absent from gk/gi = visible)
   function computeGate(): GateResult {
     const ids = widgetIds();
-    const weather = has(ids, [7, 8, 13, 37]);
+    // 40..44 = rain-max widgets (1/3/6/9/12 h); they need the weather location/source too.
+    const rain = has(ids, [40, 41, 42, 43, 44]);
+    const weather = has(ids, [7, 8, 13, 37]) || rain;
     const temp = has(ids, [7, 8]);
     const manual = weather && key('weather_loc_mode').get() === 'manual';
     const cheapHour = has(ids, [18, 19]);
@@ -121,6 +123,7 @@ function clayConfigCustom(this: ClayConfigThis, minified: unknown): void {
     const gk: { [k: string]: boolean } = {};
     const gi: { [k: string]: boolean } = {};
     gk.SettingUseMetric = temp;
+    gk.SettingPrecipUnit = rain;
     gk.weather_loc_mode = weather;
     gk.weather_datasource = weather;
     gk.weather_loc = manual;

@@ -96,7 +96,9 @@
       "TestFontLeft",
       "TestFontRight",
       "TestFontTop",
-      "TestFontBottom"
+      "TestFontBottom",
+      "WeatherRainMax",
+      "SettingPrecipUnit"
     ],
     "resources": {
       "media": [

@@ -3,6 +3,7 @@
 
 import * as weatherCommon from './weather';
 import type { GeoPosition, WeatherDict } from './weather';
+import { rainMaxBytes, openMeteoPrecipSamples } from './rain_max';
 
 interface OpenMeteoResponse {
   current_weather: {
@@ -15,9 +16,11 @@ interface OpenMeteoResponse {
     temperature_2m_min: number[];
     weathercode: number[];
   };
+  utc_offset_seconds?: number;
   hourly: {
     time: string[];
     uv_index: number[];
+    precipitation?: (number | null)[];
   };
 }
 
@@ -30,7 +33,7 @@ export function getWeatherFromCoords(pos: GeoPosition): void {
     lat + '&longitude=' + lon +
     '&current_weather=true' +
     '&daily=temperature_2m_max,temperature_2m_min,uv_index_max,weathercode' +
-    '&hourly=uv_index' +
+    '&hourly=uv_index,precipitation' +
     '&timezone=auto';
 
   console.log(url);
@@ -73,6 +76,9 @@ function getAndSendWeather(url: string): void {
       WeatherForecastLowTemp: forecastLow,
       WeatherForecastCondition: forecastIcon,
       WeatherUVIndex: uvIndex,
+      WeatherRainMax: rainMaxBytes(
+        openMeteoPrecipSamples(json.hourly.time, json.hourly.precipitation, json.utc_offset_seconds),
+        Math.floor(Date.now() / 1000)),
     };
 
     console.log(JSON.stringify(dictionary));

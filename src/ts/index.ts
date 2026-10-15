@@ -199,7 +199,8 @@ Pebble.addEventListener('webviewclosed', (e) => {
     .concat(widgetListIds(s.WidgetListBottom, 'center'));
   window.localStorage.setItem('disable_weather',
     (widgetIDs.indexOf(7) !== -1 || widgetIDs.indexOf(8) !== -1 || widgetIDs.indexOf(13) !== -1 ||
-     widgetIDs.indexOf(37) !== -1) ? 'no' : 'yes');
+     widgetIDs.indexOf(37) !== -1 ||
+     widgetIDs.some((id) => id >= 40 && id <= 44)) ? 'no' : 'yes');
   window.localStorage.setItem('disable_electricity',
     (widgetIDs.indexOf(14) !== -1 || widgetIDs.indexOf(18) !== -1 || widgetIDs.indexOf(19) !== -1) ? 'no' : 'yes');
   // crypto: enabled iff any placed widget id is in the crypto range (15/16/17 or 200+)

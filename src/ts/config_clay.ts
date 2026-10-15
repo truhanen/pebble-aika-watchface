@@ -219,6 +219,8 @@ const config = [
           { label: 'Open-Meteo', value: 'openmeteo' },
           { label: 'FMI (Ilmatieteen laitos)', value: 'fmi' },
         ] },
+      { type: 'radiogroup', messageKey: 'SettingPrecipUnit', label: 'Precipitation unit',
+        defaultValue: '0', options: [{ label: 'mm', value: '0' }, { label: 'inch', value: '1' }] },
     ],
   },
 

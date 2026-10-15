@@ -21,7 +21,7 @@ export interface WeatherProvider {
 
 // Values pushed to the watch: numeric weather fields plus the (string) station
 // name. Loose enough for both providers' dictionaries.
-export type WeatherDict = Record<string, number | string>;
+export type WeatherDict = Record<string, number | string | number[]>;
 
 const weatherProviders: Record<string, WeatherProvider> = {
   openmeteo,

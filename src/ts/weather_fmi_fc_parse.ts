@@ -11,7 +11,7 @@
    of <wml2:time>/<wml2:value> pairs ('NaN' = gap). */
 
 const NAME_RE = /<gml:name[^>]*locationcode\/name[^>]*>([^<]+)<\/gml:name>/;
-const PARAM_RE = /param=([a-z0-9]+)/;
+const PARAM_RE = /param=([A-Za-z0-9]+)/;
 const TVP_RE = /<wml2:time>([^<]+)<\/wml2:time>\s*<wml2:value>([^<]+)<\/wml2:value>/g;
 
 interface Sample {
@@ -27,6 +27,8 @@ export interface FmiForecastTvp {
   forecastHigh: number;
   forecastLow: number;
   uvIndex: number;
+  // Precipitation1h samples (mm in the hour ENDING at epoch); NaN gaps are dropped.
+  precip: Sample[];
   name: string;
 }
 
@@ -43,7 +45,7 @@ function nearest(series: Sample[], nowEpochSec: number): Sample | null {
 }
 
 export function parseFmiForecastTvp(
-  xml: unknown, nowEpochSec: number, fcSymbolEpochSec?: number,
+  xml: unknown, nowEpochSec: number, fcSymbolEpochSec?: number, dayEndEpochSec?: number,
 ): FmiForecastTvpResult {
   if (typeof xml !== 'string' || xml.indexOf('ExceptionReport') !== -1) {
     return { ok: false };
@@ -55,15 +57,18 @@ export function parseFmiForecastTvp(
   const temps: Sample[] = [];
   const syms: Sample[] = [];
   const uvs: Sample[] = [];
+  const precip: Sample[] = [];
   const members = xml.split('<wfs:member>');
   for (let i = 1; i < members.length; i++) {        // [0] is the header chunk
     const chunk = members[i];
     const pm = PARAM_RE.exec(chunk);
     if (!pm) { continue; }
+    const pname = pm[1].toLowerCase();
     const target =
-      pm[1] === 'temperature' ? temps
-      : pm[1] === 'smartsymbol' ? syms
-      : pm[1] === 'uvindex' ? uvs : null;
+      pname === 'temperature' ? temps
+      : pname === 'smartsymbol' ? syms
+      : pname === 'uvindex' ? uvs
+      : pname === 'precipitation1h' ? precip : null;
     if (!target) { continue; }
 
     let m: RegExpExecArray | null;
@@ -82,11 +87,16 @@ export function parseFmiForecastTvp(
   const curSym = syms.length ? nearest(syms, nowEpochSec) : null;
   const curUv = uvs.length ? nearest(uvs, nowEpochSec) : null;
 
-  let high = temps[0].value;
-  let low = temps[0].value;
-  for (let j = 1; j < temps.length; j++) {
-    if (temps[j].value > high) { high = temps[j].value; }
-    if (temps[j].value < low) { low = temps[j].value; }
+  // The request may reach past today (for the rain horizon); the day's high/low
+  // must still cover today only when dayEndEpochSec is given.
+  const dayTemps = (typeof dayEndEpochSec === 'number' && !isNaN(dayEndEpochSec))
+    ? temps.filter((t) => t.epoch <= dayEndEpochSec) : temps;
+  const hl = dayTemps.length ? dayTemps : temps;
+  let high = hl[0].value;
+  let low = hl[0].value;
+  for (let j = 1; j < hl.length; j++) {
+    if (hl[j].value > high) { high = hl[j].value; }
+    if (hl[j].value < low) { low = hl[j].value; }
   }
 
   // Forecast condition = the smartsymbol at ~15:00 local (fcSymbolEpochSec), or
@@ -108,6 +118,7 @@ export function parseFmiForecastTvp(
     forecastHigh: Math.round(high),
     forecastLow: Math.round(low),
     uvIndex: curUv ? Math.round(curUv.value) : 0,
+    precip,
     name,
   };
 }

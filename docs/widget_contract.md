@@ -15,7 +15,7 @@ The four widget lists, all byte arrays:
 
 The phone-only Clay keys are `WidgetList`, `WidgetListRight`, `WidgetListTop` and `WidgetListBottom`.
 
-`SettingShowBatteryPct` is removed. Use the battery widget (icon + %) or the icon-only battery widget instead.
+`SettingShowBatteryPct` is removed. Use the battery widget (2) in unit mode (`63 %`) or icon mode, or the icon-only battery widget (36).
 
 ## Payload format (v2)
 
@@ -29,8 +29,32 @@ A list is a sequence of slots. Each slot is either:
 | Bits | Meaning |
 |---|---|
 | 0–4 | Font index 0..16, see the table below. 31 means "position default": 5 for the edges, 7 for top and bottom. |
-| 5 | Hide the identifier (icon/unit). |
-| 6–7 | Reserved, must be 0. |
+| 5 | Identifier NONE (hidden). |
+| 6 | Identifier UNIT (the widget's unit label instead of its icon). |
+| 7 | Reserved, must be 0. |
+
+Identifier mode = bits 5/6: neither = ICON, bit 6 = UNIT, bit 5 = NONE. Both bits set is invalid and is read as NONE (the sanitizer rewrites it to NONE).
+
+Each widget declares which identifiers it has (an icon, a unit, or both). When the requested mode is unavailable the watch falls back: UNIT -> ICON -> NONE, or ICON -> UNIT -> NONE. The config page offers only the available modes, in the order ICON (`◉`), UNIT (`U`), NONE (`⊘`); a widget with no identifier at all has no button. Older stored config entries `{id, hide, font}` load as hide -> `none`, else `icon`; the stored field is now `ident: 'icon'|'unit'|'none'`.
+
+| Widget | Icon mode | Unit mode |
+|---|---|---|
+| 2 battery | battery icon, value `63` | `63` + `%` (Turkish: value `%63`, no unit) |
+| 22 battery days | battery icon | `d` (none while charging) |
+| 7 temperature | weather icon, value `19°` | value `19` + `°C` / `°F` (`SettingUseMetric`); NONE shows `19°` |
+| 8 forecast | forecast icon, `18/11` | `18/11` + `°C` / `°F` |
+| 13 UV | (no icon; shows the unit) | `UVI` |
+| 9, 20, 24, 25 sleep | sleep icon / deep icon / bar | `h` |
+| 10 steps | steps icon | `steps` |
+| 21 distance | steps icon | `km` / `mi` |
+| 12 heart rate | heart icon | `bpm` |
+| 6 week | (no icon; shows the unit) | week word (`Wk`, localised) |
+| 3 alt time | (no icon; shows the unit) | the alt-zone name |
+| 35 digital time | (no icon; shows the unit) | AM / PM (12 h only) |
+| 14, 18, 19 electricity | (no icon; shows the unit) | `c/kWh` fraction |
+| crypto / currency / tuya | (no icon; shows the unit) | the label |
+| 23 Tuya LEDs | the LED row | (none) |
+| 26..34 dates, 5 seconds, 11 beats, 36..38 icon-only | no identifier switch | |
 
 - `id` uses the whole byte. The old 0x20 hide-flag-in-id encoding is gone.
 - `id` 0 (Empty) is a valid slot.
@@ -123,7 +147,6 @@ Other existing ids:
 | 36 | Battery icon only | BATTERY icon | |
 | 37 | Weather icon only | WEATHER condition icon | |
 | 38 | Bluetooth icon only | MISC bluetooth icon | Shows a connected or disconnected glyph. |
-| 39 | Battery % | BATTERY percentage with % unit | Value is the battery percentage; identifier is the `%` unit, inline with the value. Hide flag hides the unit. Turkish: value is `%NN` (percent-prefix) with no separate unit. |
 
 - Weekday and month names are localised (`languages.c`).
-- `MAX_WIDGET_TYPE` becomes 39.
+- `MAX_WIDGET_TYPE` is 38. Id 39 (a separate Battery % widget) existed briefly and is gone: widget 2 in unit mode replaces it.

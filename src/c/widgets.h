@@ -1,5 +1,6 @@
 #pragma once
 #include <pebble.h>
+#include "widget_list.h"
 
 /*
  * The different types of widgets:
@@ -44,13 +45,12 @@ typedef enum {
   DIGITAL_TIME              = 35,
   BATTERY_ICON              = 36,   // icon only
   WEATHER_ICON              = 37,   // icon only
-  BLUETOOTH_ICON            = 38,   // icon only, connected or disconnected glyph
-  BATTERY_PERCENT           = 39    // number + % unit
+  BLUETOOTH_ICON            = 38    // icon only, connected or disconnected glyph
 } WidgetType;
 
 // Highest valid widget id; bump when appending a widget type. Used for the
 // settings clamp and the config-message bounds checks.
-#define MAX_WIDGET_TYPE BATTERY_PERCENT
+#define MAX_WIDGET_TYPE BLUETOOTH_ICON
 
 // Byte budget of a left / right widget list (storage + protocol buffer). The layer
 // shows as many slots as fit by height; this only bounds the buffer.
@@ -60,7 +60,7 @@ typedef enum {
 typedef struct {
   uint8_t id;         // WidgetType, or a crypto / currency / tuya wid
   uint8_t font;       // widget_fonts.h index of the value font
-  bool hide_icon;     // identifier (icon or unit) hidden by the user
+  uint8_t ident;      // WlIdent the user asked for (widget_list.h); the widget resolves it
 } WidgetCtx;
 
 // What a widget reports about itself. Everything is 0 for a widget that draws nothing.

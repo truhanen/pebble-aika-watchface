@@ -63,7 +63,7 @@ static int font_for(int pos, uint8_t flags) {
 static void measure_member(int pos, const WidgetSlot *slot, int member, WidgetCtx *ctx, WidgetSize *size) {
   ctx->id = slot->members[member];
   ctx->font = (uint8_t)font_for(pos, slot->flags[member]);
-  ctx->hide_icon = WidgetList_flagHidden(slot->flags[member]);
+  ctx->ident = (uint8_t)WidgetList_flagIdent(slot->flags[member]);
   Widgets_get(ctx->id)->measure(ctx, size);
 }
 
@@ -116,7 +116,7 @@ static void column_heights(const Active *col, int n, int16_t *h) {
 static void set_fallback(int pos, Active *a, uint8_t id, int font) {
   a->ctx.id = id;
   a->ctx.font = (uint8_t)font;
-  a->ctx.hide_icon = false;
+  a->ctx.ident = WL_IDENT_ICON;
   Widgets_get(id)->measure(&a->ctx, &a->size);
   a->slot_h = (int16_t)widget_height(&a->size);
   (void)pos;

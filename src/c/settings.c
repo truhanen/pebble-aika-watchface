@@ -52,16 +52,18 @@ static void set_defaults(void) {
 
   // A fresh install, every widget in its position's default font. Each edge groups an
   // icon over its value in the top corner (weather icon + temperature, battery icon +
-  // percent) and one widget in the bottom corner (steps, heart rate); the five Empty
+  // percent with its % unit) and one widget in the bottom corner (steps, heart rate); the five Empty
   // slots in between push the pairs apart.
 #define D WL_FONT_POS_DEFAULT
-#define VALUE_ONLY (WL_FONT_POS_DEFAULT | WL_FLAG_HIDE)
+#define VALUE_ONLY (WL_FONT_POS_DEFAULT | WL_FLAG_NONE)
+#define WITH_UNIT (WL_FONT_POS_DEFAULT | WL_FLAG_UNIT)
 #define FIVE_EMPTY EMPTY, D, EMPTY, D, EMPTY, D, EMPTY, D, EMPTY, D
   static const uint8_t LEFT[] = { WEATHER_ICON, D, WEATHER_CURRENT, VALUE_ONLY, FIVE_EMPTY,
                                   STEP_COUNTER, D };
-  static const uint8_t RIGHT[] = { BATTERY_ICON, D, BATTERY_PERCENT, D, FIVE_EMPTY,
+  static const uint8_t RIGHT[] = { BATTERY_ICON, D, BATTERY_METER, WITH_UNIT, FIVE_EMPTY,
                                    HEARTRATE, D };
 #undef FIVE_EMPTY
+#undef WITH_UNIT
 #undef VALUE_ONLY
 #undef D
   static const uint8_t TOP[] = { DATE_WKDAY_DD, WL_FONT_POS_DEFAULT };
@@ -140,7 +142,7 @@ static void dyn_scan_cb(uint8_t w, void *ctx) {
     dynamicSettings.disableWeather = false;
   }
   if (w == SECONDS) { dynamicSettings.updateScreenEverySecond = true; }
-  if (w == BATTERY_METER || w == BATTERY_ICON || w == BATTERY_PERCENT) { dynamicSettings.enableAutoBatteryWidget = false; }
+  if (w == BATTERY_METER || w == BATTERY_ICON) { dynamicSettings.enableAutoBatteryWidget = false; }
   if (w == BEATS) { dynamicSettings.enableBeats = true; }
   if (w == ALT_TIME_ZONE) { dynamicSettings.enableAltTimeZone = true; }
 }

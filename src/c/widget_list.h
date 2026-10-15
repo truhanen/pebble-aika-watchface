@@ -12,12 +12,13 @@
    A "list" is a byte array; each slot is either ONE plain widget, 2 bytes
    `id, flags`, or a rotating group: WIDGET_ROTATING_MARKER, count, interval_code,
    then count x (id, flags). flags: bits 0-4 font index (31 = the position's default),
-   bit 5 hide the identifier (icon / unit), bits 6-7 reserved (cleared). */
+   bit 5 no identifier (NONE), bit 6 the unit as identifier (UNIT; neither bit = ICON,
+   both bits = invalid, read as NONE), bit 7 reserved (cleared). */
 
 // Numeric mirrors -- keep in sync with src/c/widgets.h (MAX_WIDGET_TYPE),
 // src/c/crypto.h (CRYPTO_WID_BASE / MAX_CRYPTO), src/c/tuya.h, src/ts/widget_list_payload.ts,
 // src/ts/config_tuya_list.ts.
-#define WL_MAX_WIDGET_TYPE   39    // BATTERY_PERCENT
+#define WL_MAX_WIDGET_TYPE   38    // BLUETOOTH_ICON
 #define WL_RETIRED_DATE_ID   4     // the old DATE widget, replaced by 26..34
 #define WL_CRYPTO_WID_BASE   200
 #define WL_MAX_CRYPTO        16
@@ -31,16 +32,25 @@
 #define MAX_WIDGET_SLOTS       16
 
 #define WL_FLAG_FONT_MASK   0x1F
-#define WL_FLAG_HIDE        0x20
-#define WL_FLAG_RESERVED    0xC0
+#define WL_FLAG_NONE        0x20   // identifier hidden
+#define WL_FLAG_UNIT        0x40   // identifier is the unit
+#define WL_FLAG_RESERVED    0x80
 #define WL_FONT_MAX         16     // highest font index (widget_fonts.h)
 #define WL_FONT_POS_DEFAULT 31     // "use the position's default font"
 
 // The font bits of a flags byte as the layer should use them: 0..WL_FONT_MAX, or
 // WL_FONT_POS_DEFAULT for 31 and for anything out of range.
 uint8_t WidgetList_flagFont(uint8_t flags);
-bool    WidgetList_flagHidden(uint8_t flags);
-// A flags byte in canonical form: out-of-range font -> 31, reserved bits cleared.
+
+// What stands beside a widget's value: its icon, its unit, or nothing.
+typedef enum { WL_IDENT_ICON = 0, WL_IDENT_UNIT = 1, WL_IDENT_NONE = 2 } WlIdent;
+// The identifier mode of a flags byte; both bits set (invalid) reads as NONE.
+WlIdent WidgetList_flagIdent(uint8_t flags);
+// The mode a widget really shows: `requested` if the widget has it, else the fallback
+// UNIT -> ICON -> NONE or ICON -> UNIT -> NONE (NONE is always available).
+WlIdent WidgetList_resolveIdent(WlIdent requested, bool has_icon, bool has_unit);
+// A flags byte in canonical form: out-of-range font -> 31, both identifier bits ->
+// NONE, reserved bit cleared.
 uint8_t WidgetList_cleanFlags(uint8_t flags);
 
 typedef struct {

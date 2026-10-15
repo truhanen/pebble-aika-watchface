@@ -31,14 +31,15 @@
 
 typedef enum {
   ICON_NONE, ICON_BATTERY, ICON_BT_OFF, ICON_BT_STATE, ICON_STEPS, ICON_HEART, ICON_WEATHER,
-  ICON_FORECAST, ICON_SLEEP, ICON_DEEP_SLEEP, ICON_SLEEP_BAR, ICON_LEDS, ICON_UNIT
+  ICON_FORECAST, ICON_SLEEP, ICON_DEEP_SLEEP, ICON_SLEEP_BAR, ICON_LEDS
 } IconKind;
 
 typedef struct {
   bool (*value)(const WidgetCtx *c, char *buf, size_t n);   // false = no value text now;
                                                             // NULL = a widget without a value
-  IconKind icon;
-  bool (*unit)(const WidgetCtx *c, char *buf, size_t n);    // ICON_UNIT label; false = none
+  IconKind icon;                                            // ICON_NONE = the widget has no icon
+  bool (*unit)(const WidgetCtx *c, char *buf, size_t n);    // unit label; NULL = no unit;
+                                                            // false = none to show now
 } WidgetDesc;
 
 static GDrawCommandImage *s_steps_image, *s_heart_image, *s_sleep_image, *s_deep_sleep_image;
@@ -111,25 +112,25 @@ static uint8_t battery_percent(void) {
   return (st.charge_percent > 0) ? st.charge_percent : 5;
 }
 
-// Widget 2: battery icon + number, no percent sign in any language
+static const WidgetDesc *desc_for(uint8_t id);
+
+// What stands beside the widget's value right now: the requested identifier mode, or
+// the fallback when the widget has not got it (widget_list.h).
+static WlIdent ident_of(const WidgetCtx *c) {
+  const WidgetDesc *d = desc_for(c->id);
+  return d ? WidgetList_resolveIdent((WlIdent)c->ident, d->icon != ICON_NONE, d->unit != NULL)
+           : WL_IDENT_NONE;
+}
+
+// Widget 2: the number. In UNIT mode the unit is "%"; Turkish writes it as a prefix
+// ("%63") and has no separate unit.
 static bool value_battery(const WidgetCtx *c, char *buf, size_t n) {
-  snprintf(buf, n, "%d", battery_percent());
+  bool prefix = settings.languageId == LANGUAGE_TR && ident_of(c) == WL_IDENT_UNIT;
+  snprintf(buf, n, prefix ? "%%%d" : "%d", battery_percent());
   return true;
 }
 
-// Widget 39: battery number + % unit
-static bool value_battery_pct(const WidgetCtx *c, char *buf, size_t n) {
-  // Turkish keeps the percent sign as a prefix with no separate unit
-  if (settings.languageId == LANGUAGE_TR) {
-    snprintf(buf, n, "%%%d", battery_percent());
-  } else {
-    snprintf(buf, n, "%d", battery_percent());
-  }
-  return true;
-}
-
-static bool unit_battery_pct(const WidgetCtx *c, char *buf, size_t n) {
-  // Turkish uses value-prefix format, no separate unit
+static bool unit_battery(const WidgetCtx *c, char *buf, size_t n) {
   if (settings.languageId == LANGUAGE_TR) { return false; }
   snprintf(buf, n, "%%");
   return true;
@@ -145,6 +146,12 @@ static bool value_battery_days(const WidgetCtx *c, char *buf, size_t n) {
   } else {
     snprintf(buf, n, "%d%c%d", tenths / 10, settings.decimalSeparator, tenths % 10);
   }
+  return true;
+}
+
+static bool unit_battery_days(const WidgetCtx *c, char *buf, size_t n) {
+  if (battery_state_service_peek().is_charging) { return false; }   // no value, so no unit
+  snprintf(buf, n, "d");
   return true;
 }
 
@@ -184,6 +191,17 @@ static bool value_distance(const WidgetCtx *c, char *buf, size_t n) {
   return true;
 }
 
+static bool unit_steps(const WidgetCtx *c, char *buf, size_t n) { snprintf(buf, n, "steps"); return true; }
+
+static bool unit_distance(const WidgetCtx *c, char *buf, size_t n) {
+  bool metric = health_service_get_measurement_system_for_display(
+                    HealthMetricWalkedDistanceMeters) == MeasurementSystemMetric;
+  snprintf(buf, n, metric ? "km" : "mi");
+  return true;
+}
+
+static bool unit_heart(const WidgetCtx *c, char *buf, size_t n) { snprintf(buf, n, "bpm"); return true; }
+
 static bool value_heart(const WidgetCtx *c, char *buf, size_t n) {
   int bpm = health_service_peek_current_value(HealthMetricHeartRateBPM);
   // the live peek has no value right after a cold start; use the last reading
@@ -196,12 +214,22 @@ static int to_display_temp(int celsius) {
   return settings.useMetric ? celsius : (int)roundf(celsius * 1.8f + 32);
 }
 
+// The temperature carries its own degree sign unless the unit ("°C" / "°F") stands beside it.
+static const char *degree(const WidgetCtx *c) {
+  return ident_of(c) == WL_IDENT_UNIT ? "" : "\xc2\xb0";
+}
+
 static bool value_weather(const WidgetCtx *c, char *buf, size_t n) {
   if (Weather_weatherInfo.currentTemp == INT32_MIN) {
-    snprintf(buf, n, "--\xc2\xb0");
+    snprintf(buf, n, "--%s", degree(c));
     return true;
   }
-  snprintf(buf, n, "%d\xc2\xb0", to_display_temp(Weather_weatherInfo.currentTemp));
+  snprintf(buf, n, "%d%s", to_display_temp(Weather_weatherInfo.currentTemp), degree(c));
+  return true;
+}
+
+static bool unit_temperature(const WidgetCtx *c, char *buf, size_t n) {
+  snprintf(buf, n, settings.useMetric ? "\xc2\xb0""C" : "\xc2\xb0""F");
   return true;
 }
 
@@ -228,7 +256,7 @@ static bool value_uv(const WidgetCtx *c, char *buf, size_t n) {
   return true;
 }
 
-static bool unit_uv(const WidgetCtx *c, char *buf, size_t n) { snprintf(buf, n, "UV"); return true; }
+static bool unit_uv(const WidgetCtx *c, char *buf, size_t n) { snprintf(buf, n, "UVI"); return true; }
 
 /***** time and date *****/
 
@@ -357,6 +385,8 @@ static bool value_sleep_combined(const WidgetCtx *c, char *buf, size_t n) {
   return true;
 }
 
+static bool unit_hours(const WidgetCtx *c, char *buf, size_t n) { snprintf(buf, n, "h"); return true; }
+
 /***** electricity *****/
 
 static bool value_electricity(const WidgetCtx *c, char *buf, size_t n) {
@@ -431,31 +461,30 @@ static bool unit_slot(const WidgetCtx *c, char *buf, size_t n) {
 static const WidgetDesc DESC_EMPTY = { NULL, ICON_NONE, NULL };
 static const WidgetDesc DESC_BT = { NULL, ICON_BT_OFF, NULL };
 static const WidgetDesc DESC_BT_ICON = { NULL, ICON_BT_STATE, NULL };
-static const WidgetDesc DESC_BATTERY = { value_battery, ICON_BATTERY, NULL };
-static const WidgetDesc DESC_BATTERY_PERCENT = { value_battery_pct, ICON_UNIT, unit_battery_pct };
-static const WidgetDesc DESC_BATTERY_DAYS = { value_battery_days, ICON_BATTERY, NULL };
+static const WidgetDesc DESC_BATTERY = { value_battery, ICON_BATTERY, unit_battery };
+static const WidgetDesc DESC_BATTERY_DAYS = { value_battery_days, ICON_BATTERY, unit_battery_days };
 static const WidgetDesc DESC_BATTERY_ICON = { NULL, ICON_BATTERY, NULL };
-static const WidgetDesc DESC_STEPS = { value_steps, ICON_STEPS, NULL };
-static const WidgetDesc DESC_DISTANCE = { value_distance, ICON_STEPS, NULL };
-static const WidgetDesc DESC_HEART = { value_heart, ICON_HEART, NULL };
-static const WidgetDesc DESC_WEATHER = { value_weather, ICON_WEATHER, NULL };
+static const WidgetDesc DESC_STEPS = { value_steps, ICON_STEPS, unit_steps };
+static const WidgetDesc DESC_DISTANCE = { value_distance, ICON_STEPS, unit_distance };
+static const WidgetDesc DESC_HEART = { value_heart, ICON_HEART, unit_heart };
+static const WidgetDesc DESC_WEATHER = { value_weather, ICON_WEATHER, unit_temperature };
 static const WidgetDesc DESC_WEATHER_ICON = { NULL, ICON_WEATHER, NULL };
-static const WidgetDesc DESC_FORECAST = { value_forecast, ICON_FORECAST, NULL };
-static const WidgetDesc DESC_UV = { value_uv, ICON_UNIT, unit_uv };
-static const WidgetDesc DESC_ALT_TIME = { value_alt_time, ICON_UNIT, unit_alt_time };
+static const WidgetDesc DESC_FORECAST = { value_forecast, ICON_FORECAST, unit_temperature };
+static const WidgetDesc DESC_UV = { value_uv, ICON_NONE, unit_uv };
+static const WidgetDesc DESC_ALT_TIME = { value_alt_time, ICON_NONE, unit_alt_time };
 static const WidgetDesc DESC_SECONDS = { value_seconds, ICON_NONE, NULL };
-static const WidgetDesc DESC_WEEK = { value_week, ICON_UNIT, unit_week };
+static const WidgetDesc DESC_WEEK = { value_week, ICON_NONE, unit_week };
 static const WidgetDesc DESC_BEATS = { value_beats, ICON_NONE, NULL };
 static const WidgetDesc DESC_DATE = { value_date, ICON_NONE, NULL };
-static const WidgetDesc DESC_DIGITAL_TIME = { value_digital_time, ICON_UNIT, unit_digital_time };
-static const WidgetDesc DESC_SLEEP = { value_sleep, ICON_SLEEP, NULL };
-static const WidgetDesc DESC_DEEP_SLEEP = { value_sleep, ICON_DEEP_SLEEP, NULL };
-static const WidgetDesc DESC_SLEEP_COMBINED = { value_sleep_combined, ICON_SLEEP, NULL };
-static const WidgetDesc DESC_SLEEP_BAR = { value_sleep, ICON_SLEEP_BAR, NULL };
-static const WidgetDesc DESC_ELECTRICITY = { value_electricity, ICON_UNIT, unit_electricity };
-static const WidgetDesc DESC_CHEAP = { value_cheap_time, ICON_UNIT, unit_cheap_price };
+static const WidgetDesc DESC_DIGITAL_TIME = { value_digital_time, ICON_NONE, unit_digital_time };
+static const WidgetDesc DESC_SLEEP = { value_sleep, ICON_SLEEP, unit_hours };
+static const WidgetDesc DESC_DEEP_SLEEP = { value_sleep, ICON_DEEP_SLEEP, unit_hours };
+static const WidgetDesc DESC_SLEEP_COMBINED = { value_sleep_combined, ICON_SLEEP, unit_hours };
+static const WidgetDesc DESC_SLEEP_BAR = { value_sleep, ICON_SLEEP_BAR, unit_hours };
+static const WidgetDesc DESC_ELECTRICITY = { value_electricity, ICON_NONE, unit_electricity };
+static const WidgetDesc DESC_CHEAP = { value_cheap_time, ICON_NONE, unit_cheap_price };
 static const WidgetDesc DESC_TUYA_LEDS = { NULL, ICON_LEDS, NULL };
-static const WidgetDesc DESC_SLOT = { value_slot, ICON_UNIT, unit_slot };
+static const WidgetDesc DESC_SLOT = { value_slot, ICON_NONE, unit_slot };
 
 static const WidgetDesc *desc_for(uint8_t id) {
   if (Crypto_isWid(id) || Currency_isWid(id) || Tuya_isWid(id)) { return &DESC_SLOT; }
@@ -487,7 +516,6 @@ static const WidgetDesc *desc_for(uint8_t id) {
     case BATTERY_ICON:         return &DESC_BATTERY_ICON;
     case WEATHER_ICON:         return &DESC_WEATHER_ICON;
     case BLUETOOTH_ICON:       return &DESC_BT_ICON;
-    case BATTERY_PERCENT:      return &DESC_BATTERY_PERCENT;
     default:                   return NULL;   // unknown id: draws nothing
   }
 }
@@ -677,13 +705,24 @@ static void measure(const WidgetCtx *c, WidgetSize *out) {
   const WidgetDesc *d = desc_for(c->id);
   if (!d) { return; }
   char buf[24];
-  if (d->value || d->icon == ICON_NONE) {   // a value, or EMPTY: reserves the font's ink height
+  if (d->value || (d->icon == ICON_NONE && !d->unit)) {   // a value, or EMPTY: reserves the font's ink height
     out->ink_h = (int16_t)WidgetText_inkHeight(c->font);
   }
   if (d->value && d->value(c, buf, sizeof(buf))) {
     out->value_w = (int16_t)WidgetText_width(buf, c->font);
   }
-  if (c->hide_icon) { return; }
+  WlIdent mode = ident_of(c);
+  if (mode == WL_IDENT_NONE) { return; }
+  if (mode == WL_IDENT_UNIT) {
+    if (d->unit(c, buf, sizeof(buf))) {
+      int w, h;
+      WidgetUnit_measure(buf, &w, &h);
+      out->icon_w = (int16_t)w;
+      out->icon_h = (int16_t)h;
+      out->unit_inline = WidgetUnit_isInline(buf);
+    }
+    return;
+  }
   switch (d->icon) {
     case ICON_NONE:
       break;
@@ -714,15 +753,6 @@ static void measure(const WidgetCtx *c, WidgetSize *out) {
       out->icon_w = led_count() * LED_D + (led_count() - 1) * LED_GAP;
       out->icon_h = WL_ICON_H;
       break;
-    case ICON_UNIT:
-      if (d->unit(c, buf, sizeof(buf))) {
-        int w, h;
-        WidgetUnit_measure(buf, &w, &h);
-        out->icon_w = (int16_t)w;
-        out->icon_h = (int16_t)h;
-        out->unit_inline = WidgetUnit_isInline(buf);
-      }
-      break;
   }
 }
 
@@ -731,7 +761,7 @@ static void measure(const WidgetCtx *c, WidgetSize *out) {
 // icon itself. A widget with a value or a unit keeps its icon below the hands.
 bool Widgets_iconOnTop(uint8_t id) {
   const WidgetDesc *d = desc_for(id);
-  return d && !d->value && d->icon != ICON_NONE && d->icon != ICON_UNIT;
+  return d && !d->value && d->icon != ICON_NONE;
 }
 
 // The icon's shape in one colour (no per-frame allocation: the PDC images are recoloured
@@ -764,10 +794,14 @@ static void draw_icon_shadow(GContext *g, const WidgetCtx *c, GRect box, GColor 
 
 static void draw_icon(GContext *g, const WidgetCtx *c, GRect box) {
   const WidgetDesc *d = desc_for(c->id);
-  if (!d || c->hide_icon) { return; }
+  if (!d || ident_of(c) == WL_IDENT_NONE) { return; }
   GColor fg = theme.timeColor, bg = theme.timeBgColor;
   IconKind kind = d->icon;
   char buf[24];
+  if (ident_of(c) == WL_IDENT_UNIT) {
+    if (d->unit(c, buf, sizeof(buf))) { WidgetUnit_draw(g, buf, box, fg); }
+    return;
+  }
   if (Widgets_iconOnTop(c->id)) { draw_icon_shadow(g, c, box, bg); }
   switch (kind) {
     case ICON_NONE:      break;
@@ -776,9 +810,6 @@ static void draw_icon(GContext *g, const WidgetCtx *c, GRect box) {
     case ICON_BATTERY:   draw_battery(g, box, fg, bg); break;
     case ICON_SLEEP_BAR: draw_sleep_bar(g, box, fg); break;
     case ICON_LEDS:      draw_leds(g, box, fg); break;
-    case ICON_UNIT:
-      if (d->unit(c, buf, sizeof(buf))) { WidgetUnit_draw(g, buf, box, fg); }
-      break;
     default: {
       GDrawCommandImage *img = icon_image(kind);
       if (img) {

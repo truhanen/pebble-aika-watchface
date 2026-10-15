@@ -6,9 +6,23 @@ uint8_t WidgetList_flagFont(uint8_t flags) {
   uint8_t f = flags & WL_FLAG_FONT_MASK;
   return f <= WL_FONT_MAX ? f : WL_FONT_POS_DEFAULT;
 }
-bool WidgetList_flagHidden(uint8_t flags) { return (flags & WL_FLAG_HIDE) != 0; }
+WlIdent WidgetList_flagIdent(uint8_t flags) {
+  if (flags & WL_FLAG_NONE) { return WL_IDENT_NONE; }
+  return (flags & WL_FLAG_UNIT) ? WL_IDENT_UNIT : WL_IDENT_ICON;
+}
+
+WlIdent WidgetList_resolveIdent(WlIdent requested, bool has_icon, bool has_unit) {
+  if (requested == WL_IDENT_NONE) { return WL_IDENT_NONE; }
+  if (requested == WL_IDENT_UNIT) {
+    return has_unit ? WL_IDENT_UNIT : (has_icon ? WL_IDENT_ICON : WL_IDENT_NONE);
+  }
+  return has_icon ? WL_IDENT_ICON : (has_unit ? WL_IDENT_UNIT : WL_IDENT_NONE);
+}
+
 uint8_t WidgetList_cleanFlags(uint8_t flags) {
-  return (uint8_t)(WidgetList_flagFont(flags) | (flags & WL_FLAG_HIDE));
+  WlIdent m = WidgetList_flagIdent(flags);
+  return (uint8_t)(WidgetList_flagFont(flags) |
+                   (m == WL_IDENT_NONE ? WL_FLAG_NONE : (m == WL_IDENT_UNIT ? WL_FLAG_UNIT : 0)));
 }
 
 bool WidgetList_isDrawableId(uint8_t id) {

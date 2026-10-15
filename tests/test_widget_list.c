@@ -8,7 +8,7 @@
 #include <string.h>
 
 #define D WL_FONT_POS_DEFAULT   // flags byte "default font, identifier shown"
-#define H WL_FLAG_HIDE
+#define H WL_FLAG_NONE
 
 static uint8_t collected[64];
 static int collectedN;
@@ -27,20 +27,45 @@ int main(void) {
   assert(WidgetList_isDrawableId(26));      // first new date widget
   assert(WidgetList_isDrawableId(35));      // digital time
   assert(WidgetList_isDrawableId(38));      // BLUETOOTH_ICON
-  assert(WidgetList_isDrawableId(39));      // BATTERY_PERCENT = MAX_WIDGET_TYPE
+  assert(WidgetList_isDrawableId(38));      // BLUETOOTH_ICON = MAX_WIDGET_TYPE
+  assert(!WidgetList_isDrawableId(39));     // the separate Battery % widget is gone (40..44 are reserved)
   assert(!WidgetList_isDrawableId(40));
   assert(WidgetList_isDrawableId(128) && WidgetList_isDrawableId(143) && !WidgetList_isDrawableId(144));
   assert(WidgetList_isDrawableId(200) && WidgetList_isDrawableId(215));
   assert(WidgetList_isDrawableId(216) && WidgetList_isDrawableId(222) && !WidgetList_isDrawableId(223));
   assert(!WidgetList_isDrawableId(255));    // the group marker is not an id
   // the old 0x20 hide-in-id encoding is gone; legacy format migration happens in TypeScript layer
-  // (7|0x20 = 39 is now a valid widget, but legacy values are filtered by entryFromLegacy)
+
 
   // --- flags ---
+  {
+    const uint8_t U = WL_FLAG_UNIT;
+    assert(WidgetList_flagIdent(0) == WL_IDENT_ICON);
+    assert(WidgetList_flagIdent(D | U) == WL_IDENT_UNIT);
+    assert(WidgetList_flagIdent(D | H) == WL_IDENT_NONE);
+    assert(WidgetList_flagIdent(D | U | H) == WL_IDENT_NONE);       // both bits: invalid -> NONE
+    assert(WidgetList_cleanFlags(D | U) == (D | U));                // UNIT kept
+    assert(WidgetList_cleanFlags(5 | U | H) == (5 | H));            // both -> canonical NONE
+    assert(WidgetList_cleanFlags(5 | 0x80) == 5);                   // reserved bit cleared
+    assert(WidgetList_cleanFlags(20 | U) == (D | U));               // bad font, unit kept
+    // a list round-trips UNIT and rewrites both-bits to NONE
+    uint8_t l[] = { 2, D | U, 7, D | U | H, 12, D | H };
+    int n = WidgetList_sanitize(l, sizeof l, 64, 16);
+    assert(n == 6 && l[1] == (D | U) && l[3] == (D | H) && l[5] == (D | H));
+    // fallback: the requested mode, else UNIT -> ICON -> NONE / ICON -> UNIT -> NONE
+    assert(WidgetList_resolveIdent(WL_IDENT_ICON, true, true) == WL_IDENT_ICON);
+    assert(WidgetList_resolveIdent(WL_IDENT_UNIT, true, true) == WL_IDENT_UNIT);
+    assert(WidgetList_resolveIdent(WL_IDENT_NONE, true, true) == WL_IDENT_NONE);
+    assert(WidgetList_resolveIdent(WL_IDENT_UNIT, true, false) == WL_IDENT_ICON);
+    assert(WidgetList_resolveIdent(WL_IDENT_ICON, false, true) == WL_IDENT_UNIT);
+    assert(WidgetList_resolveIdent(WL_IDENT_UNIT, false, false) == WL_IDENT_NONE);
+    assert(WidgetList_resolveIdent(WL_IDENT_ICON, false, false) == WL_IDENT_NONE);
+    assert(WidgetList_resolveIdent(WL_IDENT_NONE, false, true) == WL_IDENT_NONE);
+  }
   assert(WidgetList_flagFont(0) == 0 && WidgetList_flagFont(16) == 16);
   assert(WidgetList_flagFont(31) == WL_FONT_POS_DEFAULT);
   assert(WidgetList_flagFont(17) == WL_FONT_POS_DEFAULT && WidgetList_flagFont(30) == WL_FONT_POS_DEFAULT);
-  assert(WidgetList_flagFont(5 | H) == 5 && WidgetList_flagHidden(5 | H) && !WidgetList_flagHidden(5));
+  assert(WidgetList_flagFont(5 | H) == 5 && WidgetList_flagIdent(5 | H) == WL_IDENT_NONE && WidgetList_flagIdent(5) == WL_IDENT_ICON);
   assert(WidgetList_cleanFlags(5 | H | 0xC0) == (5 | H));       // reserved bits cleared
   assert(WidgetList_cleanFlags(20 | H) == (D | H));              // bad font -> default, hide kept
 
@@ -135,7 +160,7 @@ int main(void) {
     int n = WidgetList_parse(b, 6, s, MAX_WIDGET_SLOTS);
     assert(n == 3 && s[0].count == 1 && s[0].members[0] == 12 && s[0].flags[0] == D);
     assert(s[1].members[0] == 0 && WidgetList_flagFont(s[1].flags[0]) == 3);
-    assert(s[2].members[0] == 7 && WidgetList_flagFont(s[2].flags[0]) == 5 && WidgetList_flagHidden(s[2].flags[0])); }
+    assert(s[2].members[0] == 7 && WidgetList_flagFont(s[2].flags[0]) == 5 && WidgetList_flagIdent(s[2].flags[0]) == WL_IDENT_NONE); }
 
   // --- parse: group -> members, per-member flags, interval ---
   { WidgetSlot s[MAX_WIDGET_SLOTS]; uint8_t b[] = {2, D, 0xFF, 3, 1, 15, 4, 16, D | H, 17, 16};

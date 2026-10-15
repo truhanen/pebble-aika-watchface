@@ -70,6 +70,21 @@ static int s_tick_pixel_count;
 static ShadowPixel s_shadow_pixels[CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK];
 static int s_shadow_pixel_count;
 
+// Insertion sort of {x, y} byte pairs by y, then x (init-time only, no heap).
+static void sort_by_row(uint8_t *xy, int n) {
+  for (int i = 1; i < n; i++) {
+    uint8_t x = xy[2 * i], y = xy[2 * i + 1];
+    int j = i - 1;
+    while (j >= 0 && (xy[2 * j + 1] > y || (xy[2 * j + 1] == y && xy[2 * j] > x))) {
+      xy[2 * j + 2] = xy[2 * j];
+      xy[2 * j + 3] = xy[2 * j + 1];
+      j--;
+    }
+    xy[2 * j + 2] = x;
+    xy[2 * j + 3] = y;
+  }
+}
+
 static void build_tick_table(int w, int h) {
   int n = 0;
   CfPoint *all = malloc(sizeof(CfPoint) * CF_TICK_COUNT * CF_TICK_MAX_PIXELS);
@@ -105,6 +120,9 @@ static void build_tick_table(int w, int h) {
   free(shadow);
   free(scratch);
   free(all);
+  // Row-major order: draw_ticks then re-fetches the row info only once per row.
+  sort_by_row((uint8_t *)s_tick_pixels, s_tick_pixel_count);
+  sort_by_row((uint8_t *)s_shadow_pixels, s_shadow_pixel_count);
 }
 
 // Writes the shadow pixels (background colour), then the tick pixels, straight into

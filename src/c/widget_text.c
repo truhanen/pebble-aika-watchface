@@ -34,25 +34,43 @@ int WidgetText_width(const char *text, int font) {
 
 int WidgetText_inkHeight(int font) { return wl_metrics(font)->digit_h; }
 
-void WidgetText_drawAtBaseline(GContext *ctx, const char *text, int font, int x, int baseline) {
+// A string split into runs, each with its font, text, width and box top measured once.
+typedef struct {
+  int n;
+  struct { char buf[40]; GFont font; int w, y, h; } run[MAX_RUNS];
+} PreparedText;
+
+static void prepare(PreparedText *pt, const char *text, int font, int baseline) {
   const WidgetFontMetrics *m = wl_metrics(font);
   WlRun runs[MAX_RUNS];
-  int n = wl_split_runs(m, text, runs, MAX_RUNS);
+  pt->n = wl_split_runs(m, text, runs, MAX_RUNS);
   int primary_top = baseline - m->base;
-  for (int i = 0; i < n; i++) {
+  for (int i = 0; i < pt->n; i++) {
     int f;
     run_font(m, font, &runs[i], &f);
-    char buf[40];
-    int len = runs[i].len < (int)sizeof(buf) - 1 ? runs[i].len : (int)sizeof(buf) - 1;
-    memcpy(buf, text + runs[i].start, len);
-    buf[len] = '\0';
-    int w = advance(buf, len, f);
-    int y = wl_run_box_top(m, wl_metrics(f), primary_top);
-    // box wider than the text so the Fill overflow mode never wraps it
-    graphics_draw_text(ctx, buf, WidgetFonts_get((uint8_t)f), GRect(x, y, w + 16, wl_metrics(f)->base + 16),
-                       GTextOverflowModeFill, GTextAlignmentLeft, NULL);
-    x += w;
+    int len = runs[i].len < (int)sizeof(pt->run[i].buf) - 1 ? runs[i].len : (int)sizeof(pt->run[i].buf) - 1;
+    memcpy(pt->run[i].buf, text + runs[i].start, len);
+    pt->run[i].buf[len] = '\0';
+    pt->run[i].font = WidgetFonts_get((uint8_t)f);
+    pt->run[i].w = advance(pt->run[i].buf, len, f);
+    pt->run[i].y = wl_run_box_top(m, wl_metrics(f), primary_top);
+    pt->run[i].h = wl_metrics(f)->base + 16;
   }
+}
+
+static void draw_prepared(GContext *ctx, const PreparedText *pt, int x, int dy) {
+  for (int i = 0; i < pt->n; i++) {
+    // box wider than the text so the Fill overflow mode never wraps it
+    graphics_draw_text(ctx, pt->run[i].buf, pt->run[i].font, GRect(x, pt->run[i].y + dy, pt->run[i].w + 16, pt->run[i].h),
+                       GTextOverflowModeFill, GTextAlignmentLeft, NULL);
+    x += pt->run[i].w;
+  }
+}
+
+void WidgetText_drawAtBaseline(GContext *ctx, const char *text, int font, int x, int baseline) {
+  PreparedText pt;
+  prepare(&pt, text, font, baseline);
+  draw_prepared(ctx, &pt, x, 0);
 }
 
 void WidgetText_draw(GContext *ctx, const char *text, int font, int x, int ink_top) {
@@ -60,14 +78,18 @@ void WidgetText_draw(GContext *ctx, const char *text, int font, int x, int ink_t
   WidgetText_drawAtBaseline(ctx, text, font, x, ink_top - m->digit_top + m->base);
 }
 
+// Measured once; the 12 shadow passes and the value only move the boxes.
 void WidgetText_drawValue(GContext *ctx, const char *text, int font, int x, int ink_top,
                           GColor fg, GColor bg) {
+  const WidgetFontMetrics *m = wl_metrics(font);
+  PreparedText pt;
+  prepare(&pt, text, font, ink_top - m->digit_top + m->base);
   graphics_context_set_text_color(ctx, bg);
   for (int i = 0; i < CF_SHADOW_OFFSET_COUNT; i++) {
-    WidgetText_draw(ctx, text, font, x + CF_SHADOW_OFFSETS[i][0], ink_top + CF_SHADOW_OFFSETS[i][1]);
+    draw_prepared(ctx, &pt, x + CF_SHADOW_OFFSETS[i][0], CF_SHADOW_OFFSETS[i][1]);
   }
   graphics_context_set_text_color(ctx, fg);
-  WidgetText_draw(ctx, text, font, x, ink_top);
+  draw_prepared(ctx, &pt, x, 0);
 }
 
 bool WidgetUnit_isInline(const char *label) {

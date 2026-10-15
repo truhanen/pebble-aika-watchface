@@ -9,9 +9,9 @@
 // The SDK peek calls are redirected by the macros below, so drawing code keeps
 // calling the plain SDK names. In a normal build everything here is a no-op.
 
-// Applies any Test* keys in `iter` (TestTopWidget / TestBottomWidget set that centre list
+// Applies any Test* keys in `iter` (TestCenterWidget sets the centre list
 // to one widget id in the position's default font, -1 clears it; 0 is the Empty widget. For
-// anything richer send the payload itself: scripts/emu.sh bytes SettingTopWidgetList=...); returns true if one was present.
+// anything richer send the payload itself: scripts/emu.sh bytes SettingCenterWidgetList=...); returns true if one was present.
 bool TestHooks_handleMessage(DictionaryIterator *iter);
 
 // Overwrites hour/minute in `t` while a TestTime override is active.
@@ -20,7 +20,7 @@ void TestHooks_applyTime(struct tm *t);
 // Current TestScene value (0 = normal watchface).
 int TestHooks_scene(void);
 
-// TestFont{Left,Right,Top,Bottom}: the widget font index forced on every widget of a
+// TestFont{Left,Right,Center}: the widget font index forced on every widget of a
 // position (WIDGET_POS_*), or -1 for the configured fonts.
 int TestHooks_font(int pos);
 

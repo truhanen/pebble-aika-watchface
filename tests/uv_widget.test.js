@@ -50,9 +50,9 @@ test('true for new-format slot objects, including a hidden UV widget', () => {
   assert.strictEqual(isUvWidgetConfigured(s), true);
 });
 
-test('true when UV is in the top or bottom centre list', () => {
-  assert.strictEqual(isUvWidgetConfigured(storageWith(JSON.stringify({ WidgetListTop: [slot(13)] }))), true);
-  assert.strictEqual(isUvWidgetConfigured(storageWith(JSON.stringify({ WidgetListBottom: [slot(13)] }))), true);
+test('true when UV is in the centre column list', () => {
+  assert.strictEqual(isUvWidgetConfigured(storageWith(JSON.stringify({ WidgetListCenter: [slot(13)] }))), true);
+  assert.strictEqual(isUvWidgetConfigured(storageWith(JSON.stringify({ WidgetListCenter: [slot(30), slot(0), slot(13)] }))), true);
 });
 
 test('true when UV is a rotating-group member', () => {
@@ -65,6 +65,6 @@ test('a hidden-icon UV widget in the legacy flat format (13 | 0x20) still counts
 });
 
 test('false when only a similar widget is placed (weather 7, icon-only weather 37)', () => {
-  const s = storageWith(JSON.stringify({ WidgetList: [slot(7)], WidgetListTop: [slot(37)] }));
+  const s = storageWith(JSON.stringify({ WidgetList: [slot(7)], WidgetListCenter: [slot(37)] }));
   assert.strictEqual(isUvWidgetConfigured(s), false);
 });

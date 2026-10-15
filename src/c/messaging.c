@@ -202,8 +202,7 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
 
   Tuple *widgetList_tuple = dict_find(iterator, MESSAGE_KEY_SettingWidgetList);
   Tuple *rightWidgetList_tuple = dict_find(iterator, MESSAGE_KEY_SettingRightWidgetList);
-  Tuple *topWidgetList_tuple = dict_find(iterator, MESSAGE_KEY_SettingTopWidgetList);
-  Tuple *bottomWidgetList_tuple = dict_find(iterator, MESSAGE_KEY_SettingBottomWidgetList);
+  Tuple *centerWidgetList_tuple = dict_find(iterator, MESSAGE_KEY_SettingCenterWidgetList);
 
   Tuple *altclockName_tuple = dict_find(iterator, MESSAGE_KEY_SettingAltClockName);
   Tuple *altclockOffset_tuple = dict_find(iterator, MESSAGE_KEY_SettingAltClockOffset);
@@ -346,12 +345,11 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
 
 
 
-  // The four widget lists (payload v2, see widget_list.h). Each is clamped to its
-  // position's byte budget and sanitized; top / bottom keep one slot at most.
+  // The three widget lists (payload v2, see widget_list.h). Each is clamped to its
+  // position's byte budget and sanitized.
   apply_widget_list(widgetList_tuple, WIDGET_POS_LEFT);
   apply_widget_list(rightWidgetList_tuple, WIDGET_POS_RIGHT);
-  apply_widget_list(topWidgetList_tuple, WIDGET_POS_TOP);
-  apply_widget_list(bottomWidgetList_tuple, WIDGET_POS_BOTTOM);
+  apply_widget_list(centerWidgetList_tuple, WIDGET_POS_CENTER);
 
   if(altclockName_tuple != NULL) {
     strncpy(settings.altclockName, altclockName_tuple->value->cstring, sizeof(settings.altclockName));

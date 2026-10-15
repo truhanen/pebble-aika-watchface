@@ -13,8 +13,8 @@
    `font` is 0..16 (widget_options.ts FONT_OPTIONS) or 31 = the position's default
    font. Older stored values (a flat marker-encoded int array: 255, count, interval,
    members..., hide flag as 0x20 in the id, no font) are still parsed (valueToSlots).
-   The optional `max` config option caps the number of top-level rows (top / bottom
-   centre lists use 1; "+ Add widget" is hidden when full). See also
+   The optional `max` config option caps the number of top-level rows (no list uses it
+   any more; "+ Add widget" is hidden when full). See also
    widget_list_payload.ts + src/c/widget_list.c and docs/widget_contract.md.
    Clay serializes this object via toSource() and re-evals it in
    the config webview, so EVERY function here MUST be self-contained: no module-scope
@@ -31,7 +31,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   const MAX_MEMBERS = 6;
   const DEFAULT_INTERVAL = 3;     // 1 min
   const FONT_DEFAULT = 31;        // "position default" (the watch picks per list)
-  // Font the watch uses for FONT_DEFAULT in this list (5 side lists, 7 top/bottom);
+  // Font the watch uses for FONT_DEFAULT in this list (5 side lists, 7 centre column);
   // only used to label the "Default (...)" option.
   const cfgDefFont = parseInt(self.config && self.config.defaultFont, 10);
   const MAX_FONT = 16;
@@ -518,7 +518,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
       const down = rows[i].querySelector('.wl-down') as HTMLButtonElement;
       up.disabled = (i === 0);
       down.disabled = (i === rows.length - 1);
-      // A single-slot list (top / bottom centre) has nothing to reorder.
+      // A single-slot list (a one-row list) has nothing to reorder.
       up.style.display = down.style.display = (MAX === 1) ? 'none' : '';
       // Member delete is never disabled: deleting the 2nd-to-last member collapses the
       // whole group to a plain widget (a rotating group with 1 member == a plain widget),

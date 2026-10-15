@@ -2,7 +2,7 @@
 #include <pebble.h>
 #include "widgets.h"
 
-#define CURRENT_SETTINGS_VERSION 2
+#define CURRENT_SETTINGS_VERSION 3
 
 // persistent storage keys
 #define SETTINGS_PERSIST_KEY 100
@@ -11,10 +11,8 @@
 // Widget positions. The numbers equal WlPosition (widget_layout_calc.h).
 #define WIDGET_POS_LEFT 0
 #define WIDGET_POS_RIGHT 1
-#define WIDGET_POS_TOP 2
-#define WIDGET_POS_BOTTOM 3
-#define WIDGET_POS_COUNT 4
-#define MAX_CENTER_WIDGET_LIST 16   // byte budget of a top / bottom list
+#define WIDGET_POS_CENTER 2
+#define WIDGET_POS_COUNT 3
 
 typedef enum {
   NO_VIBE = 0,
@@ -65,11 +63,9 @@ typedef struct {
   uint8_t widgetCount;
   uint8_t rightWidgetList[MAX_WIDGET_LIST];
   uint8_t rightWidgetCount;
-  // Top / bottom centre lists, same byte format, at most one slot (a group counts as one).
-  uint8_t topWidgetList[MAX_CENTER_WIDGET_LIST];
-  uint8_t topWidgetCount;
-  uint8_t bottomWidgetList[MAX_CENTER_WIDGET_LIST];
-  uint8_t bottomWidgetCount;
+  // Centre column list, same format and caps as the edges.
+  uint8_t centerWidgetList[MAX_WIDGET_LIST];
+  uint8_t centerWidgetCount;
 
   // Night window (NightWindowMode; [start, end) hours, may wrap midnight) and its
   // two consumers: slowing sub-minute rotation and the night palette.
@@ -110,12 +106,12 @@ void Settings_updateDynamicSettings();
 
 // The bytes and length of a position's widget list.
 const uint8_t *Settings_widgetList(int pos, int *count);
-// Every drawable widget id in all four lists (group members included).
+// Every drawable widget id in all three lists (group members included).
 void Settings_forEachWidgetId(void (*cb)(uint8_t id, void *ctx), void *ctx);
-// Shortest sub-minute rotation interval over all four lists, or 0.
+// Shortest sub-minute rotation interval over all three lists, or 0.
 int Settings_minSubMinuteIntervalSec(void);
 // Store a received payload as a position's list: sanitized, capped to the position's
-// byte budget and, for top / bottom, to one slot.
+// byte and slot budget.
 void Settings_setWidgetList(int pos, const uint8_t *bytes, int len);
 // Re-sanitize the lists after they changed.
 void Settings_sanitizeWidgetLists(void);

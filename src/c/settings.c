@@ -66,12 +66,10 @@ static void set_defaults(void) {
 #undef WITH_UNIT
 #undef VALUE_ONLY
 #undef D
-  static const uint8_t TOP[] = { DATE_WKDAY_DD, WL_FONT_POS_DEFAULT };
-  static const uint8_t BOTTOM[] = { EMPTY, WL_FONT_POS_DEFAULT };
+  static const uint8_t CENTER[] = { DATE_WKDAY_DD, WL_FONT_POS_DEFAULT, EMPTY, WL_FONT_POS_DEFAULT };
   Settings_setWidgetList(WIDGET_POS_LEFT, LEFT, sizeof LEFT);
   Settings_setWidgetList(WIDGET_POS_RIGHT, RIGHT, sizeof RIGHT);
-  Settings_setWidgetList(WIDGET_POS_TOP, TOP, sizeof TOP);
-  Settings_setWidgetList(WIDGET_POS_BOTTOM, BOTTOM, sizeof BOTTOM);
+  Settings_setWidgetList(WIDGET_POS_CENTER, CENTER, sizeof CENTER);
 }
 
 void Settings_loadFromStorage() {
@@ -169,8 +167,7 @@ const uint8_t *Settings_widgetList(int pos, int *count) {
   switch (pos) {
     case WIDGET_POS_LEFT:  *count = settings.widgetCount;       return settings.widgetList;
     case WIDGET_POS_RIGHT: *count = settings.rightWidgetCount;  return settings.rightWidgetList;
-    case WIDGET_POS_TOP:   *count = settings.topWidgetCount;    return settings.topWidgetList;
-    default:               *count = settings.bottomWidgetCount; return settings.bottomWidgetList;
+    default:               *count = settings.centerWidgetCount; return settings.centerWidgetList;
   }
 }
 
@@ -202,10 +199,8 @@ static ListRef list_ref(int pos) {
       return (ListRef){ settings.widgetList, &settings.widgetCount, MAX_WIDGET_LIST, MAX_WIDGET_SLOTS };
     case WIDGET_POS_RIGHT:
       return (ListRef){ settings.rightWidgetList, &settings.rightWidgetCount, MAX_WIDGET_LIST, MAX_WIDGET_SLOTS };
-    case WIDGET_POS_TOP:
-      return (ListRef){ settings.topWidgetList, &settings.topWidgetCount, MAX_CENTER_WIDGET_LIST, 1 };
     default:
-      return (ListRef){ settings.bottomWidgetList, &settings.bottomWidgetCount, MAX_CENTER_WIDGET_LIST, 1 };
+      return (ListRef){ settings.centerWidgetList, &settings.centerWidgetCount, MAX_WIDGET_LIST, MAX_WIDGET_SLOTS };
   }
 }
 

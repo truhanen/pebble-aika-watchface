@@ -87,7 +87,7 @@ function makeDocument() {
 }
 
 // widgetVals: left-list widget IDs. opts: {locMode, autoBatteryDisabled, rightVals,
-// topVals, bottomVals, rawLeft, fallbackColumn}
+// centerVals, rawLeft, fallbackColumn}
 function makeClay(widgetVals, opts) {
   opts = opts || {};
   const items = flattenConfig(configArr).map(makeItem);
@@ -102,8 +102,7 @@ function makeClay(widgetVals, opts) {
   const slotsOf = (vals) => (vals || []).map((v) => ({ id: parseInt(v, 10) || 0, hide: false, font: 31 }));
   byKey['WidgetList'].value = opts.rawLeft !== undefined ? opts.rawLeft : slotsOf(widgetVals);
   byKey['WidgetListRight'].value = slotsOf(opts.rightVals);
-  byKey['WidgetListTop'].value = slotsOf(opts.topVals);
-  byKey['WidgetListBottom'].value = slotsOf(opts.bottomVals);
+  byKey['WidgetListCenter'].value = slotsOf(opts.centerVals);
   byKey['weather_loc_mode'].value = opts.locMode || 'auto';
   byKey['SettingDisableAutobattery'].value = String(opts.autoBatteryDisabled ? 1 : 0);
   byKey['SettingFallbackColumn'].value = String(opts.fallbackColumn !== undefined ? opts.fallbackColumn : 0);
@@ -218,11 +217,11 @@ test('icon-only weather (37): weather source settings shown, units hidden', () =
   assert.strictEqual(c.byKey['SettingUseMetric'].shown, false);
 });
 
-test('top / bottom centre lists gate settings too', () => {
-  const top = render([], { topVals: [7] });
+test('the centre column list gates settings too', () => {
+  const top = render([], { centerVals: [7] });
   assert.strictEqual(top.byId['heading-weather'].shown, true);
-  const bottom = render([], { bottomVals: [18] });
-  assert.strictEqual(bottom.byId['heading-electricity'].shown, true);
+  const later = render([], { centerVals: [30, 0, 18] });   // any slot of the column counts
+  assert.strictEqual(later.byId['heading-electricity'].shown, true);
   const none = render([]);
   assert.strictEqual(none.byId['heading-weather'].shown, false);
 });
@@ -234,11 +233,11 @@ test('rotating-group members gate settings', () => {
   assert.strictEqual(c.byKey['SettingAltClockName'].shown, true);
 });
 
-test('live change: a weather widget in the top list reveals weather', () => {
+test('live change: a weather widget in the centre list reveals weather', () => {
   const c = render([]);
   assert.strictEqual(c.byId['heading-weather'].shown, false);
-  c.byKey['WidgetListTop'].value = [{ id: 7, hide: false, font: 31 }];
-  c.byKey['WidgetListTop'].changeHandlers.forEach((fn) => fn());
+  c.byKey['WidgetListCenter'].value = [{ id: 7, hide: false, font: 31 }];
+  c.byKey['WidgetListCenter'].changeHandlers.forEach((fn) => fn());
   assert.strictEqual(c.byId['heading-weather'].shown, true);
 });
 
@@ -482,7 +481,7 @@ test('accordion: Widgets is a single group (13 rows, not split by sub-labels)', 
   assert.strictEqual(head.config.defaultValue, 'Widgets',
     'fallback setting opens under the "Widgets" heading, not a sub-label');
   assert.strictEqual(c.byKey['SettingFallbackColumn'].shown, true);
-  ['WidgetList', 'WidgetListRight', 'WidgetListTop', 'WidgetListBottom'].forEach((k) => {
+  ['WidgetListCenter', 'WidgetList', 'WidgetListRight'].forEach((k) => {
     assert.strictEqual(c.byKey[k].shown, true, k + ' shown with the Widgets section');
   });
 });
@@ -509,8 +508,7 @@ test('accordion: custom-component sections collapse (widgetList/cryptoList/... h
   openSectionFor(c, 'SettingHourlyVibe');   // open Clock -> all other sections collapsed
   assert.strictEqual(c.byKey['WidgetList'].shown, false, 'widgetList hidden when collapsed');
   assert.strictEqual(c.byKey['WidgetListRight'].shown, false);
-  assert.strictEqual(c.byKey['WidgetListTop'].shown, false);
-  assert.strictEqual(c.byKey['WidgetListBottom'].shown, false);
+  assert.strictEqual(c.byKey['WidgetListCenter'].shown, false);
   assert.strictEqual(c.byKey['CryptoList'].shown, false);
   assert.strictEqual(c.byKey['CurrencyList'].shown, false);
   assert.strictEqual(c.byKey['TuyaList'].shown, false);
@@ -608,32 +606,31 @@ test('live change: turning on night colours reveals the palette pickers', () => 
 });
 
 // ------------------------------------------------------ Widgets section layout
-test('Widgets section: four widgetLists in order, with the expected max/defaults', () => {
+test('Widgets section: three widgetLists in order (centre first), with the expected max/defaults', () => {
   const items = flattenConfig(configArr);
   const lists = items.filter((it) => it.type === 'widgetList');
   assert.deepStrictEqual(lists.map((l) => l.messageKey),
-    ['WidgetList', 'WidgetListRight', 'WidgetListTop', 'WidgetListBottom']);
-  assert.strictEqual(lists[0].max, undefined);
-  assert.strictEqual(lists[1].max, undefined);
-  assert.strictEqual(lists[2].max, 1);
-  assert.strictEqual(lists[3].max, 1);
+    ['WidgetListCenter', 'WidgetList', 'WidgetListRight']);
+  lists.forEach((l) => assert.strictEqual(l.max, undefined));
+  assert.strictEqual(lists[0].defaultFont, 7);
+  assert.strictEqual(lists[1].defaultFont, 5);
+  assert.strictEqual(lists[2].defaultFont, 5);
   const ids = (l) => l.defaultValue.map((e) => e.id);
-  assert.deepStrictEqual(ids(lists[0]), [37, 7, 0, 0, 0, 0, 0, 10]);
-  assert.deepStrictEqual(ids(lists[1]), [36, 2, 0, 0, 0, 0, 0, 12]);
-  assert.deepStrictEqual(ids(lists[2]), [30]);
-  assert.deepStrictEqual(ids(lists[3]), []);
+  assert.deepStrictEqual(ids(lists[0]), [30, 0]);   // date at the top, Empty below it
+  assert.deepStrictEqual(ids(lists[1]), [37, 7, 0, 0, 0, 0, 0, 10]);
+  assert.deepStrictEqual(ids(lists[2]), [36, 2, 0, 0, 0, 0, 0, 12]);
   lists.forEach((l) => l.defaultValue.forEach((e) => {
     assert.strictEqual(e.font, 31, 'defaults use the position default font');
   }));
   // the temperature shows its value only (no identifier); battery shows icon and the % unit
-  assert.deepStrictEqual(lists[0].defaultValue.map((e) => e.ident),
-    ['icon', 'none', 'icon', 'icon', 'icon', 'icon', 'icon', 'icon']);
   assert.deepStrictEqual(lists[1].defaultValue.map((e) => e.ident),
+    ['icon', 'none', 'icon', 'icon', 'icon', 'icon', 'icon', 'icon']);
+  assert.deepStrictEqual(lists[2].defaultValue.map((e) => e.ident),
     ['icon', 'unit', 'icon', 'icon', 'icon', 'icon', 'icon', 'icon']);
-  const labels = items.filter((it) => it.type === 'text' && /^<b>(Left|Right|Top|Bottom) /.test(it.defaultValue))
+  const labels = items.filter((it) => it.type === 'text' && /^<b>(Center|Left|Right) /.test(it.defaultValue))
     .map((it) => it.defaultValue);
   assert.deepStrictEqual(labels,
-    ['<b>Left edge</b>', '<b>Right edge</b>', '<b>Top center</b>', '<b>Bottom center</b>']);
+    ['<b>Center column</b>', '<b>Left edge</b>', '<b>Right edge</b>']);
 });
 
 test('no removed settings or sidebar wording remain in the config', () => {

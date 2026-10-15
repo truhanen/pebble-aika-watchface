@@ -4,16 +4,17 @@ This is shared by the watch (C, `src/c`) and the phone and config page (TypeScri
 
 ## Message keys
 
-The four widget lists, all byte arrays:
+The three widget lists, all byte arrays, all with the same caps (64 bytes, at most 16 slots):
 
 | Key | Position | Max bytes |
 |---|---|---|
+| `SettingCenterWidgetList` | centre column | 64 |
 | `SettingWidgetList` | left edge | 64 |
 | `SettingRightWidgetList` | right edge | 64 |
-| `SettingTopWidgetList` | top centre | 16 |
-| `SettingBottomWidgetList` | bottom centre | 16 |
 
-The phone-only Clay keys are `WidgetList`, `WidgetListRight`, `WidgetListTop` and `WidgetListBottom`.
+The phone-only Clay keys are `WidgetListCenter`, `WidgetList` and `WidgetListRight` (the config page lists them in that order, the centre column first). The separate top and bottom centre lists no longer exist.
+
+Default centre column: `[date "Wkday dd" (30), Empty (0)]`, so the date sits at the top and the Empty slot below keeps the space. The edges are unchanged.
 
 `SettingShowBatteryPct` is removed. Use the battery widget (2) in unit mode (`63 %`) or icon mode, or the icon-only battery widget (36).
 
@@ -28,7 +29,7 @@ A list is a sequence of slots. Each slot is either:
 
 | Bits | Meaning |
 |---|---|
-| 0–4 | Font index 0..16, see the table below. 31 means "position default": 5 for the edges, 7 for top and bottom. |
+| 0–4 | Font index 0..16, see the table below. 31 means "position default": 5 for the edges, 7 (Bitham large) for the centre column. |
 | 5 | Identifier NONE (hidden). |
 | 6 | Identifier UNIT (the widget's unit label instead of its icon). |
 | 7 | Reserved, must be 0. |
@@ -58,9 +59,17 @@ Each widget declares which identifiers it has (an icon, a unit, or both). When t
 
 - `id` uses the whole byte. The old 0x20 hide-flag-in-id encoding is gone.
 - `id` 0 (Empty) is a valid slot.
-- The top and bottom lists hold **at most one slot**. A rotating group counts as one slot.
+- A rotating group counts as one slot (all three lists).
 - Groups are packed whole or not at all. A group with one member degrades to a plain slot, and a group with no members is dropped.
 - Interval codes 0..5 mean 5 s, 10 s, 30 s, 1 min, 2 min and 5 min.
+
+## Layout (watch)
+
+- Every list is a column laid out top to bottom, "space-between": the first slot at the column top, the last ending at the column bottom, a single slot centred, the slack spread evenly (gaps differ by at most 1 px). With no slack the slots are 5 px apart from the top and those that do not fit are not drawn.
+- Left edge: value at the left edge, icon / unit to its right. Right edge: mirrored. Centre column: value and icon / unit are centred horizontally as one group, the icon / unit to the RIGHT of the value. A rotating group works in any column.
+- An inline unit shares the value's baseline, an icon is centred on the value's ink.
+- The default font of the centre column is 7 (Bitham large).
+- The automatic battery / Bluetooth-disconnect substitution only works on the edge columns.
 
 ## Font indices
 

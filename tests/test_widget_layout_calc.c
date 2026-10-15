@@ -145,10 +145,10 @@ static void test_horizontal(void) {
   wl_place_h(WL_RIGHT, W, STRIP, 30, 12, &p);
   assert(p.value_x + 30 == W - edge);
   assert(p.icon_x + 12 + WL_ICON_GAP == p.value_x);          // icon towards the centre
-  wl_place_h(WL_TOP, W, STRIP, 40, 20, &p);
+  wl_place_h(WL_CENTER, W, STRIP, 40, 20, &p);
   int total = 40 + WL_ICON_GAP + 20;
   assert(p.value_x == (W - total) / 2 && p.icon_x == p.value_x + 40 + WL_ICON_GAP);
-  wl_place_h(WL_BOTTOM, W, STRIP, 40, 0, &p);                 // no icon: no gap
+  wl_place_h(WL_CENTER, W, STRIP, 40, 0, &p);                 // no icon: no gap
   assert(p.value_x == (W - 40) / 2);
   wl_place_h(WL_LEFT, W, STRIP, 0, 12, &p);                   // icon only
   assert(p.icon_x == edge);

@@ -185,18 +185,16 @@ Pebble.addEventListener('webviewclosed', (e) => {
     window.localStorage.setItem('weather_api_key', '');
   }
 
-  // widget lists -> four v2 byte-array keys the watch draws (left / right edge, top /
-  // bottom centre; see docs/widget_contract.md).
-  dict.SettingWidgetList = widgetListToPayload(s.WidgetList, 'side');
-  dict.SettingRightWidgetList = widgetListToPayload(s.WidgetListRight, 'side');
-  dict.SettingTopWidgetList = widgetListToPayload(s.WidgetListTop, 'center');
-  dict.SettingBottomWidgetList = widgetListToPayload(s.WidgetListBottom, 'center');
+  // widget lists -> three v2 byte-array keys the watch draws (centre column, left / right
+  // edge; see docs/widget_contract.md).
+  dict.SettingCenterWidgetList = widgetListToPayload(s.WidgetListCenter);
+  dict.SettingWidgetList = widgetListToPayload(s.WidgetList);
+  dict.SettingRightWidgetList = widgetListToPayload(s.WidgetListRight);
 
-  // derive disable_* flags from the plain widget ids (no flags) across ALL four lists
-  const widgetIDs = widgetListIds(s.WidgetList, 'side')
-    .concat(widgetListIds(s.WidgetListRight, 'side'))
-    .concat(widgetListIds(s.WidgetListTop, 'center'))
-    .concat(widgetListIds(s.WidgetListBottom, 'center'));
+  // derive disable_* flags from the plain widget ids (no flags) across ALL three lists
+  const widgetIDs = widgetListIds(s.WidgetListCenter)
+    .concat(widgetListIds(s.WidgetList))
+    .concat(widgetListIds(s.WidgetListRight));
   window.localStorage.setItem('disable_weather',
     (widgetIDs.indexOf(7) !== -1 || widgetIDs.indexOf(8) !== -1 || widgetIDs.indexOf(13) !== -1 ||
      widgetIDs.indexOf(37) !== -1 ||

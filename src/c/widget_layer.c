@@ -40,8 +40,7 @@ void WidgetLayer_reload(void) {
   for (int pos = 0; pos < WIDGET_POS_COUNT; pos++) {
     int n;
     const uint8_t *list = Settings_widgetList(pos, &n);
-    bool center = pos == WIDGET_POS_TOP || pos == WIDGET_POS_BOTTOM;   // one slot at most
-    s_slot_count[pos] = WidgetList_parse(list, n, s_slots[pos], center ? 1 : MAX_WIDGET_SLOTS);
+    s_slot_count[pos] = WidgetList_parse(list, n, s_slots[pos], MAX_WIDGET_SLOTS);
   }
 }
 
@@ -50,14 +49,13 @@ static int widget_height(const WidgetSize *s) {
 }
 
 // The font of a member: the test-hook override, else the one in its flags, else the
-// position's default (side widgets Gothic medium, top / bottom Bitham large).
+// position's default (side widgets Gothic medium, centre Bitham large).
 static int font_for(int pos, uint8_t flags) {
   int forced = TestHooks_font(pos);
   if (forced >= 0) { return forced; }
   int f = WidgetList_flagFont(flags);
   if (f != WL_FONT_POS_DEFAULT) { return f; }
-  return (pos == WIDGET_POS_TOP || pos == WIDGET_POS_BOTTOM) ? WIDGET_FONT_DEFAULT_TOP_BOTTOM
-                                                              : WIDGET_FONT_DEFAULT_SIDE;
+  return pos == WIDGET_POS_CENTER ? WIDGET_FONT_DEFAULT_CENTER : WIDGET_FONT_DEFAULT_SIDE;
 }
 
 static void measure_member(int pos, const WidgetSlot *slot, int member, WidgetCtx *ctx, WidgetSize *size) {
@@ -203,9 +201,9 @@ void WidgetLayer_prepare(GRect bounds) {
   int sod = seconds_of_day();
   int inner = bounds.size.h - 2 * (CF_STRIP_W + WL_EDGE_INSET);
 
-  static Active col[2][MAX_WIDGET_SLOTS + 1];
-  int n[2];
-  for (int c = 0; c < 2; c++) {
+  static Active col[WIDGET_POS_COUNT][MAX_WIDGET_SLOTS + 1];
+  int n[WIDGET_POS_COUNT];
+  for (int c = 0; c < WIDGET_POS_COUNT; c++) {
     n[c] = s_slot_count[c];
     for (int i = 0; i < n[c]; i++) { resolve_slot(c, &s_slots[c][i], sod, &col[c][i]); }
   }
@@ -213,14 +211,7 @@ void WidgetLayer_prepare(GRect bounds) {
   place_column(col[0], n[0], WIDGET_POS_LEFT, bounds);
   place_column(col[1], n[1], WIDGET_POS_RIGHT, bounds);
 
-  int edge = CF_STRIP_W + WL_EDGE_INSET;
-  for (int pos = WIDGET_POS_TOP; pos <= WIDGET_POS_BOTTOM; pos++) {
-    if (s_slot_count[pos] < 1) { continue; }
-    Active a;
-    resolve_slot(pos, &s_slots[pos][0], sod, &a);
-    int top = (pos == WIDGET_POS_TOP) ? edge : bounds.size.h - edge - a.slot_h;
-    place(&a, pos, bounds.size.w, top, a.slot_h);
-  }
+  place_column(col[2], n[2], WIDGET_POS_CENTER, bounds);
 }
 
 void WidgetLayer_drawIcons(GContext *ctx) {

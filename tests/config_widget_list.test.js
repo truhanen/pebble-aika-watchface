@@ -37,10 +37,10 @@ test('every font-capable row has one "Aa" control named Font, in the main line',
   });
 });
 
-test('Default option names the list default font (side 5, top/bottom 7)', () => {
+test('Default option names the list default font (side 5, centre column 7)', () => {
   const side = mount([w(10)], { defaultFont: 5 });
   assert.strictEqual(defaultLabel(side.root), 'Default (M Gothic)');
-  const top = mount([w(30)], { defaultFont: 7, max: 1 });
+  const top = mount([w(30)], { defaultFont: 7 });
   assert.strictEqual(defaultLabel(top.root), 'Default (L Bitham)');
   const none = mount([w(10)]);
   assert.strictEqual(defaultLabel(none.root), 'Default');
@@ -95,7 +95,7 @@ test('every row in a list has the same slot elements with placeholders for missi
     { rotating: true, interval: 3, members: [w(2), w(10), w(37)] },  // rotating group
   ], { defaultFont: 5 });
 
-  const { root: topList } = mount([w(35)], { defaultFont: 7, max: 1 });  // single-row top list
+  const { root: topList } = mount([w(35)], { defaultFont: 7 });  // single-row top list
 
   // Check side list rows (should have: select, font, hide, up, down, del)
   const sideRows = sideList.querySelectorAll('.wl-row > .wl-main');

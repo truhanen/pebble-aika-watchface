@@ -81,7 +81,7 @@ test('side lists are capped at 64 bytes (32 plain slots)', () => {
   const long = [];
   for (let i = 0; i < 40; i++) { long.push(w(5)); }
   assert.strictEqual(widgetListToPayload(long).length, 64);
-  assert.strictEqual(widgetListToPayload(long, 'side').length, 64);
+  assert.strictEqual(widgetListToPayload(long).length, 64);
 });
 
 test('a rotating group encodes as 0xFF, count, interval, (id, flags) x count', () => {
@@ -146,25 +146,25 @@ test('stops at the first group that does not fit, even if later plain slots woul
   assert.strictEqual(over.length, 60);
 });
 
-// ----------------------------------------------------------- centre (top / bottom)
+// ----------------------------------------------------------- centre column
 
-test("centre lists keep at most one slot, capped at 16 bytes", () => {
-  assert.deepStrictEqual(widgetListToPayload([w(30), w(7)], 'center'), [30, 31]);
-  assert.deepStrictEqual(widgetListToPayload([w(30, false, 11)], 'center'), [30, 11]);
-  assert.deepStrictEqual(widgetListToPayload([], 'center'), []);
-  // the same list on a side keeps both
-  assert.deepStrictEqual(widgetListToPayload([w(30), w(7)], 'side'), [30, 31, 7, 31]);
+test("centre column: the default [date, Empty] and several slots, same caps as the edges", () => {
+  assert.deepStrictEqual(widgetListToPayload([w(30), w(0)]), [30, 31, 0, 31]);
+  // digital time (font 7) directly followed by the ISO date (font 2), then Empty
+  assert.deepStrictEqual(widgetListToPayload([w(35, false, 7), w(34, false, 2), w(0), w(0)]),
+    [35, 7, 34, 2, 0, 31, 0, 31]);
+  assert.deepStrictEqual(widgetListToPayload([]), []);
+  const many = [];
+  for (let i = 0; i < 20; i++) { many.push(w(7)); }
+  assert.strictEqual(widgetListToPayload(many).length, 40);   // 16 slots would be 32; byte cap is 64
 });
 
-test('centre: the first VALID slot wins; invalid leading slots are skipped', () => {
-  assert.deepStrictEqual(widgetListToPayload([w(99), w(4), w(30)], 'center'), [30, 31]);
-});
-
-test('centre: a rotating group counts as one slot and fits the 16-byte cap', () => {
-  const g = rot(2, [200, 201, 202, 203, 204, 205].map((id) => w(id)));   // 15 bytes
-  const p = widgetListToPayload([g, w(7)], 'center');
-  assert.strictEqual(p.length, 15);
-  assert.deepStrictEqual(p.slice(0, 3), [255, 6, 2]);
+test('centre column: invalid slots are skipped, a rotating group is one slot', () => {
+  assert.deepStrictEqual(widgetListToPayload([w(99), w(4), w(30)]), [30, 31]);
+  const g = rot(2, [200, 201, 202].map((id) => w(id)));
+  const p = widgetListToPayload([g, w(7)]);
+  assert.deepStrictEqual(p.slice(0, 3), [255, 3, 2]);
+  assert.strictEqual(p.length, 9 + 2);
 });
 
 // ----------------------------------------------------------- legacy stored values
@@ -205,8 +205,8 @@ test('widgetListIds returns the plain ids, without flags or group markers', () =
   assert.deepStrictEqual(widgetListIds(undefined), []);
 });
 
-test('widgetListIds honours the centre slot limit and legacy hide flags', () => {
-  assert.deepStrictEqual(widgetListIds([w(30), w(7)], 'center'), [30]);
+test('widgetListIds covers every slot and honours legacy hide flags', () => {
+  assert.deepStrictEqual(widgetListIds([w(30), w(7)]), [30, 7]);
   assert.deepStrictEqual(widgetListIds([7 | 0x20, 255, 2, 3, 14, 18]), [7, 14, 18]);
 });
 

@@ -130,14 +130,18 @@ const config = [
     items: [
       { type: 'heading', defaultValue: 'Widgets' },
       { type: 'text', id: 'widgets-help', defaultValue:
-        'Widgets are placed in four lists: the <b>left</b> and <b>right edge</b> of the ' +
-        'screen, and a single widget each at the <b>top</b> and <b>bottom centre</b>. ' +
-        'A widget’s value sits at the screen edge and its icon sits next to it, toward ' +
-        'the centre.<br><br>' +
+        'Widgets are placed in three lists: the <b>center column</b> and the <b>left</b> and ' +
+        '<b>right edge</b> of the screen. Each column is laid out top to bottom, spread ' +
+        'evenly between the top and bottom of the screen (a single widget sits in the ' +
+        'middle; add Empty widgets to push the others together or apart). In the center ' +
+        'column each widget is centered, with its icon or unit to the right of the value ' +
+        '(for example the ISO date in a small font right below the digital time). On an ' +
+        'edge, a widget’s value sits at the screen edge and its icon sits next to it, ' +
+        'toward the centre.<br><br>' +
         'Each row is one widget. Pick the widget from the dropdown, choose the ' +
         '<b>font</b> of its value (Default = Gothic medium at the edges, Bitham large ' +
-        'at the top / bottom), reorder with ▲ / ▼, remove with ✕, and add more with ' +
-        '“+ Add widget”. The top and bottom lists hold one widget each.<br><br>' +
+        'in the center column), reorder with ▲ / ▼, remove with ✕, and add more with ' +
+        '“+ Add widget”.<br><br>' +
         'The <b>◉ / U / ⊘</b> button after the dropdown picks that widget’s ' +
         '<b>identifier</b>: <b>◉</b> = its icon (battery, weather, steps, heart rate, …), ' +
         '<b>U</b> = its unit (%, °C, h, bpm, UVI, a coin code, …), <b>⊘</b> = none, ' +
@@ -157,11 +161,14 @@ const config = [
         'scale (12 / 6 / 2 extra full redraws per minute). Intervals of <b>1 min or ' +
         'longer are free</b> — they ride the refresh the watchface does anyway.' },
       // Defaults: font 31 = "Default" (the watch maps it per list: Gothic medium on
-      // the edges, Bitham large at the top / bottom). Each edge groups an icon-only
+      // the edges, Bitham large in the center column). Each edge groups an icon-only
       // widget over its value (temperature: no identifier; battery: the % unit) in the top corner and one widget in the
-      // bottom corner; five Empty slots push them apart. Ids: 37 weather icon,
+      // bottom corner; the centre column holds the date at the top and an Empty slot below it; five Empty slots push them apart. Ids: 37 weather icon,
       // 7 weather, 0 Empty, 10 steps, 36 battery icon, 2 battery, 12 heart rate,
       // 30 date "Wkday dd". Must match the watch defaults in src/c/settings.c.
+      { type: 'text', defaultValue: '<b>Center column</b>' },
+      { type: 'widgetList', messageKey: 'WidgetListCenter', defaultFont: 7,
+        defaultValue: [{ id: 30, ident: 'icon', font: 31 }, emptySlot()] },
       { type: 'text', defaultValue: '<b>Left edge</b>' },
       { type: 'widgetList', messageKey: 'WidgetList', defaultFont: 5,
         defaultValue: [{ id: 37, ident: 'icon', font: 31 }, { id: 7, ident: 'none', font: 31 },
@@ -172,11 +179,6 @@ const config = [
         defaultValue: [{ id: 36, ident: 'icon', font: 31 }, { id: 2, ident: 'unit', font: 31 },
           emptySlot(), emptySlot(), emptySlot(), emptySlot(), emptySlot(),
           { id: 12, ident: 'icon', font: 31 }] },
-      { type: 'text', defaultValue: '<b>Top center</b>' },
-      { type: 'widgetList', messageKey: 'WidgetListTop', max: 1, defaultFont: 7,
-        defaultValue: [{ id: 30, ident: 'icon', font: 31 }] },
-      { type: 'text', defaultValue: '<b>Bottom center</b>' },
-      { type: 'widgetList', messageKey: 'WidgetListBottom', max: 1, defaultFont: 7, defaultValue: [] },
       { type: 'radiogroup', messageKey: 'SettingDisableAutobattery', label: 'Auto-show battery meter',
         defaultValue: '0', options: [{ label: 'On', value: '0' }, { label: 'Off', value: '1' }] },
       { type: 'select', messageKey: 'SettingAutoBatteryThreshold', label: 'Auto-show below battery %',
@@ -193,7 +195,7 @@ const config = [
         attributes: { type: 'number', min: 1, max: 17, step: 1, placeholder: '1' }, defaultValue: '1' },
       { type: 'text', id: 'fallback-help', defaultValue:
         'Position N replaces the Nth widget in the chosen edge list (left or right; the ' +
-        'top and bottom centre lists are not used). A position one past the last widget ' +
+        'center column is not used). A position one past the last widget ' +
         'adds the battery / disconnect icon as an extra at the end instead of ' +
         'replacing one.' },
     ],

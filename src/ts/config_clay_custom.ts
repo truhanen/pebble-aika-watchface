@@ -56,8 +56,8 @@ function clayConfigCustom(this: ClayConfigThis, minified: unknown): void {
   let groups: ClayGroup[] = [];
   let openIndex = -1;
 
-  // Plain widget ids placed in any of the four lists (left / right edge, top / bottom
-  // centre). A list value is an array of slot objects ({id,hide,font} or
+  // Plain widget ids placed in any of the three lists (centre column, left / right
+  // edge). A list value is an array of slot objects ({id,hide,font} or
   // {rotating,interval,members:[...]}); an older flat int array (255, count,
   // interval, members...; hide flag 0x20 in the id) is still understood.
   function widgetIds(): number[] {
@@ -67,7 +67,7 @@ function clayConfigCustom(this: ClayConfigThis, minified: unknown): void {
       const v = parseInt(raw, 10) || 0;
       ids.push((v > 0x20 && v <= 0x39) ? v - 0x20 : v);
     }
-    ['WidgetList', 'WidgetListRight', 'WidgetListTop', 'WidgetListBottom'].forEach((k) => {
+    ['WidgetListCenter', 'WidgetList', 'WidgetListRight'].forEach((k) => {
       const v = clayConfig.getItemByMessageKey(k).get();
       if (!v || !v.length) { return; }
       let i = 0;
@@ -263,7 +263,7 @@ function clayConfigCustom(this: ClayConfigThis, minified: unknown): void {
     openIndex = -1;
     wireHeadings();
     applyVisibility();
-    ['WidgetList', 'WidgetListRight', 'WidgetListTop', 'WidgetListBottom', 'weather_loc_mode', 'SettingDisableAutobattery',
+    ['WidgetListCenter', 'WidgetList', 'WidgetListRight', 'weather_loc_mode', 'SettingDisableAutobattery',
      'SettingFallbackColumn', 'SettingNightRotationMode', 'SettingNightColors',
      'SettingBatteryWarnPct', 'SettingBatteryWarnDays', 'SettingBtWarnBorder']
       .forEach((k) => { clayConfig.getItemByMessageKey(k).on('change', applyVisibility); });

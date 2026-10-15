@@ -2,8 +2,7 @@
 // Copyright (c) 2026 Tuomas Airaksinen
 
 // Converts the `widgetList` Clay value into the v2 byte payload sent under
-// SettingWidgetList / SettingRightWidgetList / SettingTopWidgetList /
-// SettingBottomWidgetList. See docs/widget_contract.md (the binding contract):
+// SettingWidgetList / SettingRightWidgetList / SettingCenterWidgetList. See docs/widget_contract.md (the binding contract):
 //   plain widget   : id, flags
 //   rotating group : 0xFF, count (2..6), interval_code (0..5), (id, flags) x count
 //   flags          : bits 0-4 font index (0..16, 31 = position default),
@@ -19,11 +18,10 @@
 // id; no font -> position default).
 // Invalid ids/members are dropped, a font outside 0..16 falls back to the default,
 // count/interval are clamped, a group with one member degrades to a plain slot, WHOLE
-// groups only are packed, and the list stops before exceeding its byte cap. Top and
-// bottom lists keep at most one slot.
+// groups only are packed, and the list stops before exceeding its byte cap (64, all
+// three lists).
 // KEEP IN SYNC with src/c/widget_list.c.
-export const MAX_SIDE_LIST_BYTES = 64;
-export const MAX_CENTER_LIST_BYTES = 16;
+export const MAX_LIST_BYTES = 64;
 const MAX_WIDGET_TYPE = 38;         // BLUETOOTH_ICON
 const CRYPTO_WID_BASE = 200;
 const MAX_CRYPTO = 16;
@@ -40,8 +38,6 @@ const FLAG_NONE = 0x20;
 const FLAG_UNIT = 0x40;
 const LEGACY_HIDE_FLAG = 0x20;      // old encoding: hide flag OR-ed into the id
 const LEGACY_MAX_TYPE = 25;
-
-export type WidgetListKind = 'side' | 'center';
 
 export type WidgetIdent = 'icon' | 'unit' | 'none';
 interface Entry { id: number; ident: WidgetIdent; font: number; }
@@ -149,17 +145,14 @@ function flagsOf(e: Entry): number {
   return e.font | (e.ident === 'none' ? FLAG_NONE : (e.ident === 'unit' ? FLAG_UNIT : 0));
 }
 
-export function widgetListToPayload(list: any, kind?: WidgetListKind): number[] {
-  const center = kind === 'center';
-  const cap = center ? MAX_CENTER_LIST_BYTES : MAX_SIDE_LIST_BYTES;
+export function widgetListToPayload(list: any): number[] {
+  const cap = MAX_LIST_BYTES;
   const slots = parseSlots(list);
   const out: number[] = [];
-  let packed = 0;
   for (let s = 0; s < slots.length; s++) {
     const slot = slots[s];
     const n = slot.members.length;
     if (n === 0) { continue; }
-    if (center && packed >= 1) { break; }
     if (slot.group && n >= 2) {
       if (out.length + 3 + 2 * n > cap) { break; }   // whole group only
       out.push(ROTATING_MARKER, n, slot.interval);
@@ -168,15 +161,14 @@ export function widgetListToPayload(list: any, kind?: WidgetListKind): number[] 
       if (out.length + 2 > cap) { break; }
       out.push(slot.members[0].id, flagsOf(slot.members[0]));
     }
-    packed += 1;
   }
   return out;
 }
 
 // Plain widget ids (flags stripped, group markers removed) of a list, for the
 // phone-side "which data sources are placed" decisions.
-export function widgetListIds(list: any, kind?: WidgetListKind): number[] {
-  const p = widgetListToPayload(list, kind);
+export function widgetListIds(list: any): number[] {
+  const p = widgetListToPayload(list);
   const ids: number[] = [];
   let i = 0;
   while (i < p.length) {

@@ -7,7 +7,7 @@
 
 void WidgetLayer_init(void);
 void WidgetLayer_deinit(void);
-// Re-parse the four widget lists; call after settings.*WidgetList changed.
+// Re-parse the three widget lists; call after settings.*WidgetList changed.
 void WidgetLayer_reload(void);
 // Resolve the active member of every slot (rotation, auto-battery / BT fallback) and
 // place everything for a face of the given bounds.

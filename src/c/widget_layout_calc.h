@@ -22,7 +22,7 @@
 // vertical battery of the original Nyquist: a 20 px body plus its 3 px nub.
 #define WL_ICON_H 23
 
-typedef enum { WL_LEFT, WL_RIGHT, WL_TOP, WL_BOTTOM } WlPosition;
+typedef enum { WL_LEFT, WL_RIGHT, WL_CENTER } WlPosition;
 
 const WidgetFontMetrics *wl_metrics(int font);
 
@@ -64,7 +64,7 @@ int wl_column_visible(const int16_t *heights, int n, int inner, int min_gap);
 typedef struct { int16_t value_x, icon_x; } WlHPlace;
 // x of a widget's value and icon/unit boxes. Left/right: the value sits against the
 // edge (strip_w + WL_EDGE_INSET from it) and the icon is next to it towards the
-// centre. Top/bottom: value and icon are centred as one group, icon to the right.
+// centre. Centre: value and icon are centred as one group, icon to the right.
 // icon_w == 0 or value_w == 0 drops the gap.
 void wl_place_h(WlPosition pos, int screen_w, int strip_w, int value_w, int icon_w,
                 WlHPlace *out);

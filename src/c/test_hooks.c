@@ -14,7 +14,7 @@ static int32_t s_sleep_min = -1;
 static int32_t s_deep_sleep_min = -1;
 static int32_t s_heart_rate = -1;
 static int32_t s_scene = 0;
-static int32_t s_font[4] = { -1, -1, -1, -1 };   // by WIDGET_POS_*
+static int32_t s_font[WIDGET_POS_COUNT] = { -1, -1, -1 };   // by WIDGET_POS_*
 
 static bool read_key(DictionaryIterator *iter, uint32_t key, int32_t *out) {
   Tuple *t = dict_find(iter, key);
@@ -36,17 +36,11 @@ bool TestHooks_handleMessage(DictionaryIterator *iter) {
   any |= read_key(iter, MESSAGE_KEY_TestScene, &s_scene);
   any |= read_key(iter, MESSAGE_KEY_TestFontLeft, &s_font[WIDGET_POS_LEFT]);
   any |= read_key(iter, MESSAGE_KEY_TestFontRight, &s_font[WIDGET_POS_RIGHT]);
-  any |= read_key(iter, MESSAGE_KEY_TestFontTop, &s_font[WIDGET_POS_TOP]);
-  any |= read_key(iter, MESSAGE_KEY_TestFontBottom, &s_font[WIDGET_POS_BOTTOM]);
+  any |= read_key(iter, MESSAGE_KEY_TestFontCenter, &s_font[WIDGET_POS_CENTER]);
   int32_t id;
-  if (read_key(iter, MESSAGE_KEY_TestTopWidget, &id)) {
+  if (read_key(iter, MESSAGE_KEY_TestCenterWidget, &id)) {
     const uint8_t slot[2] = { (uint8_t)id, WL_FONT_POS_DEFAULT };
-    Settings_setWidgetList(WIDGET_POS_TOP, slot, id >= 0 ? 2 : 0);
-    any = true;
-  }
-  if (read_key(iter, MESSAGE_KEY_TestBottomWidget, &id)) {
-    const uint8_t slot[2] = { (uint8_t)id, WL_FONT_POS_DEFAULT };
-    Settings_setWidgetList(WIDGET_POS_BOTTOM, slot, id >= 0 ? 2 : 0);
+    Settings_setWidgetList(WIDGET_POS_CENTER, slot, id >= 0 ? 2 : 0);
     any = true;
   }
   return any;

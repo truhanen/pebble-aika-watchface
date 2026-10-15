@@ -121,8 +121,10 @@ typedef struct {
 // Split "BTC/USD" at the slash into num/den (buffers of cap bytes). Returns false when
 // the label has no slash or an empty half; num then holds the whole label.
 bool wl_split_fraction(const char *label, char *num, char *den, int cap);
-// Layout of a fraction in the unit font m (Gothic 14).
-void wl_fraction_layout(const WidgetFontMetrics *m, WlFraction *out);
+// Layout of a fraction in the unit font m (Gothic 14). The stack top follows the
+// numerator's tallest glyph: a numerator with nothing above the x-height ("c", "mm")
+// loses the empty rows between cap top and x-height.
+void wl_fraction_layout(const WidgetFontMetrics *m, const char *num, WlFraction *out);
 
 // Fitting a vector icon to WL_ICON_H. The icon's points span [min, max] on an axis in
 // raw units (1/8 px for precise paths); `stroke` px of line is drawn around them. The

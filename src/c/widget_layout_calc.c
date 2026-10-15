@@ -89,6 +89,22 @@ bool wl_text_has_descender(const char *text) {
   return false;
 }
 
+// True if no glyph of text rises above the x-height (a c e m n o r s u v w x z, the
+// g p q y descenders, space, low punctuation). Anything else counts as tall.
+static bool text_is_short(const char *text) {
+  for (const char *p = text; *p; p++) {
+    switch (*p) {
+      case 'a': case 'c': case 'e': case 'm': case 'n': case 'o': case 'r': case 's':
+      case 'u': case 'v': case 'w': case 'x': case 'z': case 'g': case 'p': case 'q':
+      case 'y': case ' ': case '.': case ',': case '-': case '_': case '=': case '+':
+      case ':': case ';': case '~':
+        break;
+      default: return false;
+    }
+  }
+  return true;
+}
+
 // The icon / unit's top relative to the ink top (ink_h > 0).
 static int icon_top_on_ink(const WlItemDims *d) {
   if (d->unit_inline && d->value_w > 0) {
@@ -234,10 +250,12 @@ bool wl_split_fraction(const char *label, char *num, char *den, int cap) {
   return false;
 }
 
-void wl_fraction_layout(const WidgetFontMetrics *m, WlFraction *out) {
+void wl_fraction_layout(const WidgetFontMetrics *m, const char *num, WlFraction *out) {
   int cap = m->cap_h > 0 ? m->cap_h : m->digit_h;
-  out->num_base = (int16_t)cap;
-  out->rule_y = (int16_t)(cap + WL_FRACTION_GAP);
+  int trim = text_is_short(num) ? m->x_top - m->cap_top : 0;
+  if (trim < 0) { trim = 0; }
+  out->num_base = (int16_t)(cap - trim);
+  out->rule_y = (int16_t)(cap - trim + WL_FRACTION_GAP);
   out->den_top = (int16_t)(out->rule_y + 1 + WL_FRACTION_GAP);
   out->h = (int16_t)(out->den_top + cap);
 }

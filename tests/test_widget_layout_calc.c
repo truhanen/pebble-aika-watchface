@@ -172,11 +172,30 @@ static void test_fraction(void) {
     assert(wl_split_fraction("ABCDE/FGHIJKL", n16, d16, 16) && !strcmp(n16, "ABCDE") && !strcmp(d16, "FGHIJKL")); }
   const WidgetFontMetrics *u = wl_metrics(0);
   WlFraction fr;
-  wl_fraction_layout(u, &fr);
+  wl_fraction_layout(u, "BTC", &fr);
   assert(fr.num_base == u->cap_h);
   assert(fr.rule_y == fr.num_base + WL_FRACTION_GAP);
   assert(fr.den_top == fr.rule_y + 1 + WL_FRACTION_GAP);
   assert(fr.h == fr.den_top + u->cap_h);
+  // tall numerators keep the full stack
+  const char *tall[] = { "kWh", "-12.5c", "Mm", "mmh", "i", "12" };
+  for (unsigned i = 0; i < sizeof tall / sizeof *tall; i++) {
+    WlFraction t;
+    wl_fraction_layout(u, tall[i], &t);
+    assert(t.h == fr.h && t.num_base == fr.num_base && t.rule_y == fr.rule_y && t.den_top == fr.den_top);
+  }
+  // x-height-only numerators lose the empty rows above them (x_top - cap_top)
+  int trim = u->x_top - u->cap_top;
+  assert(trim == 2);
+  const char *shorts[] = { "c", "mm", "ypg", "" };
+  for (unsigned i = 0; i < sizeof shorts / sizeof *shorts; i++) {
+    WlFraction t;
+    wl_fraction_layout(u, shorts[i], &t);
+    assert(t.num_base == fr.num_base - trim && t.rule_y == fr.rule_y - trim);
+    assert(t.den_top == fr.den_top - trim && t.h == fr.h - trim);
+  }
+  wl_fraction_layout(u, "c", &fr);
+  assert(fr.h == 19 && fr.num_base == 7 && fr.rule_y == 8 && fr.den_top == 10);
 }
 
 // Heart rate in unit mode: Gothic medium value, inline "bpm" (descender on the p).

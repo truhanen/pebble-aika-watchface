@@ -102,7 +102,7 @@ void WidgetUnit_measure(const char *label, int *w, int *h) {
   if (wl_split_fraction(label, num, den, UNIT_PART_LEN)) {
     int nw = WidgetText_width(num, WIDGET_FONT_UNIT), dw = WidgetText_width(den, WIDGET_FONT_UNIT);
     WlFraction fr;
-    wl_fraction_layout(wl_metrics(WIDGET_FONT_UNIT), &fr);
+    wl_fraction_layout(wl_metrics(WIDGET_FONT_UNIT), num, &fr);
     *w = nw > dw ? nw : dw;
     *h = fr.h;
   } else {
@@ -116,7 +116,7 @@ void WidgetUnit_draw(GContext *ctx, const char *label, GRect box, GColor fg) {
   graphics_context_set_text_color(ctx, fg);
   if (wl_split_fraction(label, num, den, UNIT_PART_LEN)) {
     WlFraction fr;
-    wl_fraction_layout(wl_metrics(WIDGET_FONT_UNIT), &fr);
+    wl_fraction_layout(wl_metrics(WIDGET_FONT_UNIT), num, &fr);
     int nw = WidgetText_width(num, WIDGET_FONT_UNIT), dw = WidgetText_width(den, WIDGET_FONT_UNIT);
     WidgetText_drawAtBaseline(ctx, num, WIDGET_FONT_UNIT, box.origin.x + (box.size.w - nw) / 2,
                               box.origin.y + fr.num_base);

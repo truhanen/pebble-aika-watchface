@@ -43,7 +43,7 @@ Each widget declares which identifiers it has (an icon, a unit, or both). When t
 | 2 battery | battery icon, value `63` | `63` + `%` |
 | 22 battery days | battery icon | `d` (none while charging) |
 | 7 temperature | weather icon, value `19°` | value `19` + `°C` / `°F` (`SettingUseMetric`); NONE shows the bare `19` |
-| 8 forecast | forecast icon, `18/11` | `18/11` + `°C` / `°F` |
+| 8 forecast | forecast icon, `11/18` (low/high) | `11/18` + `°C` / `°F` |
 | 13 UV | (no icon; shows the unit) | `UVI` |
 | 40..44 max rain | light-rain icon, value `1.4` (mm/h) or `0.06` (in/h), `--` unknown | stacked `mm` / `h` (1 h) or `hi mm` / `3 h` (N h); inch: `in` |
 | 9, 20, 24, 25 sleep | sleep icon / deep icon / bar | `h` |
@@ -112,7 +112,7 @@ These ids are kept, ported to the new API, and listed on the config page:
 | 5 | Seconds | TIME seconds |
 | 6 | Week number | DATE week number |
 | 7 | Current weather | WEATHER temperature |
-| 8 | Today's forecast | WEATHER forecast high/low |
+| 8 | Today's forecast | WEATHER forecast low/high |
 | 9 | Sleep | SLEEP hours |
 | 10 | Steps | HEALTH steps |
 | 11 | Swatch beats | TIME swatch beats |

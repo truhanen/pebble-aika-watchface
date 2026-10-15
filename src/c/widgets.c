@@ -234,14 +234,14 @@ static bool unit_temperature(const WidgetCtx *c, char *buf, size_t n) {
   return true;
 }
 
-// Today's high / low on one line, "18/11"; the icon is the forecast's.
+// Today's low / high on one line, "11/18"; the icon is the forecast's.
 static bool value_forecast(const WidgetCtx *c, char *buf, size_t n) {
   if (Weather_weatherInfo.todaysHighTemp == INT32_MIN) {
     snprintf(buf, n, "--/--");
     return true;
   }
-  snprintf(buf, n, "%d/%d", to_display_temp(Weather_weatherInfo.todaysHighTemp),
-           to_display_temp(Weather_weatherInfo.todaysLowTemp));
+  snprintf(buf, n, "%d/%d", to_display_temp(Weather_weatherInfo.todaysLowTemp),
+           to_display_temp(Weather_weatherInfo.todaysHighTemp));
   return true;
 }
 

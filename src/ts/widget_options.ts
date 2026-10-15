@@ -33,7 +33,7 @@ export const STATIC_WIDGETS: WidgetOption[] = [
   { id: 6, label: 'DATE week number' },
   { id: 7, label: 'WEATHER temperature' },
   { id: 37, label: 'WEATHER condition icon' },
-  { id: 8, label: 'WEATHER forecast high/low' },
+  { id: 8, label: 'WEATHER forecast low/high' },
   { id: 13, label: 'WEATHER UV index' },
   { id: 40, label: 'WEATHER max rain 1 h' },
   { id: 41, label: 'WEATHER max rain 3 h' },

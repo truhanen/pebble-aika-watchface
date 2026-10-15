@@ -115,7 +115,7 @@ void Weather_init() {
   }
 
 #ifdef SCREENSHOT_FIXTURES
-  // Demo weather for appstore screenshots: forecast 18/11 °C, UV 3.
+  // Demo weather for appstore screenshots: forecast high 18 / low 11 °C, UV 3.
   Weather_weatherInfo.todaysHighTemp = 18;
   Weather_weatherInfo.todaysLowTemp = 11;
   Weather_weatherInfo.currentUVIndex = 3;

@@ -40,7 +40,7 @@ Each widget declares which identifiers it has (an icon, a unit, or both). When t
 
 | Widget | Icon mode | Unit mode |
 |---|---|---|
-| 2 battery | battery icon, value `63` | `63` + `%` (Turkish: value `%63`, no unit) |
+| 2 battery | battery icon, value `63` | `63` + `%` |
 | 22 battery days | battery icon | `d` (none while charging) |
 | 7 temperature | weather icon, value `19°` | value `19` + `°C` / `°F` (`SettingUseMetric`); NONE shows the bare `19` |
 | 8 forecast | forecast icon, `18/11` | `18/11` + `°C` / `°F` |

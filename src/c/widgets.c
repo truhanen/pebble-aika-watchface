@@ -125,16 +125,13 @@ static WlIdent ident_of(const WidgetCtx *c) {
            : WL_IDENT_NONE;
 }
 
-// Widget 2: the number. In UNIT mode the unit is "%"; Turkish writes it as a prefix
-// ("%63") and has no separate unit.
+// Widget 2: the number. In UNIT mode the unit is "%".
 static bool value_battery(const WidgetCtx *c, char *buf, size_t n) {
-  bool prefix = settings.languageId == LANGUAGE_TR && ident_of(c) == WL_IDENT_UNIT;
-  snprintf(buf, n, prefix ? "%%%d" : "%d", battery_percent());
+  snprintf(buf, n, "%d", battery_percent());
   return true;
 }
 
 static bool unit_battery(const WidgetCtx *c, char *buf, size_t n) {
-  if (settings.languageId == LANGUAGE_TR) { return false; }
   snprintf(buf, n, "%%");
   return true;
 }

@@ -295,3 +295,24 @@ test('an unknown id is labelled "Unknown #N", not as a crypto rate', () => {
   assert.ok(/Unknown #99/.test(root.innerHTML));
   assert.ok(!/Crypto #/.test(root.innerHTML));
 });
+
+test('crypto and currency rows appear as "RATE NAME/QUOTE" options', () => {
+  const { JSDOM } = require('jsdom');
+  const dom = new JSDOM('<!doctype html><html><body>' +
+    '<div class="cl-root"><div class="cl-row" data-wid="200"><select class="cl-coin"><option value="bitcoin" selected>BTC</option></select>' +
+    '<select class="cl-vs"><option value="usd" selected>USD</option></select><input class="cl-label" value="BTC"></div></div>' +
+    '<div class="cul-root"><div class="cul-row" data-wid="216"><select class="cul-base"><option value="EUR" selected>EUR</option></select>' +
+    '<select class="cul-quote"><option value="USD" selected>USD</option></select><input class="cul-label" value=""></div></div>' +
+    '<div id="root"></div></body></html>');
+  global.window = dom.window;
+  global.document = dom.window.document;
+  const host = dom.window.document.getElementById('root');
+  host.innerHTML = component.template;
+  const self = { $element: [host.firstElementChild], trigger: () => {}, config: {} };
+  component.initialize.call(self, null, { on: () => {}, EVENTS: {} });
+  component.manipulator.set.call(self, [{ id: 200, ident: 'unit', font: 31 }, { id: 216, ident: 'unit', font: 31 }]);
+  const html = host.innerHTML;
+  assert.ok(/>RATE BTC\/USD</.test(html), 'crypto option label');
+  assert.ok(/>RATE EUR\/USD</.test(html), 'currency option label');
+  assert.ok(!/Crypto #|RATE #/.test(html));
+});

@@ -171,8 +171,8 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     { code: 5, label: '5 min' },
   ];
 
-  function readCryptoRows(): { wid: number; coin: string; label: string }[] {
-    const out: { wid: number; coin: string; label: string }[] = [];
+  function readCryptoRows(): { wid: number; coin: string; vs: string; label: string }[] {
+    const out: { wid: number; coin: string; vs: string; label: string }[] = [];
     const rowEls = document.querySelectorAll('.cl-root .cl-row');
     for (let i = 0; i < rowEls.length; i++) {
       const el = rowEls[i] as HTMLElement;
@@ -184,7 +184,8 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
         coin = cust ? cust.value : '';
       }
       const labelIn = el.querySelector('.cl-label') as HTMLInputElement;
-      out.push({ wid: wid, coin: coin, label: labelIn ? labelIn.value : '' });
+      const vsSel = el.querySelector('.cl-vs') as HTMLSelectElement;
+      out.push({ wid: wid, coin: coin, vs: vsSel ? vsSel.value : '', label: labelIn ? labelIn.value : '' });
     }
     return out;
   }
@@ -234,7 +235,10 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
       const wid = r.wid;
       if (isNaN(wid) || wid === 0) { continue; }
       const coin = (typeof r.coin === 'string') ? r.coin : '';
-      const label = (typeof r.label === 'string' && r.label !== '') ? r.label : coin.toUpperCase();
+      // Same pair the watch shows as the unit (crypto_parse.ts labelFor): NAME/QUOTE.
+      const name = (typeof r.label === 'string' && r.label !== '') ? r.label : coin.toUpperCase();
+      const vs = (typeof r.vs === 'string') ? r.vs.toUpperCase() : '';
+      const label = (name.indexOf('/') !== -1 || vs === '') ? name : name + '/' + vs;
       out.push({ id: wid, label: 'RATE ' + label });
     }
     const carr = readCurrencyRows();

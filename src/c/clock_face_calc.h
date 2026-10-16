@@ -64,6 +64,12 @@ void cf_hand_pose(float cx, float cy, float sin_a, float cos_a, int shoulder,
 // in continuous pixel-edge coordinates.
 void cf_boundary_hit(int w, int h, int r, float sin_a, float cos_a, float *hx, float *hy);
 
+// Same as cf_boundary_hit with the ray starting at (cx, cy) instead of the screen centre.
+void cf_boundary_hit_from(int w, int h, int r, float cx, float cy, float sin_a, float cos_a, float *hx, float *hy);
+
+// y of the moving clock centre (hub of both hands) at the given minute (see clock_face_calc.c).
+int cf_pivot_y(int w, int h, int minute);
+
 // True when pixel (x,y) is in the tick band of the given depth: its centre lies inside
 // the rounded rectangle and its inset distance from the boundary is in [0, depth).
 // On the straights that is the outermost `depth` rows/columns; in a corner it is the
@@ -94,6 +100,10 @@ bool cf_in_band(int w, int h, int r, int x, int y, int depth);
 // the rays (slanting near corners, where they hold more or fewer than 5). Near rounded
 // corners the outer row follows the arc and its pixel count varies slightly around 5.
 int cf_tick_pixels(int w, int h, int r, float hx, float hy, int depth, int inset, CfPoint out[CF_TICK_MAX_PIXELS]);
+
+// cf_tick_pixels with the tick rays coming from (pcx, pcy) instead of the screen centre
+// (hx,hy must come from cf_boundary_hit_from with the same pivot).
+int cf_tick_pixels_from(int w, int h, int r, float pcx, float pcy, float hx, float hy, int depth, int inset, CfPoint out[CF_TICK_MAX_PIXELS]);
 
 // Shadow reach in px: the shadow of ticks and icon-only widgets covers the pixels within
 // this Manhattan distance of the shape (widget value text uses its own per-font offset

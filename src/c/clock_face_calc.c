@@ -4,6 +4,24 @@ int cf_snap(float v) {
   return (int)(v >= 0 ? v + 0.5f : v - 0.5f);
 }
 
+// Moving clock centre: y of the pivot, x stays at w/2. top = w/2 is the pivot whose
+// distance to the top edge equals that to the side edges, bottom = h - w/2 likewise.
+// The minute hand points into the top edge for minutes 52.5..7.5 and the bottom edge for
+// 22.5..37.5; between, the pivot glides linearly (down 7.5..22.5, up 37.5..52.5).
+int cf_pivot_y(int w, int h, int minute) {
+  int top = w / 2, span = h - w;   // bottom - top = h - w
+  int m = ((minute % 60) + 60) % 60;
+  int u;                               // glide progress in 1/30 steps, 0 = top, 30 = bottom
+  if (m <= 37) {
+    u = 2 * m - 15;                    // down: t = (m - 7.5) / 15
+  } else {
+    u = 30 - (2 * m - 75);             // up: t = 1 - (m - 37.5) / 15
+  }
+  if (u < 0) { u = 0; }
+  if (u > 30) { u = 30; }
+  return top + (span * u + 15) / 30;
+}
+
 void cf_hand_pose(float cx, float cy, float sin_a, float cos_a, int shoulder,
                   int width, int apex_ext, int tail, CfHandPose *out) {
   float inner_x = cx - tail * sin_a;
@@ -95,7 +113,10 @@ static void c_point(int w, int h, const CRing *c, float s, float *X, float *Y) {
 }
 
 void cf_boundary_hit(int w, int h, int r, float sin_a, float cos_a, float *hx, float *hy) {
-  float cx = w / 2.0f, cy = h / 2.0f;
+  cf_boundary_hit_from(w, h, r, w / 2.0f, h / 2.0f, sin_a, cos_a, hx, hy);
+}
+
+void cf_boundary_hit_from(int w, int h, int r, float cx, float cy, float sin_a, float cos_a, float *hx, float *hy) {
   float dx = sin_a, dy = -cos_a;   // screen frame, y grows downwards
   const float big = 1e30f;
   float tx = big, ty = big;
@@ -167,13 +188,17 @@ static float centre_s(int w, int h, int r, const CRing *c, float hx, float hy) {
 }
 
 int cf_tick_pixels(int w, int h, int r, float hx, float hy, int depth, int inset, CfPoint out[CF_TICK_MAX_PIXELS]) {
+  return cf_tick_pixels_from(w, h, r, w / 2.0f, h / 2.0f, hx, hy, depth, inset, out);
+}
+
+int cf_tick_pixels_from(int w, int h, int r, float pcx, float pcy, float hx, float hy, int depth, int inset, CfPoint out[CF_TICK_MAX_PIXELS]) {
   // The curve the tick is laid on is the outer-row curve of the visible area shrunk by
   // `inset` on every side (corner radius r - inset), moved back by (inset, inset).
   int w2 = w - 2 * inset, h2 = h - 2 * inset, r2 = r > inset ? r - inset : 0;
   float lx = hx, ly = hy;   // boundary point of that shrunk shape, on the same ray from the centre
   if (inset > 0) {
-    float dx = hx - w / 2.0f, dy = hy - h / 2.0f, len = tsqrt(dx * dx + dy * dy);
-    cf_boundary_hit(w2, h2, r2, dx / len, -dy / len, &lx, &ly);   // (sin, cos) of the ray
+    float dx = hx - pcx, dy = hy - pcy, len = tsqrt(dx * dx + dy * dy);
+    cf_boundary_hit_from(w2, h2, r2, pcx - inset, pcy - inset, dx / len, -dy / len, &lx, &ly);   // (sin, cos) of the ray
   }
   CRing c = c_ring(w2, h2, r2);
   float sc = centre_s(w2, h2, r2, &c, lx, ly);
@@ -184,17 +209,18 @@ int cf_tick_pixels(int w, int h, int r, float hx, float hy, int depth, int inset
   c_point(w2, h2, &c, sc + CF_TICK_LEN / 2.0f, &ex2, &ey2);
   fx += off; fy += off; ex1 += off; ey1 += off; ex2 += off; ey2 += off;
   // Directions from the clock centre to E1/E2 in 1/16 px (exact on the straights).
-  int x1 = (int)((ex1 - w / 2.0f) * 16 + (ex1 >= w / 2.0f ? 0.5f : -0.5f));
-  int y1 = (int)((ey1 - h / 2.0f) * 16 + (ey1 >= h / 2.0f ? 0.5f : -0.5f));
-  int x2 = (int)((ex2 - w / 2.0f) * 16 + (ex2 >= w / 2.0f ? 0.5f : -0.5f));
-  int y2 = (int)((ey2 - h / 2.0f) * 16 + (ey2 >= h / 2.0f ? 0.5f : -0.5f));
+  int x1 = (int)((ex1 - pcx) * 16 + (ex1 >= pcx ? 0.5f : -0.5f));
+  int y1 = (int)((ey1 - pcy) * 16 + (ey1 >= pcy ? 0.5f : -0.5f));
+  int x2 = (int)((ex2 - pcx) * 16 + (ex2 >= pcx ? 0.5f : -0.5f));
+  int y2 = (int)((ey2 - pcy) * 16 + (ey2 >= pcy ? 0.5f : -0.5f));
+  int pcx16 = (int)(pcx * 16), pcy16 = (int)(pcy * 16);
   int n = 0;
   int bx = (int)fx, by = (int)fy;
   for (int y = by - 14; y <= by + 14; y++) {
     for (int x = bx - 14; x <= bx + 14; x++) {
       if (!cf_in_band(w, h, r, x, y, inset + depth)) { continue; }
       if (inset > 0 && cf_in_band(w, h, r, x, y, inset)) { continue; }
-      int vx = (2 * x + 1 - w) * 8, vy = (2 * y + 1 - h) * 8;
+      int vx = (2 * x + 1) * 8 - pcx16, vy = (2 * y + 1) * 8 - pcy16;
       if (x1 * vy - y1 * vx >= 0 && vx * y2 - vy * x2 >= 0 && n < CF_TICK_MAX_PIXELS) {
         out[n++] = (CfPoint){ (int16_t)x, (int16_t)y };
       }

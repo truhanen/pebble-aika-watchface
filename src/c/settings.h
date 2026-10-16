@@ -21,7 +21,9 @@ typedef enum {
 } VibeIntervalType;
 
 // Settings struct. Persisted as one raw blob (SETTINGS_PERSIST_KEY); a blob written
-// with a different CURRENT_SETTINGS_VERSION is discarded and defaults are used.
+// with a different CURRENT_SETTINGS_VERSION is discarded and defaults are used. Fields may
+// be appended at the END without a version bump: a shorter stored blob (down to the end of
+// btWarnColor, the last field of the original layout) is loaded over the defaults.
 typedef struct {
   // Colors. A colour a user can configure must ALSO be mapped in Theme_update
   // (src/c/theme.c): drawing code reads theme.*, never settings.*Color, directly.
@@ -85,6 +87,10 @@ typedef struct {
   GColor batteryWarnColor;
   uint8_t btWarnBorder;   // bool
   GColor btWarnColor;
+
+  // Clock centre. Stored INVERTED (0 = the centre moves, the default) so a blob written
+  // before this field existed -- whose trailing bytes are zero -- reads as "moving".
+  uint8_t fixedCentre;
 } Settings;
 
 // Dynamic settings (calculated at runtime based on currently-selected widgets)

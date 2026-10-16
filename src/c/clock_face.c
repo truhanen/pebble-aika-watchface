@@ -2,6 +2,8 @@
 // the screen edges (separate, 5 px long on the outer edge, following the frame's rounded corners (CF_CORNER_R), with radial sides, 2 px background shadow, all in the
 // time text colour: 4 px deep for 5-minute ticks and 1 px deep and 1 px in from the edge for 1-minute ticks) and the widgets (icons below
 // the hands, values and icon-only widgets above), all on one full-screen layer.
+// The hands' hub (pivot) moves vertically with the minute (cf_pivot_y); the tick table is
+// rebuilt from the pivot whenever its integer y changes.
 //
 // Hand dimensions are those of the Nyquist watchface (truhanen/
 // pebble-nyquist-watchface, GPL-3.0); the minute hand is lengthened so it always
@@ -24,6 +26,12 @@ Layer *clock_face_layer;
 
 static int s_hours;
 static int s_minutes;
+static int s_w, s_h;
+
+// Pivot y: the middle of the screen, or the moving centre (cf_pivot_y) for the current minute.
+static int pivot_y(void) {
+  return settings.fixedCentre ? s_h / 2 : cf_pivot_y(s_w, s_h, s_minutes);
+}
 
 static GPoint to_gpoint(CfPoint p) { return GPoint(p.x, p.y); }
 
@@ -85,44 +93,48 @@ static void sort_by_row(uint8_t *xy, int n) {
   }
 }
 
-static void build_tick_table(int w, int h) {
-  int n = 0;
-  CfPoint *all = malloc(sizeof(CfPoint) * CF_TICK_COUNT * CF_TICK_MAX_PIXELS);
-  for (int b = 0; b < CF_TICK_COUNT; b++) {
-    int32_t angle = b * TRIG_MAX_ANGLE / CF_TICK_COUNT;
-    float sin_a = (float)sin_lookup(angle) / TRIG_MAX_RATIO;
-    float cos_a = (float)cos_lookup(angle) / TRIG_MAX_RATIO;
-    float hx, hy;
-    cf_boundary_hit(w, h, CF_CORNER_R, sin_a, cos_a, &hx, &hy);
-    CfPoint px[CF_TICK_MAX_PIXELS];
-    // Major (5-minute) ticks are CF_STRIP_W deep; minor ticks are CF_MINOR_TICK_DEPTH deep.
-    bool is_major = cf_tick_is_major(b);
-    int depth = is_major ? CF_STRIP_W : CF_MINOR_TICK_DEPTH;
-    int inset = is_major ? 0 : CF_MINOR_TICK_INSET;
-    int count = cf_tick_pixels(w, h, CF_CORNER_R, hx, hy, depth, inset, px);
-    for (int i = 0; i < count; i++) {
-      all[n] = px[i];
-      // All ticks use the foreground colour (resolved at draw time).
-      s_tick_pixels[n] = (TickPixel){
-        (uint8_t)px[i].x, (uint8_t)px[i].y };
-      n++;
-    }
-  }
-  s_tick_pixel_count = n;
+static int s_tick_cy = -1;   // pivot y the tick table was built for
 
+// Builds the tick and shadow tables for rays from (w/2, cy). The transient buffers
+// (about 28 KB: the tick points, the shadow bitmap and the shadow points) are malloc'd per
+// rebuild rather than kept static: static ones would take that much of the ~70 KB app
+// heap permanently. If an allocation fails the previous tables stay in use.
+static void build_tick_table(int w, int h, int cy) {
+  CfPoint *all = malloc(sizeof(CfPoint) * CF_TICK_COUNT * CF_TICK_MAX_PIXELS);
   uint8_t *scratch = malloc(2 * ((w * h + 7) / 8));
   CfPoint *shadow = malloc(sizeof(CfPoint) * CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK);
-  int sn = cf_shadow_pixels(w, h, all, n, scratch, shadow, CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK);
-  for (int i = 0; i < sn; i++) {
-    s_shadow_pixels[i] = (ShadowPixel){ (uint8_t)shadow[i].x, (uint8_t)shadow[i].y };
+  if (all && scratch && shadow) {
+    int n = 0;
+    for (int b = 0; b < CF_TICK_COUNT; b++) {
+      int32_t angle = b * TRIG_MAX_ANGLE / CF_TICK_COUNT;
+      float sin_a = (float)sin_lookup(angle) / TRIG_MAX_RATIO;
+      float cos_a = (float)cos_lookup(angle) / TRIG_MAX_RATIO;
+      float hx, hy;
+      cf_boundary_hit_from(w, h, CF_CORNER_R, w / 2.0f, (float)cy, sin_a, cos_a, &hx, &hy);
+      // Major (5-minute) ticks are CF_STRIP_W deep; minor ticks are CF_MINOR_TICK_DEPTH deep.
+      bool is_major = cf_tick_is_major(b);
+      int depth = is_major ? CF_STRIP_W : CF_MINOR_TICK_DEPTH;
+      int inset = is_major ? 0 : CF_MINOR_TICK_INSET;
+      n += cf_tick_pixels_from(w, h, CF_CORNER_R, w / 2.0f, (float)cy, hx, hy, depth, inset, all + n);
+    }
+    int sn = cf_shadow_pixels(w, h, all, n, scratch, shadow, CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK);
+    // All ticks use the foreground colour (resolved at draw time).
+    for (int i = 0; i < n; i++) {
+      s_tick_pixels[i] = (TickPixel){ (uint8_t)all[i].x, (uint8_t)all[i].y };
+    }
+    s_tick_pixel_count = n;
+    for (int i = 0; i < sn; i++) {
+      s_shadow_pixels[i] = (ShadowPixel){ (uint8_t)shadow[i].x, (uint8_t)shadow[i].y };
+    }
+    s_shadow_pixel_count = sn;
+    // Row-major order: draw_ticks then re-fetches the row info only once per row.
+    sort_by_row((uint8_t *)s_tick_pixels, s_tick_pixel_count);
+    sort_by_row((uint8_t *)s_shadow_pixels, s_shadow_pixel_count);
+    s_tick_cy = cy;
   }
-  s_shadow_pixel_count = sn;
   free(shadow);
   free(scratch);
   free(all);
-  // Row-major order: draw_ticks then re-fetches the row info only once per row.
-  sort_by_row((uint8_t *)s_tick_pixels, s_tick_pixel_count);
-  sort_by_row((uint8_t *)s_shadow_pixels, s_shadow_pixel_count);
 }
 
 // Writes the shadow pixels (background colour), then the tick pixels, straight into
@@ -175,7 +187,12 @@ static void draw_warn_border(GContext *ctx, GRect bounds) {
 
 static void face_update_proc(Layer *l, GContext *ctx) {
   GRect bounds = layer_get_bounds(l);
-  GPoint center = GPoint(bounds.size.w / 2, bounds.size.h / 2);
+  s_w = bounds.size.w; s_h = bounds.size.h;
+  int cy = pivot_y();
+  GPoint center = GPoint(s_w / 2, cy);
+  // Rebuilt only when the integer pivot y changed (once a minute while it glides, never
+  // with the fixed centre). On an allocation failure the old tables stay until next time.
+  if (cy != s_tick_cy) { build_tick_table(s_w, s_h, cy); }
   GColor fg = theme.timeColor, bg = theme.timeBgColor;
 
   int scene = TestHooks_scene();
@@ -216,7 +233,8 @@ static void face_update_proc(Layer *l, GContext *ctx) {
 void ClockFace_init(Window *window) {
   Layer *root = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(root);
-  build_tick_table(bounds.size.w, bounds.size.h);
+  s_w = bounds.size.w; s_h = bounds.size.h;
+  build_tick_table(s_w, s_h, pivot_y());
   clock_face_layer = layer_create(bounds);
   layer_set_update_proc(clock_face_layer, face_update_proc);
   layer_add_child(root, clock_face_layer);

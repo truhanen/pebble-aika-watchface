@@ -804,6 +804,7 @@ static void draw_icon_silhouette(GContext *g, const WidgetCtx *c, GRect box, GCo
 }
 
 static void draw_icon_shadow(GContext *g, const WidgetCtx *c, GRect box, GColor bg) {
+  if (!WidgetShadow_needed(box, CF_SHADOW_R, false)) { return; }
   for (int i = 0; i < CF_SHADOW_OFFSET_COUNT; i++) {
     GRect b = box;
     b.origin.x += CF_SHADOW_OFFSETS[i][0];

@@ -34,6 +34,7 @@ run_one t_warn_border_calc   tests/test_warn_border_calc.c   src/c/warn_border_c
 run_one t_poll_state_calc    tests/test_poll_state_calc.c    src/c/poll_state_calc.c
 run_one t_clock_face_calc   tests/test_clock_face_calc.c   src/c/clock_face_calc.c -lm
 run_one t_widget_layout_calc tests/test_widget_layout_calc.c src/c/widget_layout_calc.c
+run_one t_shadow_skip_calc  tests/test_shadow_skip_calc.c  src/c/shadow_skip_calc.c src/c/clock_face_calc.c -lm
 run_one t_sleep_calc         tests/test_sleep_calc.c         src/c/sleep_calc.c
 run_one t_data_slots         tests/test_data_slots.c         src/c/data_slots.c
 run_one t_tuya_leds_parse    tests/test_tuya_leds_parse.c    src/c/tuya_leds_parse.c

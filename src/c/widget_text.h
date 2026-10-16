@@ -3,6 +3,7 @@
 // missing glyphs come from its measured fallback font, see widget_font_metrics.h),
 // the value shadow, and the GOTHIC_14 unit (inline, or stacked as a fraction).
 #include <pebble.h>
+#include "shadow_skip_calc.h"
 
 // Advance width of text in the widget font, summed over its font runs.
 int WidgetText_width(const char *text, int font);
@@ -18,6 +19,13 @@ void WidgetText_draw(GContext *ctx, const char *text, int font, int x, int ink_t
 // follows each run's font), then the text in `fg`.
 void WidgetText_drawValue(GContext *ctx, const char *text, int font, int x, int ink_top,
                           GColor fg, GColor bg);
+
+// Frame context for skipping shadows that cannot change a pixel: the hands and the widget
+// boxes, and the item whose widget is drawn next. NULL = every shadow is drawn.
+void WidgetText_setShadowScene(const SsScene *scene, int self);
+// Whether a shadow of reach `reach` around ink box `ink` can change a pixel. check_own_icon:
+// also test the icon / unit box of the item being drawn (a value; not its own icon).
+bool WidgetShadow_needed(GRect ink, int reach, bool check_own_icon);
 
 // Unit label in GOTHIC_14: "A/B" is a stacked fraction (numerator, a 1 px rule as
 // wide as the wider part, denominator), anything else one inline line.

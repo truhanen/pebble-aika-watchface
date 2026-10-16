@@ -4,6 +4,8 @@
 #include "widget_list.h"
 #include "widget_fonts.h"
 #include "widget_layout_calc.h"
+#include "widget_text.h"
+#include "shadow_skip_calc.h"
 #include "clock_face_calc.h"
 #include "test_hooks.h"
 
@@ -29,6 +31,7 @@ static WidgetSlot s_slots[WIDGET_POS_COUNT][MAX_WIDGET_SLOTS];
 static int s_slot_count[WIDGET_POS_COUNT];
 static Placed s_placed[MAX_PLACED];
 static int s_placed_count;
+static SsScene s_scene;   // this frame's hands and widget boxes, for skipping invisible shadows
 
 void WidgetLayer_init(void) {
   Widgets_init();
@@ -186,6 +189,19 @@ static void place(const Active *a, int pos, int screen_w, int slot_top, int slot
   p->has_icon = a->size.icon_w > 0;
   p->value_box = GRect(hp.value_x, slot_top + vp.ink_top, a->size.value_w, a->size.ink_h);
   p->icon_box = GRect(hp.icon_x, slot_top + vp.icon_top, a->size.icon_w, a->size.icon_h);
+  // The slot rect (everything the widget draws, see wl_place_v) is what other shadows must not touch.
+  SsItem *it = &s_scene.item[s_placed_count - 1];
+  int x0 = 1000, x1 = -1000;
+  if (p->has_value) { x0 = p->value_box.origin.x; x1 = x0 + p->value_box.size.w; }
+  if (p->has_icon) {
+    if (p->icon_box.origin.x < x0) { x0 = p->icon_box.origin.x; }
+    if (p->icon_box.origin.x + p->icon_box.size.w > x1) { x1 = p->icon_box.origin.x + p->icon_box.size.w; }
+  }
+  it->used = p->has_value || p->has_icon;
+  it->has_icon = p->has_icon;
+  it->icon = ss_rect(p->icon_box.origin.x, p->icon_box.origin.y, p->icon_box.size.w, p->icon_box.size.h);
+  it->slot = ss_rect(x0, slot_top, x1 - x0, slot_h);
+  s_scene.n_items = s_placed_count;
 }
 
 static void place_column(const Active *col, int n, int pos, GRect bounds) {
@@ -203,6 +219,8 @@ static void place_column(const Active *col, int n, int pos, GRect bounds) {
 
 void WidgetLayer_prepare(GRect bounds) {
   s_placed_count = 0;
+  s_scene.n_items = 0;
+  s_scene.has_hands = false;
   int sod = seconds_of_day();
   int ctop, cbottom;
   wl_column_bounds(bounds.size.h, CF_STRIP_W, &ctop, &cbottom);
@@ -228,9 +246,15 @@ void WidgetLayer_drawIcons(GContext *ctx) {
   }
 }
 
-void WidgetLayer_drawValues(GContext *ctx) {
+void WidgetLayer_drawValues(GContext *ctx, const CfHandPose *hour, const CfHandPose *minute, GPoint pivot) {
+  s_scene.hand[0] = *hour;
+  s_scene.hand[1] = *minute;
+  s_scene.cx = pivot.x;
+  s_scene.cy = pivot.y;
+  s_scene.has_hands = true;
   for (int i = 0; i < s_placed_count; i++) {
     const Placed *p = &s_placed[i];
+    WidgetText_setShadowScene(&s_scene, i);
     if (p->has_value) {
       Widgets_get(p->ctx.id)->draw_value(ctx, &p->ctx, p->value_box, GTextAlignmentLeft);
     }
@@ -238,4 +262,5 @@ void WidgetLayer_drawValues(GContext *ctx) {
       Widgets_get(p->ctx.id)->draw_icon(ctx, &p->ctx, p->icon_box);
     }
   }
+  WidgetText_setShadowScene(NULL, 0);
 }

@@ -1,6 +1,7 @@
 #include "widget_text.h"
 #include "widget_fonts.h"
 #include "widget_layout_calc.h"
+#include "shadow_skip_calc.h"
 #include <string.h>
 
 #define MAX_RUNS 6
@@ -93,7 +94,25 @@ static const int8_t SHADOW_THICK[][2] = {
   { -1, 0 }, { 0, 1 },
 };
 
-// Measured once; the shadow passes and the value only move the boxes.
+// The frame's hands and widget boxes, and the item being drawn: a shadow is skipped when
+// it cannot change a pixel (shadow_skip_calc.h). NULL scene = always draw.
+static const SsScene *s_scene;
+static int s_self;
+
+void WidgetText_setShadowScene(const SsScene *scene, int self) {
+  s_scene = scene;
+  s_self = self;
+}
+
+bool WidgetShadow_needed(GRect ink, int reach, bool check_own_icon) {
+  if (!s_scene) { return true; }
+  return ss_needs_shadow(s_scene, ss_rect(ink.origin.x, ink.origin.y, ink.size.w, ink.size.h),
+                         reach, s_self, check_own_icon);
+}
+
+// Measured once; the shadow passes and the value only move the boxes. A run's ink box is
+// its advance wide (+1 px for bearings) and runs from its box top to below the descenders
+// (+3 px for glyphs below the measured "g").
 void WidgetText_drawValue(GContext *ctx, const char *text, int font, int x, int ink_top,
                           GColor fg, GColor bg) {
   const WidgetFontMetrics *m = wl_metrics(font);
@@ -106,8 +125,12 @@ void WidgetText_drawValue(GContext *ctx, const char *text, int font, int x, int 
     int count = thin ? (int)(sizeof(SHADOW_THIN) / sizeof(SHADOW_THIN[0]))
                      : (int)(sizeof(SHADOW_THICK) / sizeof(SHADOW_THICK[0]));
     const int8_t (*offs)[2] = thin ? SHADOW_THIN : SHADOW_THICK;
-    for (int k = 0; k < count; k++) {
-      draw_run(ctx, &pt, i, rx + offs[k][0], offs[k][1]);
+    GRect ink = GRect(rx - 1, pt.run[i].y, pt.run[i].w + 2,
+                      wl_metrics(pt.run[i].font_idx)->desc_bottom + 3);
+    if (WidgetShadow_needed(ink, thin ? 1 : 2, true)) {
+      for (int k = 0; k < count; k++) {
+        draw_run(ctx, &pt, i, rx + offs[k][0], offs[k][1]);
+      }
     }
     rx += pt.run[i].w;
   }

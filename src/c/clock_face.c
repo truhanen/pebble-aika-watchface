@@ -207,7 +207,7 @@ static void face_update_proc(Layer *l, GContext *ctx) {
   graphics_context_set_fill_color(ctx, bg);
   graphics_fill_circle(ctx, center, CF_PIVOT_R);
 
-  WidgetLayer_drawValues(ctx);
+  WidgetLayer_drawValues(ctx, &hour, &minute, center);
 
   draw_ticks(ctx, bg, fg);
   draw_warn_border(ctx, bounds);

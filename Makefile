@@ -77,6 +77,11 @@ create_hand_position_screenshots:
 screenshots:
 	scripts/screenshots.sh
 
+# Regenerate only the animated hero GIF (screenshots/readme/hero*.gif, ~5 min).
+.PHONY: hero_gif
+hero_gif:
+	scripts/screenshots.sh --gif-only
+
 # Regenerate src/c/widget_font_metrics.h from emulator font specimens (~10 min).
 .PHONY: measure_fonts
 measure_fonts:

@@ -15,6 +15,7 @@ static int32_t s_deep_sleep_min = -1;
 static int32_t s_heart_rate = -1;
 static int32_t s_scene = 0;
 static int32_t s_date = -1;         // YYYYMMDD
+static int32_t s_seconds = -1;      // 0..59
 static int32_t s_font[WIDGET_POS_COUNT] = { -1, -1, -1 };   // by WIDGET_POS_*
 
 static bool read_key(DictionaryIterator *iter, uint32_t key, int32_t *out) {
@@ -36,6 +37,7 @@ bool TestHooks_handleMessage(DictionaryIterator *iter) {
   any |= read_key(iter, MESSAGE_KEY_TestHeartRate, &s_heart_rate);
   any |= read_key(iter, MESSAGE_KEY_TestScene, &s_scene);
   any |= read_key(iter, MESSAGE_KEY_TestDate, &s_date);
+  any |= read_key(iter, MESSAGE_KEY_TestSeconds, &s_seconds);
   any |= read_key(iter, MESSAGE_KEY_TestFontLeft, &s_font[WIDGET_POS_LEFT]);
   any |= read_key(iter, MESSAGE_KEY_TestFontRight, &s_font[WIDGET_POS_RIGHT]);
   any |= read_key(iter, MESSAGE_KEY_TestFontCenter, &s_font[WIDGET_POS_CENTER]);
@@ -64,10 +66,11 @@ void TestHooks_applyTime(struct tm *t) {
     int yy = (m < 3) ? y - 1 : y;
     t->tm_wday = (yy + yy / 4 - yy / 100 + yy / 400 + tt[m - 1] + d) % 7;
   }
+  if (s_seconds >= 0) { t->tm_sec = (int)(s_seconds % 60); }
   if (s_time < 0) { return; }
   t->tm_hour = (s_time / 100) % 24;
   t->tm_min = (s_time % 100) % 60;
-  t->tm_sec = 0;
+  if (s_seconds < 0) { t->tm_sec = 0; }
 }
 
 int TestHooks_scene(void) { return (int)s_scene; }

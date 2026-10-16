@@ -14,7 +14,7 @@
 // anything richer send the payload itself: scripts/emu.sh bytes SettingCenterWidgetList=...); returns true if one was present.
 bool TestHooks_handleMessage(DictionaryIterator *iter);
 
-// Overwrites hour/minute (TestTime) and the calendar date (TestDate, YYYYMMDD) in `t`
+// Overwrites hour/minute (TestTime), seconds (TestSeconds) and the calendar date (TestDate, YYYYMMDD) in `t`
 // while those overrides are active.
 void TestHooks_applyTime(struct tm *t);
 

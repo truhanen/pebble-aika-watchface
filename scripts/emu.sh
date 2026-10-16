@@ -38,11 +38,24 @@ send() {
   for kv in "$@"; do
     args+=("$(key_id "${kv%%=*}")=${kv#*=}")
   done
-  pebble send-app-message --emulator "$PLATFORM" --vnc --app-uuid "$UUID" "--$type" "${args[@]}" >/dev/null
+  # A send occasionally hangs in the pebble tool: give up after 20 s and retry.
+  local try
+  for try in 1 2 3 4; do
+    perl -e 'alarm 20; exec @ARGV' pebble send-app-message --emulator "$PLATFORM" --vnc \
+      --app-uuid "$UUID" "--$type" "${args[@]}" >/dev/null 2>&1 && return 0
+    sleep 2
+  done
+  echo "emu.sh: send-app-message failed: $*" >&2
+  return 1
 }
 
 shot() {
-  pebble screenshot --vnc --no-open "$SHOTS/$1.png" >/dev/null 2>&1
+  local try
+  for try in 1 2 3 4; do
+    perl -e 'alarm 30; exec @ARGV' pebble screenshot --vnc --no-open "$SHOTS/$1.png" >/dev/null 2>&1 \
+      && break
+    sleep 2
+  done
   echo "$SHOTS/$1.png"
 }
 

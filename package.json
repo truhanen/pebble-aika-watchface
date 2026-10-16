@@ -96,7 +96,8 @@
       "TestFontCenter",
       "WeatherRainMax",
       "SettingPrecipUnit",
-      "TestDate"
+      "TestDate",
+      "TestSeconds"
     ],
     "resources": {
       "media": [

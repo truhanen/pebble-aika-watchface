@@ -98,7 +98,8 @@
       "SettingPrecipUnit",
       "TestDate",
       "TestSeconds",
-      "SettingMovingCentre"
+      "SettingMovingCentre",
+      "SettingMinuteOffscreen"
     ],
     "resources": {
       "media": [

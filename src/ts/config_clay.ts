@@ -112,7 +112,12 @@ const config = [
       { type: 'toggle', messageKey: 'SettingMovingCentre', label: 'Moving clock centre',
         defaultValue: true, description:
         'Shifts the centre up while the minute hand points at the top edge and down at the ' +
-        'bottom, so the very long minute hand looks less stretched.' },
+        'bottom, so the minute hand reaches those edges as well as the sides.' },
+      // Default: off = the finite minute hand with its head (settings.c set_defaults, minuteOffscreen).
+      { type: 'toggle', messageKey: 'SettingMinuteOffscreen', label: 'Minute hand runs off the screen',
+        defaultValue: false, description:
+        'Off: a finite minute hand whose head touches the screen edge. On: a longer hand that ' +
+        'always runs off the edge.' },
     ],
   },
 

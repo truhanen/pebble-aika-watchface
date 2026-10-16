@@ -91,6 +91,10 @@ typedef struct {
   // Clock centre. Stored INVERTED (0 = the centre moves, the default) so a blob written
   // before this field existed -- whose trailing bytes are zero -- reads as "moving".
   uint8_t fixedCentre;
+
+  // Minute hand style: 0 = finite with its head, touching the edge (the default), 1 = runs off
+  // the screen. Zero in a legacy blob, so it reads as the default.
+  uint8_t minuteOffscreen;
 } Settings;
 
 // Dynamic settings (calculated at runtime based on currently-selected widgets)

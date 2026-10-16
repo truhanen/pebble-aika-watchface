@@ -6,8 +6,8 @@
 // rebuilt from the pivot whenever its integer y changes.
 //
 // Hand dimensions are those of the Nyquist watchface (truhanen/
-// pebble-nyquist-watchface, GPL-3.0); the minute hand is lengthened so it always
-// runs off the screen. Each hand is a pentagon whose five corners are computed from
+// pebble-nyquist-watchface, GPL-3.0); the minute hand is lengthened: by default its tip just
+// touches the screen edge it points at; optionally it runs off the screen. Each hand is a pentagon whose five corners are computed from
 // the ideal geometry and rounded once to the nearest pixel (clock_face_calc.c),
 // then filled and outlined with the plain GContext API.
 #include <pebble.h>
@@ -189,7 +189,7 @@ static void face_update_proc(Layer *l, GContext *ctx) {
                        + s_minutes * TRIG_MAX_ANGLE / 720;
   CfHandPose hour, minute;
   hand_pose(center, hour_angle, CF_HOUR_SHOULDER, CF_HOUR_WIDTH, CF_HOUR_APEX_EXT, &hour);
-  hand_pose(center, minute_angle, CF_MINUTE_SHOULDER, CF_MINUTE_WIDTH, CF_MINUTE_APEX_EXT, &minute);
+  hand_pose(center, minute_angle, CF_MINUTE_SHOULDER(settings.minuteOffscreen), CF_MINUTE_WIDTH, CF_MINUTE_APEX_EXT, &minute);
 
   // Both hands get a bg halo so they separate from the widget icons/units below them.
   draw_hand_border(ctx, &hour, CF_HAND_EDGE_W + 2 * CF_HAND_HALO_W, bg);

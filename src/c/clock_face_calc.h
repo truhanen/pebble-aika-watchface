@@ -17,12 +17,27 @@
 #define CF_HAND_HALO_W         2   // bg halo around each hand, each side
 #define CF_PIVOT_R             3
 
-// Minute shoulder: Nyquist's is 86. Ours is the shortest length whose stroked
-// shoulder corners lie at least CF_OFFSCREEN_MARGIN px outside the screen at every
-// minute, so the hand always runs off the edge (tests/test_clock_face_calc.c
-// asserts both properties).
-#define CF_MINUTE_SHOULDER   153
+// Minute hand length, two styles (setting minuteOffscreen; default FINITE, see set_defaults):
+//
+// FINITE (CF_MINUTE_SHOULDER_FINITE): the hand ends in its head (apex). The hand's ink tip is the
+// apex plus half the outline stroke, so with this shoulder the tip of a hand pointing straight
+// at an edge from CF_HAND_EDGE_DIST px away (the pivot is at x = w/2 and, with the moving
+// centre, 100 px from the top/bottom edge when the minute hand points there) lands on the
+// screen's outermost pixel row/column. Nyquist's own shoulder is 86. With the fixed centre
+// (pivot y = 114) the hand stops 14 px short of the top/bottom edge.
+#define CF_HAND_EDGE_DIST        100
+#define CF_MINUTE_SHOULDER_FINITE (CF_HAND_EDGE_DIST - CF_MINUTE_APEX_EXT - CF_HAND_EDGE_W / 2)
+
+// OFF-SCREEN (CF_MINUTE_SHOULDER_OFFSCREEN): the shortest length whose stroked shoulder corners
+// lie at least CF_OFFSCREEN_MARGIN px outside the screen at every minute, so the hand always
+// runs off the edge and its head is never visible (tests/test_clock_face_calc.c asserts both
+// properties).
+#define CF_MINUTE_SHOULDER_OFFSCREEN 153
 #define CF_OFFSCREEN_MARGIN    5
+
+// The minute shoulder for the setting (offscreen != 0: the hand runs off the screen).
+#define CF_MINUTE_SHOULDER(offscreen) \
+  ((offscreen) ? CF_MINUTE_SHOULDER_OFFSCREEN : CF_MINUTE_SHOULDER_FINITE)
 
 // Edge ticks: one per minute boundary b = 0..59, CF_TICK_LEN px long on the outermost
 // pixel row, CF_STRIP_W px deep for 5-minute ticks, CF_MINOR_TICK_DEPTH px deep for

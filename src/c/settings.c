@@ -52,6 +52,7 @@ static void set_defaults(void) {
   settings.btWarnColor = GColorYellow;
 
   settings.fixedCentre = 0;   // moving clock centre ON
+  settings.minuteOffscreen = 0;   // minute hand FINITE (with its head); 1 = runs off the screen
 
   // A fresh install, every widget in its position's default font. Each edge groups an
   // icon over its value in the top corner (weather icon + temperature, battery icon +
@@ -116,6 +117,7 @@ void Settings_loadFromStorage() {
   if (settings.batteryWarnDaysTenths > 100) { settings.batteryWarnDaysTenths = 0; }
   if (settings.btWarnBorder > 1) { settings.btWarnBorder = 0; }
   if (settings.fixedCentre > 1) { settings.fixedCentre = 0; }
+  if (settings.minuteOffscreen > 1) { settings.minuteOffscreen = 0; }
 
 #ifdef SCREENSHOT_FIXTURES
   // Appstore screenshot scene config (no phone); not persisted.

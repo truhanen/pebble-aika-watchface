@@ -195,6 +195,7 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   Tuple *batWarnColor_tuple = dict_find(iterator, MESSAGE_KEY_SettingBatteryWarnColor);
   Tuple *btWarnBorder_tuple = dict_find(iterator, MESSAGE_KEY_SettingBtWarnBorder);
   Tuple *movingCentre_tuple = dict_find(iterator, MESSAGE_KEY_SettingMovingCentre);
+  Tuple *minuteOffscreen_tuple = dict_find(iterator, MESSAGE_KEY_SettingMinuteOffscreen);
   Tuple *btWarnColor_tuple = dict_find(iterator, MESSAGE_KEY_SettingBtWarnColor);
   Tuple *elecQuietStart_tuple = dict_find(iterator, MESSAGE_KEY_SettingElecQuietStart);
   Tuple *elecQuietEnd_tuple = dict_find(iterator, MESSAGE_KEY_SettingElecQuietEnd);
@@ -251,6 +252,9 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   }
   if(movingCentre_tuple != NULL) {
     settings.fixedCentre = movingCentre_tuple->value->int32 ? 0 : 1;
+  }
+  if(minuteOffscreen_tuple != NULL) {
+    settings.minuteOffscreen = minuteOffscreen_tuple->value->int32 ? 1 : 0;
   }
   if(btWarnColor_tuple != NULL) {
     settings.btWarnColor = GColorFromHEX(btWarnColor_tuple->value->int32);

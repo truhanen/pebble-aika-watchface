@@ -26,19 +26,6 @@ static CfHandPose minute_pose(int shoulder, double m) {
   return p;
 }
 
-static int offscreen(CfPoint p) {
-  int m = CF_OFFSCREEN_MARGIN;
-  return p.x <= -m || p.x >= W - 1 + m || p.y <= -m || p.y >= H - 1 + m;
-}
-
-static int shoulders_offscreen(int shoulder) {
-  for (int m = 0; m < 60; m++) {
-    CfHandPose p = minute_pose(shoulder, m);
-    if (!offscreen(p.outer_left) || !offscreen(p.outer_right)) { return 0; }
-  }
-  return 1;
-}
-
 static void test_snap(void) {
   assert(cf_snap(92.5f) == 93);
   assert(cf_snap(92.49f) == 92);
@@ -71,9 +58,61 @@ static void test_nyquist_minute_one(void) {
   assert(p.inner_left.x - CX == -9 && p.inner_left.y - CY == 17);
 }
 
+static int offscreen(CfPoint p) {
+  int m = CF_OFFSCREEN_MARGIN;
+  return p.x <= -m || p.x >= W - 1 + m || p.y <= -m || p.y >= H - 1 + m;
+}
+
+static int shoulders_offscreen(int shoulder) {
+  for (int m = 0; m < 60; m++) {
+    CfHandPose p = minute_pose(shoulder, m);
+    if (!offscreen(p.outer_left) || !offscreen(p.outer_right)) { return 0; }
+  }
+  return 1;
+}
+
 static void test_minute_shoulder_is_minimal_offscreen(void) {
-  assert(shoulders_offscreen(CF_MINUTE_SHOULDER));
-  assert(!shoulders_offscreen(CF_MINUTE_SHOULDER - 1));
+  assert(shoulders_offscreen(CF_MINUTE_SHOULDER_OFFSCREEN));
+  assert(!shoulders_offscreen(CF_MINUTE_SHOULDER_OFFSCREEN - 1));
+}
+
+// Ink extent of the stroked hand: the apex pushed out by half the outline stroke (the
+// outermost ink of the head; measured in the emulator, see commit message).
+#define TIP_REACH (CF_HAND_EDGE_W / 2)
+
+// Hand at minute m (integer or not) from pivot y cy: the ink stays on the screen (to within the 1 px right/bottom overshoot below).
+static void check_ink_on_screen(int cy, int m) {
+  CfHandPose p;
+  double a = rad_of_minute(m);
+  cf_hand_pose(CX, cy, (float)sin(a), (float)cos(a), CF_MINUTE_SHOULDER_FINITE, CF_MINUTE_WIDTH,
+               CF_MINUTE_APEX_EXT, CF_HAND_TAIL, &p);
+  // Every corner's ink reaches at most TIP_REACH beyond it (the stroke half-width).
+  CfPoint c[5] = { p.inner_left, p.inner_right, p.outer_left, p.outer_right, p.apex };
+  for (int i = 0; i < 5; i++) {
+    assert(c[i].x - TIP_REACH >= 0 && c[i].x + TIP_REACH <= W);
+    assert(c[i].y - TIP_REACH >= 0 && c[i].y + TIP_REACH <= H);
+  }
+}
+
+static void test_minute_hand_finite(void) {
+  // The pivot pixel is 100 px from the left/top edge but 99 from the right/bottom one (its
+  // own pixel counts on that side), so the ink reaches the outermost row/column at the top
+  // and left and overshoots by 1 px (clipped by the screen) at the right and bottom.
+  assert(CF_MINUTE_SHOULDER_FINITE + CF_MINUTE_APEX_EXT + TIP_REACH == CF_HAND_EDGE_DIST);
+  // Cardinal minutes with the moving pivot: the tip ink lands on the outermost row/column.
+  CfHandPose p;
+  cf_hand_pose(CX, 100, 0.0f, 1.0f, CF_MINUTE_SHOULDER_FINITE, CF_MINUTE_WIDTH, CF_MINUTE_APEX_EXT, CF_HAND_TAIL, &p);
+  assert(p.apex.y - TIP_REACH == 0);                       // :00 top
+  cf_hand_pose(CX, 100, 1.0f, 0.0f, CF_MINUTE_SHOULDER_FINITE, CF_MINUTE_WIDTH, CF_MINUTE_APEX_EXT, CF_HAND_TAIL, &p);
+  assert(p.apex.x + TIP_REACH == W);                       // :15 right: last column, +1 clipped
+  cf_hand_pose(CX, 128, 0.0f, -1.0f, CF_MINUTE_SHOULDER_FINITE, CF_MINUTE_WIDTH, CF_MINUTE_APEX_EXT, CF_HAND_TAIL, &p);
+  assert(p.apex.y + TIP_REACH == H);                       // :30 bottom: last row, +1 clipped
+  cf_hand_pose(CX, 100, -1.0f, 0.0f, CF_MINUTE_SHOULDER_FINITE, CF_MINUTE_WIDTH, CF_MINUTE_APEX_EXT, CF_HAND_TAIL, &p);
+  assert(p.apex.x - TIP_REACH == 0);                       // :45 left
+  // Ink never leaves the screen (at most the 1 px clipped overshoot): every minute, every pivot y the moving centre can take.
+  for (int cy = 100; cy <= 128; cy++) {
+    for (int m = 0; m < 60; m++) { check_ink_on_screen(cy, m); }
+  }
 }
 
 static int min_edge_dist(CfPoint p) {
@@ -622,6 +661,7 @@ int main(void) {
   test_nyquist_twelve_oclock();
   test_nyquist_minute_one();
   test_minute_shoulder_is_minimal_offscreen();
+  test_minute_hand_finite();
   test_boundary_hit();
   test_band();
   test_radius_zero_is_old_geometry();

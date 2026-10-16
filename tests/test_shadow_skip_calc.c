@@ -13,6 +13,9 @@
 #define CX 100
 #define CY 114
 
+// Minute shoulder under test: main() runs every test for both minute hand styles.
+static int g_minute_shoulder;
+
 static CfHandPose pose(int shoulder, int width, int ext, double deg) {
   CfHandPose p;
   double a = deg * M_PI / 180.0;
@@ -24,7 +27,7 @@ static SsScene scene(double hour_deg, double min_deg) {
   SsScene s;
   memset(&s, 0, sizeof s);
   s.hand[0] = pose(CF_HOUR_SHOULDER, CF_HOUR_WIDTH, CF_HOUR_APEX_EXT, hour_deg);
-  s.hand[1] = pose(CF_MINUTE_SHOULDER, CF_MINUTE_WIDTH, CF_MINUTE_APEX_EXT, min_deg);
+  s.hand[1] = pose(g_minute_shoulder, CF_MINUTE_WIDTH, CF_MINUTE_APEX_EXT, min_deg);
   s.has_hands = true;
   s.cx = CX;
   s.cy = CY;
@@ -109,7 +112,7 @@ static void test_clear(void) {
 // reaches SS_HAND_REACH beyond. A rect whose left edge sits exactly at the reach touches
 // (true); the same rect SS_MARGIN+1 px farther is clear.
 static void test_edge_and_margin(void) {
-  CfHandPose h = pose(CF_MINUTE_SHOULDER, CF_MINUTE_WIDTH, CF_MINUTE_APEX_EXT, 0);
+  CfHandPose h = pose(g_minute_shoulder, CF_MINUTE_WIDTH, CF_MINUTE_APEX_EXT, 0);
   int right = h.outer_right.x;   // straight section, x of the right side
   int y = 60;
   // closed rect x0 - margin == right + reach  -> touching
@@ -136,7 +139,7 @@ static void test_rect_inside_polygon(void) {
 
 static void test_rotations(void) {
   for (int deg = 0; deg < 360; deg += 15) {
-    CfHandPose h = pose(CF_MINUTE_SHOULDER, CF_MINUTE_WIDTH, CF_MINUTE_APEX_EXT, deg);
+    CfHandPose h = pose(g_minute_shoulder, CF_MINUTE_WIDTH, CF_MINUTE_APEX_EXT, deg);
     double a = deg * M_PI / 180.0;
     // a point on the axis 60 px out is on the hand; one 40 px to the side is clear
     int ax = (int)lround(CX + 60 * sin(a)), ay = (int)lround(CY - 60 * cos(a));
@@ -187,13 +190,17 @@ static void test_items(void) {
 }
 
 int main(void) {
-  test_clear();
-  test_edge_and_margin();
-  test_rect_inside_polygon();
-  test_rotations();
-  test_pivot();
-  test_items();
-  test_no_false_negatives();
+  int shoulders[2] = { CF_MINUTE_SHOULDER_FINITE, CF_MINUTE_SHOULDER_OFFSCREEN };
+  for (int i = 0; i < 2; i++) {
+    g_minute_shoulder = shoulders[i];
+    test_clear();
+    test_edge_and_margin();
+    test_rect_inside_polygon();
+    test_rotations();
+    test_pivot();
+    test_items();
+    test_no_false_negatives();
+  }
   printf("shadow_skip_calc: all tests passed\n");
   return 0;
 }

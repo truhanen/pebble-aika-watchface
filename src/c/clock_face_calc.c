@@ -7,7 +7,8 @@ int cf_snap(float v) {
 // Moving clock centre: y of the pivot, x stays at w/2. top = w/2 is the pivot whose
 // distance to the top edge equals that to the side edges, bottom = h - w/2 likewise.
 // The minute hand points into the top edge for minutes 52.5..7.5 and the bottom edge for
-// 22.5..37.5; between, the pivot glides linearly (down 7.5..22.5, up 37.5..52.5).
+// 22.5..37.5; between, the pivot glides along a smoothstep ease (down 7.5..22.5, up
+// 37.5..52.5): s = 3t^2 - 2t^3, so it starts and stops gently at the hold positions.
 int cf_pivot_y(int w, int h, int minute) {
   int top = w / 2, span = h - w;   // bottom - top = h - w
   int m = ((minute % 60) + 60) % 60;
@@ -19,7 +20,8 @@ int cf_pivot_y(int w, int h, int minute) {
   }
   if (u < 0) { u = 0; }
   if (u > 30) { u = 30; }
-  return top + (span * u + 15) / 30;
+  // smoothstep in integers: t = u/30, s * 27000 = u^2 * (90 - 2u)
+  return top + (span * u * u * (90 - 2 * u) + 13500) / 27000;
 }
 
 void cf_hand_pose(float cx, float cy, float sin_a, float cos_a, int shoulder,

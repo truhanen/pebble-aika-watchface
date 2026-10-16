@@ -566,14 +566,14 @@ static void test_moving_pivot(void) {
 // edge the minute hand points at (W/2) at :00, :15, :30 and :45.
 static void test_pivot_profile(void) {
   static const int want_first_half[31] = {
-    100, 100, 100, 100, 100, 100, 100, 100,                       // 0..7
-    101, 103, 105, 107, 108, 110, 112, 114, 116, 118, 120, 121, 123, 125, 127,   // 8..22
-    128, 128, 128, 128, 128, 128, 128, 128 };                     // 23..30
+    100, 100, 100, 100, 100, 100, 100, 100,                       // 0..7 (hold)
+    100, 101, 102, 104, 106, 109, 111, 114, 117, 119, 122, 124, 126, 127, 128,   // 8..22 (eased glide)
+    128, 128, 128, 128, 128, 128, 128, 128 };                     // 23..30 (hold)
   for (int m = 0; m <= 30; m++) {
     assert(cf_pivot_y(W, H, m) == want_first_half[m]);
     if (m > 0 && m < 30) { assert(cf_pivot_y(W, H, 60 - m) == want_first_half[m]); }   // mirror
   }
-  assert(cf_pivot_y(W, H, 37) == 128 && cf_pivot_y(W, H, 38) == 127 && cf_pivot_y(W, H, 52) == 101);
+  assert(cf_pivot_y(W, H, 37) == 128 && cf_pivot_y(W, H, 39) == 127 && cf_pivot_y(W, H, 51) == 101);
   assert(cf_pivot_y(W, H, 53) == 100 && cf_pivot_y(W, H, 0) == 100 && cf_pivot_y(W, H, 60) == 100);
   for (int m = 8; m < 23; m++) { assert(cf_pivot_y(W, H, m) >= cf_pivot_y(W, H, m - 1)); }      // down
   for (int m = 38; m < 53; m++) { assert(cf_pivot_y(W, H, m) <= cf_pivot_y(W, H, m - 1)); }     // up

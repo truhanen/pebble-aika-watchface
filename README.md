@@ -2,14 +2,14 @@
 
 An analog watchface for the Pebble Time 2 (emery). It uses bold Nyquist-style hands, 60 separate edge ticks (one per minute boundary, each 5 px long on the outer edge, which follows the screen frame's rounded corners (tunable `CF_CORNER_R`, 10 px by default), 5 px deep for 5-minute ticks and 1 px deep, set 1 px in from the screen edge, for 1-minute ticks, with sides pointing at the clock centre, all in the time text colour; each with a 2 px background-colour shadow), and configurable widgets along the left, right, top and bottom edges. The clock centre moves vertically (optional, on by default): up while the minute hand points at the top edge and down at the bottom, so the minute hand reaches the top and bottom edges as well as the sides; by default the minute hand always runs off the screen, optionally it is finite, its head touching the screen edge when it points straight at one (config: Minute hand runs off the screen, off); the ticks are recomputed from the moving centre so each hand still points exactly at its tick.
 
-<p><img src="screenshots/readme/hero@2x.gif" width="200" alt="Nyquist watchface: a tour of the layouts and themes"></p>
+<p><img src="screenshots/readme/01-hero@2x.gif" width="200" alt="Nyquist watchface: a tour of the layouts and themes"></p>
 
 <table>
   <tr>
-    <td align="center"><img src="screenshots/readme/01-little-widgets.png" width="150" alt="A few widgets"><br>A few widgets</td>
-    <td align="center"><img src="screenshots/readme/02-many-widgets.png" width="150" alt="Many widgets"><br>Many widgets</td>
-    <td align="center"><img src="screenshots/readme/03-leco.png" width="150" alt="Leco fonts"><br>Leco fonts</td>
-    <td align="center"><img src="screenshots/readme/04-night.png" width="150" alt="Night colours"><br>Night colours</td>
+    <td align="center"><img src="screenshots/readme/02-little-widgets.png" width="150" alt="A few widgets"><br>A few widgets</td>
+    <td align="center"><img src="screenshots/readme/03-many-widgets.png" width="150" alt="Many widgets"><br>Many widgets</td>
+    <td align="center"><img src="screenshots/readme/04-leco.png" width="150" alt="Leco fonts"><br>Leco fonts</td>
+    <td align="center"><img src="screenshots/readme/05-night.png" width="150" alt="Night colours"><br>Night colours</td>
   </tr>
 </table>
 

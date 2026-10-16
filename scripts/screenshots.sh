@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Regenerates the README / appstore screenshots on the emery emulator: the animated hero
-# GIF (screenshots/readme/hero.gif, hero@2x.gif) and the stills, which are frames of it
+# GIF (screenshots/readme/01-hero.gif, 01-hero@2x.gif) and the stills, which are frames of it
 # copied under descriptive names (STILLS below; native 200x228, unframed). The output is
 # version-controlled; run it again after a visual change.
 #
@@ -143,7 +143,7 @@ EOF
 # The size cycle goes to the smaller fonts (units off and back on there), back to normal,
 # then to the Leco fonts, which stay for the colour frames.
 # README / appstore stills: "<GIF frame name> <still name>", copied to
-# screenshots/readme/NN-<still name>.png, numbered in this order.
+# screenshots/readme/NN-<still name>.png, numbered from 02 in this order (01 is the GIF).
 STILLS="corners little-widgets
 grow3 many-widgets
 bigger leco
@@ -578,18 +578,19 @@ if [ $want_gif = 1 ]; then
     gifargs+=(-delay "$FRAME_DELAY" "$f")
     elapsed=$((elapsed + FRAME_DELAY))
   done
-  echo "Assembling hero.gif ($fi frames, $((elapsed / 100)).$((elapsed % 100)) s)..."
+  echo "Assembling 01-hero.gif ($fi frames, $((elapsed / 100)).$((elapsed % 100)) s)..."
   # One palette over all frames: the watch is 8-bit colour, so this is lossless.
   magick "$GIFDIR"/[0-9][0-9]-*.png +append -colors 256 -unique-colors "$WORK/palette.png"
   magick -loop 0 "${gifargs[@]}" -dither None -remap "$WORK/palette.png" \
-    -layers OptimizePlus "$OUT/hero.gif"
+    -layers OptimizePlus "$OUT/01-hero.gif"
   # 2x nearest-neighbour version: crisp when the README shows it larger than 200 px.
   magick -loop 0 "${gifargs[@]}" -filter point -resize 200% -dither None \
-    -remap "$WORK/palette.png" -layers OptimizePlus "$OUT/hero@2x.gif"
-  ls -l "$OUT"/hero*.gif | awk '{print $5, $9}'
+    -remap "$WORK/palette.png" -layers OptimizePlus "$OUT/01-hero@2x.gif"
+  rm -f "$OUT"/hero*.gif   # pre-numbering names
+  ls -l "$OUT"/01-hero*.gif | awk '{print $5, $9}'
   # The stills: chosen GIF frames under descriptive names, numbered in STILLS order.
   rm -f "$OUT"/[0-9][0-9]-*.png
-  si=0
+  si=1   # 01 is the GIF
   while read -r frame still; do
     [ -n "$frame" ] || continue
     src=$(ls "$GIFDIR"/[0-9][0-9]-"$frame".png 2>/dev/null | head -1)

@@ -23,8 +23,8 @@ appstore (the listing looks bare without one).
 - **Banner** — optional for a watchface; none yet.
 - **Screenshots** — ≥1 per supported platform, **unframed**, native resolution.
   Generated on the emulator with `scripts/screenshots.sh` (`make screenshots`):
-  `screenshots/readme/hero.gif` plus the stills `01-little-widgets.png`,
-  `02-many-widgets.png`, `03-leco.png` and `04-night.png` (frames of the GIF, 200x228).
+  `screenshots/readme/01-hero.gif` plus the stills `02-little-widgets.png`,
+  `03-many-widgets.png`, `04-leco.png` and `05-night.png` (frames of the GIF, 200x228).
   Version-controlled because the main README shows them too.
 
 ## Status

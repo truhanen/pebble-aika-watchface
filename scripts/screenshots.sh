@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# Regenerates the README screenshots (screenshots/readme/NN-name.png, native
-# 200x228, unframed) and the animated hero GIF (screenshots/readme/hero.gif) on the
-# emery emulator. The output is version-controlled; run it again after a visual change.
+# Regenerates the README / appstore screenshots on the emery emulator: the animated hero
+# GIF (screenshots/readme/hero.gif, hero@2x.gif) and the stills, which are frames of it
+# copied under descriptive names (STILLS below; native 200x228, unframed). The output is
+# version-controlled; run it again after a visual change.
 #
-#   scripts/screenshots.sh            rebuild, run every scene, assemble the GIF
-#   scripts/screenshots.sh --no-gif   stills only
-#   scripts/screenshots.sh scene...   only the named scenes (no GIF), e.g. "packed"
-#   scripts/screenshots.sh --gif-only only the hero GIF (frames: GIFFRAMES below; make hero_gif)
+#   scripts/screenshots.sh            rebuild, render the GIF frames, assemble the GIF and stills
+#   scripts/screenshots.sh scene...   only the named scenes (SCENES below; no GIF) to
+#                                     screenshots/test/scenes/, e.g. "default"
 #   scripts/screenshots.sh --keep scene...   same on an already running TEST_HOOKS emulator:
 #                                     no build, no fresh start, nothing stopped (tuning)
+# GIF frames are saved to screenshots/gif_frames/ (gitignored). --gif-only (make hero_gif) is
+# the same as no arguments.
 #
 # Needs: pebble-tool, ImageMagick (magick), python3.
 # The screenshots come from a TEST_HOOKS build (fixed time/date/battery/health data over
@@ -131,8 +133,19 @@ EOF
 # `A B | C D` stacks A B at the top and C D at the bottom (spacers are added
 # automatically, see autopad); bottom groups are listed top to bottom, so the corner
 # widget is the last one. `colors 0xFG 0xBG` sets the time and background colours.
-# The "bigger" frame keeps the date at 5 (a larger date hits the corner icons) and the digital
-# time at 7 (a larger one hits the weekday and seconds widgets).
+# The "bigger" frame is all Leco, one step up: S Gothic (3) -> M Leco (6), M Gothic (5) ->
+# L Leco (9), L Bitham (7) -> XL Leco (10); the date, weekday, steps and heart rate take
+# M Leco (6) (the date then doesn't hit the corner icons). Weekday and seconds are M Gothic (5)
+# in the normal frames and S Gothic (3) in the smaller frame; seconds are L Leco (9) in the
+# Leco frames. So they never touch the digital time.
+# The last (2 s) frame repeats the Leco fonts.
+# README / appstore stills: "<GIF frame name> <still name>", copied to
+# screenshots/readme/NN-<still name>.png, numbered in this order.
+STILLS="corners little-widgets
+grow3 many-widgets
+bigger leco
+color3 night"
+
 GIFFRAMES=$(cat <<'EOF'
 gifdefaults
 crypto 200,BTC/USD,62
@@ -178,9 +191,9 @@ center date_iso/5 digital/7
 
 frame bigger
 delay 50
-left weather_icon weather/10:u forecast/5:u rain12/5:u | steps/7:i hr/7:i date_wkday/5
-right bat_icon bat/7:u battery_days/7:u | elec/5:u 216/5:u 200/5:u seconds/5
-center date_iso/5 digital/7
+left weather_icon weather/10:u forecast/6:u rain12/6:u | steps/6:i hr/6:i date_wkday/6
+right bat_icon bat/9:u battery_days/9:u | elec/6:u 216/6:u 200/6:u seconds/9
+center date_iso/6 digital/10
 
 frame bigger-back
 delay 50
@@ -235,9 +248,9 @@ colors 0xFFAA00 0x000055
 
 frame color4
 delay 200
-left weather_icon weather/7:u forecast/3:u rain12/3:u | steps/5:i hr/5:i date_wkday/5
-right bat_icon bat/5:u battery_days/5:u | elec/3:u 216/3:u 200/3:u seconds/5
-center date_iso/5 digital/7
+left weather_icon weather/10:u forecast/6:u rain12/6:u | steps/6:i hr/6:i date_wkday/6
+right bat_icon bat/9:u battery_days/9:u | elec/6:u 216/6:u 200/6:u seconds/9
+center date_iso/6 digital/10
 colors 0xFFFFFF 0xAA0000
 EOF
 )
@@ -252,15 +265,13 @@ SHOTS="$ROOT/screenshots/test"
 GIF_DELAY=200   # centiseconds per hero frame
 
 want_gif=1
-gif_only=0
 keep=0
 only=()
 for a in "$@"; do
   case "$a" in
-    --no-gif) want_gif=0 ;;
-    --gif-only) gif_only=1; want_gif=0 ;;
+    --gif-only) ;;
     --keep) keep=1 ;;
-    -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
     *) only+=("$a"); want_gif=0 ;;
   esac
 done
@@ -506,17 +517,13 @@ while IFS= read -r line; do
 done <<<"$GIFFRAMES"
 
 selected=()
-if [ $gif_only = 1 ] && [ ${#only[@]} -eq 0 ]; then
-  selected=()
-elif [ ${#only[@]} -gt 0 ]; then
+if [ ${#only[@]} -gt 0 ]; then
   for o in "${only[@]}"; do
     found=0
     for n in "${names[@]}"; do [ "$n" = "$o" ] && found=1; done
     [ $found = 1 ] || die "unknown scene: $o (have: ${names[*]})"
     selected+=("$o")
   done
-else
-  selected=("${names[@]}")
 fi
 
 # --- build + emulator -----------------------------------------------------------------
@@ -530,8 +537,8 @@ echo "Fresh emulator..."
 sleep 4   # the emulator needs a moment after install before it takes AppMessages
 fi
 
-mkdir -p "$OUT" "$SHOTS"
-if [ ${#only[@]} -eq 0 ] && [ $gif_only = 0 ]; then rm -f "$OUT"/[0-9][0-9]-*.png "$OUT"/hero*.gif; fi
+SCENEDIR="$SHOTS/scenes"
+mkdir -p "$OUT" "$SCENEDIR"
 
 # Index = position in the full scene list, so a single-scene run keeps its number.
 idx=0
@@ -543,14 +550,14 @@ for n in "${names[@]}"; do
   CAPTION=""
   while IFS= read -r l; do apply_line "$l"; done <"$WORK/defaults"
   while IFS= read -r l; do apply_line "$l"; done <"$WORK/scene.$n"
-  capture "$OUT/$(printf '%02d' $idx)-$n.png"
+  capture "$SCENEDIR/$(printf '%02d' $idx)-$n.png"
 done
 
 # --- hero GIF -------------------------------------------------------------------------
 # Frames: GIFFRAMES. The fake clock starts at 09:00:00 and runs one watch minute per GIF
 # second (frame i shows 09:00:00 + (sum of the earlier delays) x 60 s).
-if [ $want_gif = 1 ] || [ $gif_only = 1 ]; then
-  GIFDIR="$SHOTS/gif"; rm -rf "$GIFDIR"; mkdir -p "$GIFDIR"
+if [ $want_gif = 1 ]; then
+  GIFDIR="$ROOT/screenshots/gif_frames"; rm -rf "$GIFDIR"; mkdir -p "$GIFDIR"   # gitignored
   elapsed=0; fi=0; gifargs=(); gifargs2=()
   for fn in "${fnames[@]}"; do
     fi=$((fi + 1))
@@ -582,6 +589,17 @@ if [ $want_gif = 1 ] || [ $gif_only = 1 ]; then
   magick -loop 0 "${gifargs[@]}" -filter point -resize 200% -dither None \
     -remap "$WORK/palette.png" -layers OptimizePlus "$OUT/hero@2x.gif"
   ls -l "$OUT"/hero*.gif | awk '{print $5, $9}'
+  # The stills: chosen GIF frames under descriptive names, numbered in STILLS order.
+  rm -f "$OUT"/[0-9][0-9]-*.png
+  si=0
+  while read -r frame still; do
+    [ -n "$frame" ] || continue
+    src=$(ls "$GIFDIR"/[0-9][0-9]-"$frame".png 2>/dev/null | head -1)
+    [ -n "$src" ] || die "STILLS: no GIF frame named $frame"
+    si=$((si + 1)); dst="$(printf '%02d' $si)-$still.png"
+    cp "$src" "$OUT/$dst"
+    echo "Still $dst <- $(basename "$src")"
+  done <<<"$STILLS"
 fi
 
 # --- leave a plain release build ------------------------------------------------------

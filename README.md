@@ -6,21 +6,14 @@ An analog watchface for the Pebble Time 2 (emery). It uses bold Nyquist-style ha
 
 <table>
   <tr>
-    <td align="center"><img src="screenshots/readme/01-default.png" width="150" alt="Default layout"><br>Default layout</td>
-    <td align="center"><img src="screenshots/readme/02-three-columns.png" width="150" alt="All three columns"><br>All three columns</td>
-    <td align="center"><img src="screenshots/readme/03-mixed-fonts.png" width="150" alt="Mixed fonts"><br>Mixed fonts</td>
-    <td align="center"><img src="screenshots/readme/04-unit-vs-icon.png" width="150" alt="Icon, unit and no identifier"><br>Icon, unit and no identifier</td>
-    <td align="center"><img src="screenshots/readme/05-weather.png" width="150" alt="Rain, electricity price, forecast"><br>Rain, electricity price, forecast</td>
-  </tr>
-  <tr>
-    <td align="center"><img src="screenshots/readme/06-dark-theme.png" width="150" alt="Dark theme"><br>Dark theme</td>
-    <td align="center"><img src="screenshots/readme/07-light-theme.png" width="150" alt="Light theme"><br>Light theme</td>
-    <td align="center"><img src="screenshots/readme/08-night.png" width="150" alt="Night mode"><br>Night mode</td>
-    <td align="center"><img src="screenshots/readme/09-battery-warning.png" width="150" alt="Battery warning border"><br>Battery warning border</td>
+    <td align="center"><img src="screenshots/readme/01-little-widgets.png" width="150" alt="A few widgets"><br>A few widgets</td>
+    <td align="center"><img src="screenshots/readme/02-many-widgets.png" width="150" alt="Many widgets"><br>Many widgets</td>
+    <td align="center"><img src="screenshots/readme/03-leco.png" width="150" alt="Leco fonts"><br>Leco fonts</td>
+    <td align="center"><img src="screenshots/readme/04-night.png" width="150" alt="Night colours"><br>Night colours</td>
   </tr>
 </table>
 
-Regenerate the images with `make screenshots` (`scripts/screenshots.sh`, which lists the scenes).
+Regenerate the images with `make screenshots` (`scripts/screenshots.sh`: the GIF frames are listed in GIFFRAMES, the stills chosen from them in STILLS).
 
 ## Origins and credits
 

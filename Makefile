@@ -71,13 +71,13 @@ create_hand_position_screenshots:
 		printf '%s ' "$$(basename $$f)"; python3 scripts/check_strip.py "$$f" | tail -1; \
 	done
 
-# Regenerate the README screenshots + hero GIF (screenshots/readme/, ~5 min; rebuilds
-# with test hooks and leaves a plain release build in build/).
+# Regenerate the hero GIF and the stills chosen from its frames (screenshots/readme/,
+# ~5 min; rebuilds with test hooks and leaves a plain release build in build/).
 .PHONY: screenshots
 screenshots:
 	scripts/screenshots.sh
 
-# Regenerate only the animated hero GIF (screenshots/readme/hero*.gif, ~5 min).
+# Same as `make screenshots` (kept for muscle memory).
 .PHONY: hero_gif
 hero_gif:
 	scripts/screenshots.sh --gif-only

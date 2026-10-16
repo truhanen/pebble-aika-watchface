@@ -140,7 +140,8 @@ EOF
 # M Leco (6) (the date then doesn't hit the corner icons). Weekday and seconds are M Gothic (5)
 # in the normal frames and S Gothic (3) in the smaller frame; seconds are L Leco (9) in the
 # Leco frames. So they never touch the digital time.
-# The last (2 s) frame repeats the Leco fonts.
+# The size cycle goes to the smaller fonts (units off and back on there), back to normal,
+# then to the Leco fonts, which stay for the colour frames.
 # README / appstore stills: "<GIF frame name> <still name>", copied to
 # screenshots/readme/NN-<still name>.png, numbered in this order.
 STILLS="corners little-widgets
@@ -191,19 +192,19 @@ left weather_icon weather/7:u forecast/3:u rain12/3:u | steps/5:i hr/5:i date_wk
 right bat_icon bat/5:u battery_days/5:u | elec/3:u 216/3:u 200/3:u seconds/5
 center date_iso/5 digital/7
 
-frame bigger
-delay 100
-left weather_icon weather/10:u forecast/6:u rain12/6:u | steps/6:i hr/6:i date_wkday/6
-right bat_icon bat/9:u battery_days/9:u | elec/6:u 216/6:u 200/6:u seconds/9
-center date_iso/6 digital/10
-
-frame bigger-back
-delay 100
-left weather_icon weather/7:u forecast/3:u rain12/3:u | steps/5:i hr/5:i date_wkday/5
-right bat_icon bat/5:u battery_days/5:u | elec/3:u 216/3:u 200/3:u seconds/5
-center date_iso/5 digital/7
-
 frame smaller
+delay 100
+left weather_icon weather/5:u forecast/2:u rain12/2:u | steps/3:i hr/3:i date_wkday/3
+right bat_icon bat/3:u battery_days/3:u | elec/2:u 216/2:u 200/2:u seconds/3
+center date_iso/3 digital/5
+
+frame no-units
+delay 100
+left weather_icon weather/5:n forecast/2:n rain12/2:n | steps/3:n hr/3:n date_wkday/3
+right bat_icon bat/3:n battery_days/3:n | elec/2:n 216/2:n 200/2:n seconds/3
+center date_iso/3 digital/5
+
+frame units
 delay 100
 left weather_icon weather/5:u forecast/2:u rain12/2:u | steps/3:i hr/3:i date_wkday/3
 right bat_icon bat/3:u battery_days/3:u | elec/2:u 216/2:u 200/2:u seconds/3
@@ -215,37 +216,31 @@ left weather_icon weather/7:u forecast/3:u rain12/3:u | steps/5:i hr/5:i date_wk
 right bat_icon bat/5:u battery_days/5:u | elec/3:u 216/3:u 200/3:u seconds/5
 center date_iso/5 digital/7
 
-frame no-units
+frame bigger
 delay 100
-left weather_icon weather/7:n forecast/3:n rain12/3:n | steps/5:i hr/5:i date_wkday/5
-right bat_icon bat/5:n battery_days/5:n | elec/3:n 216/3:n 200/3:n seconds/5
-center date_iso/5 digital/7
-
-frame units
-delay 100
-left weather_icon weather/7:u forecast/3:u rain12/3:u | steps/5:i hr/5:i date_wkday/5
-right bat_icon bat/5:u battery_days/5:u | elec/3:u 216/3:u 200/3:u seconds/5
-center date_iso/5 digital/7
+left weather_icon weather/10:u forecast/6:u rain12/6:u | steps/6:i hr/6:i date_wkday/6
+right bat_icon bat/9:u battery_days/9:u | elec/6:u 216/6:u 200/6:u seconds/9
+center date_iso/6 digital/10
 
 frame color1
 delay 100
-left weather_icon weather/7:u forecast/3:u rain12/3:u | steps/5:i hr/5:i date_wkday/5
-right bat_icon bat/5:u battery_days/5:u | elec/3:u 216/3:u 200/3:u seconds/5
-center date_iso/5 digital/7
+left weather_icon weather/10:u forecast/6:u rain12/6:u | steps/6:i hr/6:i date_wkday/6
+right bat_icon bat/9:u battery_days/9:u | elec/6:u 216/6:u 200/6:u seconds/9
+center date_iso/6 digital/10
 colors 0x000055 0xFFFFAA
 
 frame color2
 delay 100
-left weather_icon weather/7:u forecast/3:u rain12/3:u | steps/5:i hr/5:i date_wkday/5
-right bat_icon bat/5:u battery_days/5:u | elec/3:u 216/3:u 200/3:u seconds/5
-center date_iso/5 digital/7
+left weather_icon weather/10:u forecast/6:u rain12/6:u | steps/6:i hr/6:i date_wkday/6
+right bat_icon bat/9:u battery_days/9:u | elec/6:u 216/6:u 200/6:u seconds/9
+center date_iso/6 digital/10
 colors 0x55FF55 0x000000
 
 frame color3
 delay 100
-left weather_icon weather/7:u forecast/3:u rain12/3:u | steps/5:i hr/5:i date_wkday/5
-right bat_icon bat/5:u battery_days/5:u | elec/3:u 216/3:u 200/3:u seconds/5
-center date_iso/5 digital/7
+left weather_icon weather/10:u forecast/6:u rain12/6:u | steps/6:i hr/6:i date_wkday/6
+right bat_icon bat/9:u battery_days/9:u | elec/6:u 216/6:u 200/6:u seconds/9
+center date_iso/6 digital/10
 colors 0xFFAA00 0x000055
 
 frame color4

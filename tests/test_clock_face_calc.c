@@ -1,5 +1,7 @@
 // Host tests for src/c/clock_face_calc.c (hand geometry + edge ticks).
 #include <assert.h>
+#include <string.h>
+#include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -484,7 +486,138 @@ static void test_tick_colour(void) {
   assert(majors == 12);  // 12 major (five-minute) ticks: 0, 5, 10, ..., 55
 }
 
+// Moving clock centre: for every pivot y in 100..128 the rays from (W/2, y) give a tick
+// table that is non-empty, within CF_TICK_MAX_PIXELS and with no pixel in two ticks; at
+// the screen centre it equals the unparametrised cf_tick_pixels; the ticks at 12/6/3
+// o'clock lie on the axes through the pivot.
+static void test_moving_pivot(void) {
+  static unsigned char seen[W * H];
+  for (int cy = 100; cy <= 128; cy++) {
+    for (int i = 0; i < W * H; i++) { seen[i] = 0; }
+    for (int b = 0; b < 60; b++) {
+      double a = rad_of_minute(b);
+      float hx, hy;
+      cf_boundary_hit_from(W, H, CF_CORNER_R, W / 2.0f, (float)cy, (float)sin(a), (float)cos(a), &hx, &hy);
+      CfPoint px[CF_TICK_MAX_PIXELS];
+      bool major = cf_tick_is_major(b);
+      int depth = major ? CF_STRIP_W : CF_MINOR_TICK_DEPTH, inset = major ? 0 : CF_MINOR_TICK_INSET;
+      int n = cf_tick_pixels_from(W, H, CF_CORNER_R, W / 2.0f, (float)cy, hx, hy, depth, inset, px);
+      assert(n > 0 && n <= CF_TICK_MAX_PIXELS);
+      for (int i = 0; i < n; i++) {
+        assert(!seen[px[i].y * W + px[i].x]);
+        seen[px[i].y * W + px[i].x] = 1;
+      }
+      if (b == 0) { assert(fabsf(hx - W / 2.0f) < 1e-3f && fabsf(hy) < 1e-3f); }
+      if (b == 30) { assert(fabsf(hx - W / 2.0f) < 1e-3f && fabsf(hy - H) < 1e-3f); }
+      if (b == 15) { assert(fabsf(hx - W) < 1e-3f && fabsf(hy - cy) < 1e-3f); }
+      if (cy == CY) {
+        float qx, qy;
+        cf_boundary_hit(W, H, CF_CORNER_R, (float)sin(a), (float)cos(a), &qx, &qy);
+        CfPoint q[CF_TICK_MAX_PIXELS];
+        int m = cf_tick_pixels(W, H, CF_CORNER_R, qx, qy, depth, inset, q);
+        assert(m == n);
+        for (int i = 0; i < n; i++) { assert(q[i].x == px[i].x && q[i].y == px[i].y); }
+      }
+    }
+  }
+}
+
+// The pivot profile: dwell at the top/bottom, linear glide while the minute hand points
+// at the side edges, the prototype's values, and the same distance from the pivot to the
+// edge the minute hand points at (W/2) at :00, :15, :30 and :45.
+static void test_pivot_profile(void) {
+  static const int want_first_half[31] = {
+    100, 100, 100, 100, 100, 100, 100, 100,                       // 0..7
+    101, 103, 105, 107, 108, 110, 112, 114, 116, 118, 120, 121, 123, 125, 127,   // 8..22
+    128, 128, 128, 128, 128, 128, 128, 128 };                     // 23..30
+  for (int m = 0; m <= 30; m++) {
+    assert(cf_pivot_y(W, H, m) == want_first_half[m]);
+    if (m > 0 && m < 30) { assert(cf_pivot_y(W, H, 60 - m) == want_first_half[m]); }   // mirror
+  }
+  assert(cf_pivot_y(W, H, 37) == 128 && cf_pivot_y(W, H, 38) == 127 && cf_pivot_y(W, H, 52) == 101);
+  assert(cf_pivot_y(W, H, 53) == 100 && cf_pivot_y(W, H, 0) == 100 && cf_pivot_y(W, H, 60) == 100);
+  for (int m = 8; m < 23; m++) { assert(cf_pivot_y(W, H, m) >= cf_pivot_y(W, H, m - 1)); }      // down
+  for (int m = 38; m < 53; m++) { assert(cf_pivot_y(W, H, m) <= cf_pivot_y(W, H, m - 1)); }     // up
+  // Distance from the pivot to the edge the minute hand points at.
+  assert(cf_pivot_y(W, H, 0) == W / 2);                // :00 to the top edge: 100
+  assert(H - cf_pivot_y(W, H, 30) == W / 2);           // :30 to the bottom edge: 100
+  assert(W - W / 2 == W / 2);                          // :15 and :45 to the side edges: 100
+  // The tick hit of every minute lies on its ray from the pivot (hands point at their ticks).
+  for (int m = 0; m < 60; m++) {
+    int cy = cf_pivot_y(W, H, m);
+    double a = rad_of_minute(m);
+    float hx, hy;
+    cf_boundary_hit_from(W, H, CF_CORNER_R, W / 2.0f, (float)cy, (float)sin(a), (float)cos(a), &hx, &hy);
+    assert(fabs((hx - W / 2.0) * cos(a) + (hy - cy) * sin(a)) < 1e-2);   // cross product = 0
+  }
+}
+
+// Heap-free table build (band bitmaps) vs the previous algorithm (full-screen bitmaps):
+// same tick list, same shadow set, same final row-sorted arrays; and every tick and
+// shadow pixel lies inside the CF_BAND_DEPTH edge band (no band misses).
+static int cmp_yx(const void *a, const void *b) {
+  const uint8_t *p = a, *q = b;
+  if (p[1] != q[1]) { return p[1] - q[1]; }
+  return p[0] - q[0];
+}
+
+static void test_band_build_matches_reference(void) {
+  static CfPoint all[CF_TICK_COUNT * CF_TICK_MAX_PIXELS];
+  static CfPoint ref_shadow[CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK];
+  static uint8_t ref_scratch[2 * ((W * H + 7) / 8)];
+  static uint8_t ticks[2 * CF_TICK_COUNT * CF_TICK_MAX_PIXELS];
+  static uint8_t shadow[2 * CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK];
+  static uint8_t band[2 * ((2 * CF_BAND_DEPTH * W + (H - 2 * CF_BAND_DEPTH) * 2 * CF_BAND_DEPTH + 7) / 8)];
+  assert((int)sizeof band == 2 * cf_band_bytes(W, H));
+  int max_depth = 0;
+  for (int cy = 100; cy <= 128; cy++) {
+    int n = 0;
+    for (int b = 0; b < 60; b++) {
+      double a = rad_of_minute(b);
+      float hx, hy;
+      cf_boundary_hit_from(W, H, CF_CORNER_R, W / 2.0f, (float)cy, (float)sin(a), (float)cos(a), &hx, &hy);
+      bool major = cf_tick_is_major(b);
+      int depth = major ? CF_STRIP_W : CF_MINOR_TICK_DEPTH, inset = major ? 0 : CF_MINOR_TICK_INSET;
+      n += cf_tick_pixels_from(W, H, CF_CORNER_R, W / 2.0f, (float)cy, hx, hy, depth, inset, all + n);
+    }
+    for (int i = 0; i < n; i++) { ticks[2 * i] = (uint8_t)all[i].x; ticks[2 * i + 1] = (uint8_t)all[i].y; }
+    int rn = cf_shadow_pixels(W, H, all, n, ref_scratch, ref_shadow, CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK);
+    int misses = -1;
+    int sn = cf_shadow_band(W, H, ticks, n, band, sizeof band, shadow,
+                            CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK, &misses);
+    assert(misses == 0);
+    assert(sn == rn);
+    for (int i = 0; i < sn; i++) {   // same enumeration order as the reference, even before sorting
+      assert(shadow[2 * i] == ref_shadow[i].x && shadow[2 * i + 1] == ref_shadow[i].y);
+    }
+    // Final sorted arrays equal the reference sorted by (y, x).
+    static uint8_t ref_t[sizeof ticks], ref_s[sizeof shadow];
+    for (int i = 0; i < n; i++) { ref_t[2 * i] = (uint8_t)all[i].x; ref_t[2 * i + 1] = (uint8_t)all[i].y; }
+    for (int i = 0; i < rn; i++) { ref_s[2 * i] = (uint8_t)ref_shadow[i].x; ref_s[2 * i + 1] = (uint8_t)ref_shadow[i].y; }
+    qsort(ref_t, n, 2, cmp_yx);
+    qsort(ref_s, rn, 2, cmp_yx);
+    cf_sort_xy(ticks, n);
+    cf_sort_xy(shadow, sn);
+    assert(memcmp(ticks, ref_t, 2 * n) == 0);
+    assert(memcmp(shadow, ref_s, 2 * sn) == 0);
+    // Band bound: distance of each pixel to the nearest screen edge.
+    for (int k = 0; k < 2; k++) {
+      const uint8_t *arr = k ? shadow : ticks;
+      for (int i = 0; i < (k ? sn : n); i++) {
+        int x = arr[2 * i], y = arr[2 * i + 1];
+        int d = x; if (y < d) { d = y; } if (W - 1 - x < d) { d = W - 1 - x; } if (H - 1 - y < d) { d = H - 1 - y; }
+        if (d > max_depth) { max_depth = d; }
+        assert(d < CF_BAND_DEPTH);
+      }
+    }
+  }
+  printf("edge band: deepest tick/shadow pixel is %d px in (CF_BAND_DEPTH %d)\n", max_depth, CF_BAND_DEPTH);
+}
+
 int main(void) {
+  test_band_build_matches_reference();
+  test_moving_pivot();
+  test_pivot_profile();
   test_snap();
   test_nyquist_twelve_oclock();
   test_nyquist_minute_one();

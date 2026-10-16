@@ -51,6 +51,8 @@ static void set_defaults(void) {
   settings.batteryWarnColor = GColorRed;
   settings.btWarnColor = GColorYellow;
 
+  settings.fixedCentre = 0;   // moving clock centre ON
+
   // A fresh install, every widget in its position's default font. Each edge groups an
   // icon over its value in the top corner (weather icon + temperature, battery icon +
   // percent with its % unit) and one widget in the bottom corner (steps, heart rate); the five Empty
@@ -73,13 +75,18 @@ static void set_defaults(void) {
   Settings_setWidgetList(WIDGET_POS_CENTER, CENTER, sizeof CENTER);
 }
 
+// Size of the blob before fixedCentre was appended (end of btWarnColor).
+#define LEGACY_SETTINGS_SIZE (offsetof(Settings, btWarnColor) + sizeof(GColor))
+
 void Settings_loadFromStorage() {
   set_defaults();
 
   if (persist_exists(SETTINGS_PERSIST_KEY) && persist_exists(SETTINGS_VERSION_PERSIST_KEY)
       && persist_read_int(SETTINGS_VERSION_PERSIST_KEY) == CURRENT_SETTINGS_VERSION
-      && persist_get_size(SETTINGS_PERSIST_KEY) == (int)sizeof(settings)) {
-    persist_read_data(SETTINGS_PERSIST_KEY, &settings, sizeof(settings));
+      && persist_get_size(SETTINGS_PERSIST_KEY) >= (int)LEGACY_SETTINGS_SIZE
+      && persist_get_size(SETTINGS_PERSIST_KEY) <= (int)sizeof(settings)) {
+    // Read what is stored; fields appended since keep their defaults from set_defaults().
+    persist_read_data(SETTINGS_PERSIST_KEY, &settings, persist_get_size(SETTINGS_PERSIST_KEY));
   }
 
   // Sanitize loaded settings: anything used as an array index is clamped back to a
@@ -108,6 +115,7 @@ void Settings_loadFromStorage() {
   // 100 tenths = 10 days; a larger threshold would mean "always warning".
   if (settings.batteryWarnDaysTenths > 100) { settings.batteryWarnDaysTenths = 0; }
   if (settings.btWarnBorder > 1) { settings.btWarnBorder = 0; }
+  if (settings.fixedCentre > 1) { settings.fixedCentre = 0; }
 
 #ifdef SCREENSHOT_FIXTURES
   // Appstore screenshot scene config (no phone); not persisted.

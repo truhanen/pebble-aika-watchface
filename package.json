@@ -97,7 +97,8 @@
       "WeatherRainMax",
       "SettingPrecipUnit",
       "TestDate",
-      "TestSeconds"
+      "TestSeconds",
+      "SettingMovingCentre"
     ],
     "resources": {
       "media": [

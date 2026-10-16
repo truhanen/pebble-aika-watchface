@@ -109,6 +109,10 @@ const config = [
           { label: 'Every 30 minutes', value: '2' },
           { label: 'Every hour', value: '1' },
         ] },
+      { type: 'toggle', messageKey: 'SettingMovingCentre', label: 'Moving clock centre',
+        defaultValue: true, description:
+        'Shifts the centre up while the minute hand points at the top edge and down at the ' +
+        'bottom, so the very long minute hand looks less stretched.' },
     ],
   },
 

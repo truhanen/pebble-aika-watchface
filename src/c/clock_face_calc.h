@@ -64,6 +64,12 @@ void cf_hand_pose(float cx, float cy, float sin_a, float cos_a, int shoulder,
 // in continuous pixel-edge coordinates.
 void cf_boundary_hit(int w, int h, int r, float sin_a, float cos_a, float *hx, float *hy);
 
+// Same as cf_boundary_hit with the ray starting at (cx, cy) instead of the screen centre.
+void cf_boundary_hit_from(int w, int h, int r, float cx, float cy, float sin_a, float cos_a, float *hx, float *hy);
+
+// y of the moving clock centre (hub of both hands) at the given minute (see clock_face_calc.c).
+int cf_pivot_y(int w, int h, int minute);
+
 // True when pixel (x,y) is in the tick band of the given depth: its centre lies inside
 // the rounded rectangle and its inset distance from the boundary is in [0, depth).
 // On the straights that is the outermost `depth` rows/columns; in a corner it is the
@@ -95,6 +101,10 @@ bool cf_in_band(int w, int h, int r, int x, int y, int depth);
 // corners the outer row follows the arc and its pixel count varies slightly around 5.
 int cf_tick_pixels(int w, int h, int r, float hx, float hy, int depth, int inset, CfPoint out[CF_TICK_MAX_PIXELS]);
 
+// cf_tick_pixels with the tick rays coming from (pcx, pcy) instead of the screen centre
+// (hx,hy must come from cf_boundary_hit_from with the same pivot).
+int cf_tick_pixels_from(int w, int h, int r, float pcx, float pcy, float hx, float hy, int depth, int inset, CfPoint out[CF_TICK_MAX_PIXELS]);
+
 // Shadow reach in px: the shadow of ticks and icon-only widgets covers the pixels within
 // this Manhattan distance of the shape (widget value text uses its own per-font offset
 // sets, see widget_text.c): all offsets (dx,dy) with
@@ -116,6 +126,26 @@ extern const int8_t CF_SHADOW_OFFSETS[CF_SHADOW_OFFSET_COUNT][2];
 // is 2 * ((w*h + 7) / 8) bytes of working memory; its contents are overwritten.
 int cf_shadow_pixels(int w, int h, const CfPoint *ticks, int n, uint8_t *scratch,
                      CfPoint *out, int max);
+
+// Depth of the edge band that holds every tick and shadow pixel (pixel index 0..depth-1
+// from the nearest screen edge) = CF_STRIP_W + CF_SHADOW_R; the host test measures a deepest
+// pixel at index 6 over every pivot 100..128 and asserts the bound (corners included). A host
+// miss is counted, never silently wrong.
+#define CF_BAND_DEPTH 7
+
+// Bytes of one band bitmap for a w x h screen.
+int cf_band_bytes(int w, int h);
+
+// cf_shadow_pixels over {x, y} byte pairs, with band-only bitmaps. `scratch` needs
+// 2 * cf_band_bytes(w, h) bytes (scratch_bytes); output is {x, y} pairs, at most `max`
+// (extras dropped). A pixel outside the band is counted in *misses (a shadow one is
+// dropped, a tick one ignored); it never happens with CF_BAND_DEPTH and tests assert 0.
+// Returns the count.
+int cf_shadow_band(int w, int h, const uint8_t *ticks, int n, uint8_t *scratch, int scratch_bytes,
+                   uint8_t *out, int max, int *misses);
+
+// Sorts n {x, y} byte pairs by y, then x, in place (insertion sort, no heap).
+void cf_sort_xy(uint8_t *xy, int n);
 
 // True when tick b is a major (5-minute) tick: all ticks at b % 5 == 0 (0 = 12 o'clock included).
 // Major ticks use the foreground colour; minor ticks use light gray.

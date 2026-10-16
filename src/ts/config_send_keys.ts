@@ -20,6 +20,7 @@ export const STRAIGHT_THROUGH_KEYS: string[] = [
   'SettingNightRotationMode', 'SettingNightRotationStart', 'SettingNightRotationEnd',
   'SettingNightSlowRotation', 'SettingNightColors',
   'SettingBatteryWarnPct', 'SettingBatteryWarnDays', 'SettingBtWarnBorder',
+  'SettingMovingCentre',
 ];
 
 // Colour settings, sent on index.ts's own path: Clay yields a 24-bit RGB value which the

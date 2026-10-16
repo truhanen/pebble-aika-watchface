@@ -254,7 +254,7 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
     settings.fixedCentre = movingCentre_tuple->value->int32 ? 0 : 1;
   }
   if(minuteOffscreen_tuple != NULL) {
-    settings.minuteOffscreen = minuteOffscreen_tuple->value->int32 ? 1 : 0;
+    settings.minuteFinite = minuteOffscreen_tuple->value->int32 ? 0 : 1;
   }
   if(btWarnColor_tuple != NULL) {
     settings.btWarnColor = GColorFromHEX(btWarnColor_tuple->value->int32);

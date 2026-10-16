@@ -17,7 +17,8 @@
 #define CF_HAND_HALO_W         2   // bg halo around each hand, each side
 #define CF_PIVOT_R             3
 
-// Minute hand length, two styles (setting minuteOffscreen; default FINITE, see set_defaults):
+// Minute hand length, two styles (setting SettingMinuteOffscreen, stored inverted as
+// minuteFinite; default OFF-SCREEN, see set_defaults):
 //
 // FINITE (CF_MINUTE_SHOULDER_FINITE): the hand ends in its head (apex). The hand's ink tip is the
 // apex plus half the outline stroke, so with this shoulder the tip of a hand pointing straight

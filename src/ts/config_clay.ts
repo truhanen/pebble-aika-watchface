@@ -113,9 +113,9 @@ const config = [
         defaultValue: true, description:
         'Shifts the centre up while the minute hand points at the top edge and down at the ' +
         'bottom, so the minute hand reaches those edges as well as the sides.' },
-      // Default: off = the finite minute hand with its head (settings.c set_defaults, minuteOffscreen).
+      // Default: on = the minute hand runs off the screen (settings.c set_defaults, minuteFinite = 0).
       { type: 'toggle', messageKey: 'SettingMinuteOffscreen', label: 'Minute hand runs off the screen',
-        defaultValue: false, description:
+        defaultValue: true, description:
         'Off: a finite minute hand whose head touches the screen edge. On: a longer hand that ' +
         'always runs off the edge.' },
     ],

@@ -92,9 +92,9 @@ typedef struct {
   // before this field existed -- whose trailing bytes are zero -- reads as "moving".
   uint8_t fixedCentre;
 
-  // Minute hand style: 0 = finite with its head, touching the edge (the default), 1 = runs off
-  // the screen. Zero in a legacy blob, so it reads as the default.
-  uint8_t minuteOffscreen;
+  // Minute hand style, stored INVERTED: 0 = runs off the screen (the default), 1 = finite with
+  // its head, touching the edge. Zero in a legacy blob, so it reads as the default.
+  uint8_t minuteFinite;
 } Settings;
 
 // Dynamic settings (calculated at runtime based on currently-selected widgets)

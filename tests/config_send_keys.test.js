@@ -139,11 +139,11 @@ test('SettingMovingCentre is a toggle, ON by default, sent straight through', ()
   assert.ok(STRAIGHT_THROUGH_KEYS.indexOf('SettingMovingCentre') !== -1);
 });
 
-test('SettingMinuteOffscreen is a toggle, OFF (finite hand) by default, sent straight through', () => {
+test('SettingMinuteOffscreen is a toggle, ON (hand runs off the screen) by default, sent straight through', () => {
   const it = flattenConfig(configArr).find((i) => i && i.messageKey === 'SettingMinuteOffscreen');
   assert.ok(it, 'SettingMinuteOffscreen must be in the config');
   assert.strictEqual(it.type, 'toggle');
   assert.strictEqual(it.label, 'Minute hand runs off the screen');
-  assert.strictEqual(it.defaultValue, false);
+  assert.strictEqual(it.defaultValue, true);
   assert.ok(STRAIGHT_THROUGH_KEYS.indexOf('SettingMinuteOffscreen') !== -1);
 });

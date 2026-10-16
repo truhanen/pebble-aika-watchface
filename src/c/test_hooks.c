@@ -75,6 +75,7 @@ void TestHooks_applyTime(struct tm *t) {
 
 int TestHooks_scene(void) { return (int)s_scene; }
 int TestHooks_font(int pos) { return (int)s_font[pos]; }
+bool TestHooks_timeFrozen(void) { return s_time >= 0; }
 
 BatteryChargeState TestHooks_batteryPeek(void) {
   BatteryChargeState st = battery_state_service_peek();
@@ -122,5 +123,6 @@ bool TestHooks_handleMessage(DictionaryIterator *iter) { (void)iter; return fals
 void TestHooks_applyTime(struct tm *t) { (void)t; }
 int TestHooks_scene(void) { return 0; }
 int TestHooks_font(int pos) { (void)pos; return -1; }
+bool TestHooks_timeFrozen(void) { return false; }
 
 #endif

@@ -296,7 +296,7 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   //
   // tm_sec first: in seconds mode this runs every tick, and the widget-list scan
   // inside needs_phone_data() is only worth doing on the minute boundary.
-  if (tick_time->tm_sec == 0 && needs_phone_data()) {
+  if (tick_time->tm_sec == 0 && !TestHooks_timeFrozen() && needs_phone_data()) {
     int intervalSec = poll_interval_sec();
     time_t now = time(NULL);
 

@@ -25,6 +25,10 @@ int TestHooks_scene(void);
 // position (WIDGET_POS_*), or -1 for the configured fonts.
 int TestHooks_font(int pos);
 
+// True while a TestTime override is active: the watch then makes no phone data polls, so
+// screenshot runs keep the weather/data they pinned (a cold poll would overwrite it).
+bool TestHooks_timeFrozen(void);
+
 #if defined(TEST_HOOKS) && !defined(TEST_HOOKS_IMPL)
 BatteryChargeState TestHooks_batteryPeek(void);
 bool TestHooks_btPeek(void);

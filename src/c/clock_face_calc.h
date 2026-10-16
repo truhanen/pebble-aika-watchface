@@ -127,6 +127,26 @@ extern const int8_t CF_SHADOW_OFFSETS[CF_SHADOW_OFFSET_COUNT][2];
 int cf_shadow_pixels(int w, int h, const CfPoint *ticks, int n, uint8_t *scratch,
                      CfPoint *out, int max);
 
+// Depth of the edge band that holds every tick and shadow pixel (pixel index 0..depth-1
+// from the nearest screen edge) = CF_STRIP_W + CF_SHADOW_R; the host test measures a deepest
+// pixel at index 6 over every pivot 100..128 and asserts the bound (corners included). A host
+// miss is counted, never silently wrong.
+#define CF_BAND_DEPTH 7
+
+// Bytes of one band bitmap for a w x h screen.
+int cf_band_bytes(int w, int h);
+
+// cf_shadow_pixels over {x, y} byte pairs, with band-only bitmaps. `scratch` needs
+// 2 * cf_band_bytes(w, h) bytes (scratch_bytes); output is {x, y} pairs, at most `max`
+// (extras dropped). A pixel outside the band is counted in *misses (a shadow one is
+// dropped, a tick one ignored); it never happens with CF_BAND_DEPTH and tests assert 0.
+// Returns the count.
+int cf_shadow_band(int w, int h, const uint8_t *ticks, int n, uint8_t *scratch, int scratch_bytes,
+                   uint8_t *out, int max, int *misses);
+
+// Sorts n {x, y} byte pairs by y, then x, in place (insertion sort, no heap).
+void cf_sort_xy(uint8_t *xy, int n);
+
 // True when tick b is a major (5-minute) tick: all ticks at b % 5 == 0 (0 = 12 o'clock included).
 // Major ticks use the foreground colour; minor ticks use light gray.
 bool cf_tick_is_major(int b);

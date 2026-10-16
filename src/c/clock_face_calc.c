@@ -259,6 +259,66 @@ int cf_shadow_pixels(int w, int h, const CfPoint *ticks, int n, uint8_t *scratch
   return count;
 }
 
+// --- edge-band shadow (no full-screen bitmaps) --------------------------------------------
+// Ticks and their shadow lie within CF_BAND_DEPTH px of a screen edge, so the working
+// bitmaps only cover that band: the top BD rows, the bottom BD rows, then the left and
+// right BD columns of the rows between.
+static int band_bit(int w, int h, int x, int y) {
+  const int bd = CF_BAND_DEPTH;
+  if (x < 0 || y < 0 || x >= w || y >= h) { return -1; }
+  if (y < bd) { return y * w + x; }
+  if (y >= h - bd) { return bd * w + (y - (h - bd)) * w + x; }
+  int col = x < bd ? x : (x >= w - bd ? x - (w - bd) + bd : -1);
+  if (col < 0) { return -1; }
+  return 2 * bd * w + (y - bd) * 2 * bd + col;
+}
+
+int cf_band_bytes(int w, int h) {
+  return (2 * CF_BAND_DEPTH * w + (h - 2 * CF_BAND_DEPTH) * 2 * CF_BAND_DEPTH + 7) / 8;
+}
+
+int cf_shadow_band(int w, int h, const uint8_t *ticks, int n, uint8_t *scratch, int scratch_bytes,
+                   uint8_t *out, int max, int *misses) {
+  int bytes = cf_band_bytes(w, h);
+  *misses = 0;
+  if (scratch_bytes < 2 * bytes) { return 0; }
+  uint8_t *is_tick = scratch, *seen = scratch + bytes;
+  for (int i = 0; i < 2 * bytes; i++) { scratch[i] = 0; }
+  for (int i = 0; i < n; i++) {
+    int bit = band_bit(w, h, ticks[2 * i], ticks[2 * i + 1]);
+    if (bit < 0) { (*misses)++; continue; }
+    is_tick[bit >> 3] |= (uint8_t)(1 << (bit & 7));
+  }
+  int count = 0;
+  for (int i = 0; i < n; i++) {
+    for (int k = 0; k < CF_SHADOW_OFFSET_COUNT; k++) {
+      int x = ticks[2 * i] + CF_SHADOW_OFFSETS[k][0], y = ticks[2 * i + 1] + CF_SHADOW_OFFSETS[k][1];
+      if (x < 0 || y < 0 || x >= w || y >= h) { continue; }
+      int bit = band_bit(w, h, x, y);
+      if (bit < 0) { (*misses)++; continue; }   // outside the band: cannot dedupe, drop
+      uint8_t m = (uint8_t)(1 << (bit & 7));
+      if ((is_tick[bit >> 3] & m) || (seen[bit >> 3] & m)) { continue; }
+      seen[bit >> 3] |= m;
+      if (count < max) { out[2 * count] = (uint8_t)x; out[2 * count + 1] = (uint8_t)y; count++; }
+    }
+  }
+  return count;
+}
+
+void cf_sort_xy(uint8_t *xy, int n) {
+  for (int i = 1; i < n; i++) {
+    uint8_t x = xy[2 * i], y = xy[2 * i + 1];
+    int j = i - 1;
+    while (j >= 0 && (xy[2 * j + 1] > y || (xy[2 * j + 1] == y && xy[2 * j] > x))) {
+      xy[2 * j + 2] = xy[2 * j];
+      xy[2 * j + 3] = xy[2 * j + 1];
+      j--;
+    }
+    xy[2 * j + 2] = x;
+    xy[2 * j + 3] = y;
+  }
+}
+
 bool cf_tick_is_major(int b) {
   return b % 5 == 0;
 }

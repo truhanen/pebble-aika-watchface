@@ -78,63 +78,42 @@ static int s_tick_pixel_count;
 static ShadowPixel s_shadow_pixels[CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK];
 static int s_shadow_pixel_count;
 
-// Insertion sort of {x, y} byte pairs by y, then x (init-time only, no heap).
-static void sort_by_row(uint8_t *xy, int n) {
-  for (int i = 1; i < n; i++) {
-    uint8_t x = xy[2 * i], y = xy[2 * i + 1];
-    int j = i - 1;
-    while (j >= 0 && (xy[2 * j + 1] > y || (xy[2 * j + 1] == y && xy[2 * j] > x))) {
-      xy[2 * j + 2] = xy[2 * j];
-      xy[2 * j + 3] = xy[2 * j + 1];
-      j--;
-    }
-    xy[2 * j + 2] = x;
-    xy[2 * j + 3] = y;
-  }
-}
-
 static int s_tick_cy = -1;   // pivot y the tick table was built for
 
-// Builds the tick and shadow tables for rays from (w/2, cy). The transient buffers
-// (about 28 KB: the tick points, the shadow bitmap and the shadow points) are malloc'd per
-// rebuild rather than kept static: static ones would take that much of the ~70 KB app
-// heap permanently. If an allocation fails the previous tables stay in use.
+// Band bitmaps for the shadow computation (is-tick and seen), static: no heap use.
+#define SCREEN_W 200
+#define SCREEN_H 228
+static uint8_t s_band[2 * ((2 * CF_BAND_DEPTH * SCREEN_W + (SCREEN_H - 2 * CF_BAND_DEPTH) * 2 * CF_BAND_DEPTH + 7) / 8)];
+
+// Builds the tick and shadow tables (row-sorted) for rays from (w/2, cy), with no heap.
 static void build_tick_table(int w, int h, int cy) {
-  CfPoint *all = malloc(sizeof(CfPoint) * CF_TICK_COUNT * CF_TICK_MAX_PIXELS);
-  uint8_t *scratch = malloc(2 * ((w * h + 7) / 8));
-  CfPoint *shadow = malloc(sizeof(CfPoint) * CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK);
-  if (all && scratch && shadow) {
-    int n = 0;
-    for (int b = 0; b < CF_TICK_COUNT; b++) {
-      int32_t angle = b * TRIG_MAX_ANGLE / CF_TICK_COUNT;
-      float sin_a = (float)sin_lookup(angle) / TRIG_MAX_RATIO;
-      float cos_a = (float)cos_lookup(angle) / TRIG_MAX_RATIO;
-      float hx, hy;
-      cf_boundary_hit_from(w, h, CF_CORNER_R, w / 2.0f, (float)cy, sin_a, cos_a, &hx, &hy);
-      // Major (5-minute) ticks are CF_STRIP_W deep; minor ticks are CF_MINOR_TICK_DEPTH deep.
-      bool is_major = cf_tick_is_major(b);
-      int depth = is_major ? CF_STRIP_W : CF_MINOR_TICK_DEPTH;
-      int inset = is_major ? 0 : CF_MINOR_TICK_INSET;
-      n += cf_tick_pixels_from(w, h, CF_CORNER_R, w / 2.0f, (float)cy, hx, hy, depth, inset, all + n);
-    }
-    int sn = cf_shadow_pixels(w, h, all, n, scratch, shadow, CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK);
+  int n = 0;
+  for (int b = 0; b < CF_TICK_COUNT; b++) {
+    int32_t angle = b * TRIG_MAX_ANGLE / CF_TICK_COUNT;
+    float sin_a = (float)sin_lookup(angle) / TRIG_MAX_RATIO;
+    float cos_a = (float)cos_lookup(angle) / TRIG_MAX_RATIO;
+    float hx, hy;
+    cf_boundary_hit_from(w, h, CF_CORNER_R, w / 2.0f, (float)cy, sin_a, cos_a, &hx, &hy);
+    CfPoint px[CF_TICK_MAX_PIXELS];
+    // Major (5-minute) ticks are CF_STRIP_W deep; minor ticks are CF_MINOR_TICK_DEPTH deep.
+    bool is_major = cf_tick_is_major(b);
+    int depth = is_major ? CF_STRIP_W : CF_MINOR_TICK_DEPTH;
+    int inset = is_major ? 0 : CF_MINOR_TICK_INSET;
+    int count = cf_tick_pixels_from(w, h, CF_CORNER_R, w / 2.0f, (float)cy, hx, hy, depth, inset, px);
     // All ticks use the foreground colour (resolved at draw time).
-    for (int i = 0; i < n; i++) {
-      s_tick_pixels[i] = (TickPixel){ (uint8_t)all[i].x, (uint8_t)all[i].y };
+    for (int i = 0; i < count; i++) {
+      s_tick_pixels[n++] = (TickPixel){ (uint8_t)px[i].x, (uint8_t)px[i].y };
     }
-    s_tick_pixel_count = n;
-    for (int i = 0; i < sn; i++) {
-      s_shadow_pixels[i] = (ShadowPixel){ (uint8_t)shadow[i].x, (uint8_t)shadow[i].y };
-    }
-    s_shadow_pixel_count = sn;
-    // Row-major order: draw_ticks then re-fetches the row info only once per row.
-    sort_by_row((uint8_t *)s_tick_pixels, s_tick_pixel_count);
-    sort_by_row((uint8_t *)s_shadow_pixels, s_shadow_pixel_count);
-    s_tick_cy = cy;
   }
-  free(shadow);
-  free(scratch);
-  free(all);
+  s_tick_pixel_count = n;
+  int misses;
+  s_shadow_pixel_count = cf_shadow_band(w, h, (const uint8_t *)s_tick_pixels, n, s_band, sizeof s_band,
+                                        (uint8_t *)s_shadow_pixels,
+                                        CF_TICK_COUNT * CF_SHADOW_MAX_PER_TICK, &misses);
+  // Row-major order: draw_ticks then re-fetches the row info only once per row.
+  cf_sort_xy((uint8_t *)s_tick_pixels, s_tick_pixel_count);
+  cf_sort_xy((uint8_t *)s_shadow_pixels, s_shadow_pixel_count);
+  s_tick_cy = cy;
 }
 
 // Writes the shadow pixels (background colour), then the tick pixels, straight into
@@ -191,7 +170,7 @@ static void face_update_proc(Layer *l, GContext *ctx) {
   int cy = pivot_y();
   GPoint center = GPoint(s_w / 2, cy);
   // Rebuilt only when the integer pivot y changed (once a minute while it glides, never
-  // with the fixed centre). On an allocation failure the old tables stay until next time.
+  // with the fixed centre).
   if (cy != s_tick_cy) { build_tick_table(s_w, s_h, cy); }
   GColor fg = theme.timeColor, bg = theme.timeBgColor;
 

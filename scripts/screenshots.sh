@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Regenerates the README / appstore screenshots on the emery emulator: the animated hero
-# GIF (screenshots/readme/01-hero.gif, 01-hero@2x.gif) and the stills, which are frames of it
+# Regenerates the README / appstore screenshots on the emery emulator: the animated overview
+# GIF (screenshots/readme/01-overview.gif, 01-overview@2x.gif) and the stills, which are frames of it
 # copied under descriptive names (STILLS below; native 200x228, unframed). The output is
 # version-controlled; run it again after a visual change.
 #
@@ -9,7 +9,7 @@
 #                                     screenshots/test/scenes/, e.g. "default"
 #   scripts/screenshots.sh --keep scene...   same on an already running TEST_HOOKS emulator:
 #                                     no build, no fresh start, nothing stopped (tuning)
-# GIF frames are saved to screenshots/gif_frames/ (gitignored). --gif-only (make hero_gif) is
+# GIF frames are saved to screenshots/gif_frames/ (gitignored). --gif-only (make overview_gif) is
 # the same as no arguments.
 #
 # Needs: pebble-tool, ImageMagick (magick), python3.
@@ -42,7 +42,7 @@
 #   currency WID,LABEL,VALUE ...    CurrencyData slots (wid 216..222), e.g. 216,EUR/USD,1.08
 #   tuyaleds STATES       TuyaLeds string, one char per switch: 1 on, 0 off, ? unknown
 #   colors 0xFG 0xBG      time colour and background colour (SettingColorTime/BG)
-#   delay CS              hero GIF frames only: frame delay in 1/100 s
+#   delay CS              overview GIF frames only: frame delay in 1/100 s
 #   night                 night window active now (custom window around the real hour)
 SCENES=$(cat <<'EOF'
 defaults
@@ -126,7 +126,7 @@ EOF
 )
 
 # ---------------------------------------------------------------------------------
-# Hero GIF: one layout built up frame by frame (independent of the scenes above), at a
+# Overview GIF: one layout built up frame by frame (independent of the scenes above), at a
 # constant 1 fps (the last frame is held for 2 s). One GIF second = one watch minute:
 # every frame advances the fake clock (TestTime/TestSeconds) by its own delay x 60. The
 # first frame applies the defaults above and the gifdefaults; later frames send only what
@@ -259,7 +259,7 @@ cd "$ROOT"
 OUT="$ROOT/screenshots/readme"
 EMU="$ROOT/scripts/emu.sh"
 SHOTS="$ROOT/screenshots/test"
-GIF_DELAY=200   # centiseconds per hero frame
+GIF_DELAY=200   # centiseconds per overview frame
 
 want_gif=1
 keep=0
@@ -551,7 +551,7 @@ for n in "${names[@]}"; do
   capture "$SCENEDIR/$(printf '%02d' $idx)-$n.png"
 done
 
-# --- hero GIF -------------------------------------------------------------------------
+# --- overview GIF -------------------------------------------------------------------------
 # Frames: GIFFRAMES. The fake clock starts at 09:00:00 and runs one watch minute per GIF
 # second (frame i shows 09:00:00 + (sum of the earlier delays) x 60 s).
 if [ $want_gif = 1 ]; then
@@ -578,16 +578,16 @@ if [ $want_gif = 1 ]; then
     gifargs+=(-delay "$FRAME_DELAY" "$f")
     elapsed=$((elapsed + FRAME_DELAY))
   done
-  echo "Assembling 01-hero.gif ($fi frames, $((elapsed / 100)).$((elapsed % 100)) s)..."
+  echo "Assembling 01-overview.gif ($fi frames, $((elapsed / 100)).$((elapsed % 100)) s)..."
   # One palette over all frames: the watch is 8-bit colour, so this is lossless.
   magick "$GIFDIR"/[0-9][0-9]-*.png +append -colors 256 -unique-colors "$WORK/palette.png"
   magick -loop 0 "${gifargs[@]}" -dither None -remap "$WORK/palette.png" \
-    -layers OptimizePlus "$OUT/01-hero.gif"
+    -layers OptimizePlus "$OUT/01-overview.gif"
   # 2x nearest-neighbour version: crisp when the README shows it larger than 200 px.
   magick -loop 0 "${gifargs[@]}" -filter point -resize 200% -dither None \
-    -remap "$WORK/palette.png" -layers OptimizePlus "$OUT/01-hero@2x.gif"
-  rm -f "$OUT"/hero*.gif   # pre-numbering names
-  ls -l "$OUT"/01-hero*.gif | awk '{print $5, $9}'
+    -remap "$WORK/palette.png" -layers OptimizePlus "$OUT/01-overview@2x.gif"
+  rm -f "$OUT"/hero*.gif "$OUT"/01-hero*.gif   # earlier names
+  ls -l "$OUT"/01-overview*.gif | awk '{print $5, $9}'
   # The stills: chosen GIF frames under descriptive names, numbered in STILLS order.
   rm -f "$OUT"/[0-9][0-9]-*.png
   si=1   # 01 is the GIF

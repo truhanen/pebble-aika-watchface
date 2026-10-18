@@ -69,8 +69,8 @@ test('FONT_OPTIONS has the 17 contract labels; FONT_DEFAULT is 31', () => {
   assert.strictEqual(FONT_OPTIONS.length, 17);
   assert.strictEqual(FONT_OPTIONS[0], '3XS Gothic');
   assert.strictEqual(FONT_OPTIONS[5], 'M Gothic');
-  assert.strictEqual(FONT_OPTIONS[7], 'L Bitham');
-  assert.strictEqual(FONT_OPTIONS[16], '5XL Leco');
+  assert.strictEqual(FONT_OPTIONS[7], 'XL Bitham');
+  assert.strictEqual(FONT_OPTIONS[16], '5XL Leco bold');
 });
 
 test('STATIC_WIDGETS includes the Battery Days widget (id 22)', () => {

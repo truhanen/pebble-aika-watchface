@@ -87,7 +87,7 @@ The label is shown on the config page. Size details are noted with the Pebble fo
 | 4 | S Roboto | ROBOTO_CONDENSED_21 |
 | 5 | M Gothic | GOTHIC_28_BOLD |
 | 6 | M Leco | LECO_20_BOLD_NUMBERS |
-| 7 | L Bitham | BITHAM_30_BLACK |
+| 7 | XL Bitham | BITHAM_30_BLACK |
 | 8 | L Droid serif | DROID_SERIF_28_BOLD |
 | 9 | L Leco | LECO_26_BOLD_NUMBERS_AM_PM |
 | 10 | XL Leco | LECO_32_BOLD_NUMBERS |
@@ -95,8 +95,8 @@ The label is shown on the config page. Size details are noted with the Pebble fo
 | 12 | 2XL Leco 36 | LECO_36_BOLD_NUMBERS |
 | 13 | 2XL Leco 38 | LECO_38_BOLD_NUMBERS |
 | 14 | 3XL Leco | LECO_42_NUMBERS |
-| 15 | 4XL Leco | LECO_60_NUMBERS_AM_PM |
-| 16 | 5XL Leco | LECO_60_BOLD_NUMBERS_AM_PM |
+| 15 | 5XL Leco | LECO_60_NUMBERS_AM_PM |
+| 16 | 5XL Leco bold | LECO_60_BOLD_NUMBERS_AM_PM |
 
 ## Widget ids
 

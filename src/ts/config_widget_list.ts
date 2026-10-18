@@ -149,7 +149,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     'S Roboto',
     'M Gothic',
     'M Leco',
-    'L Bitham',
+    'XL Bitham',
     'L Droid serif',
     'L Leco',
     'XL Leco',
@@ -157,9 +157,11 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     '2XL Leco 36',
     '2XL Leco 38',
     '3XL Leco',
-    '4XL Leco',
     '5XL Leco',
+    '5XL Leco bold',
   ];
+  // Picker order: font indices by rendered width. KEEP IN SYNC with widget_options.ts.
+  const FONT_PICKER_ORDER: number[] = [0, 1, 2, 3, 4, 5, 6, 9, 8, 7, 10, 12, 13, 11, 14, 15, 16];
 
   const INTERVAL_OPTIONS: { code: number; label: string }[] = [
     { code: 0, label: '5 s' },
@@ -353,7 +355,8 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     }
     let html = '<option value="' + FONT_DEFAULT + '"' + (selected === FONT_DEFAULT ? ' selected' : '') +
       '>' + defLabel + '</option>';
-    for (let i = 0; i < FONT_OPTIONS.length; i++) {
+    for (let k = 0; k < FONT_PICKER_ORDER.length; k++) {
+      const i = FONT_PICKER_ORDER[k];
       html += '<option value="' + i + '"' + (i === selected ? ' selected' : '') + '>' + FONT_OPTIONS[i] + '</option>';
     }
     return html;

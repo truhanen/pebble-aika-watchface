@@ -148,7 +148,7 @@ const config = [
         'edge, a widget’s value sits at the screen edge and its icon sits next to it, ' +
         'toward the centre.<br><br>' +
         'Each row is one widget. Pick the widget from the dropdown, choose the ' +
-        '<b>font</b> of its value (Default = Gothic medium at the edges, Bitham large ' +
+        '<b>font</b> of its value (Default = M Gothic at the edges, XL Bitham ' +
         'in the center column), reorder with ▲ / ▼, remove with ✕, and add more with ' +
         '“+ Add widget”.<br><br>' +
         'The <b>◉ / U / ⊘</b> button after the dropdown picks that widget’s ' +

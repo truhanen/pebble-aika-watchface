@@ -41,7 +41,7 @@ test('Default option names the list default font (side 5, centre column 7)', () 
   const side = mount([w(10)], { defaultFont: 5 });
   assert.strictEqual(defaultLabel(side.root), 'Default (M Gothic)');
   const top = mount([w(30)], { defaultFont: 7 });
-  assert.strictEqual(defaultLabel(top.root), 'Default (L Bitham)');
+  assert.strictEqual(defaultLabel(top.root), 'Default (XL Bitham)');
   const none = mount([w(10)]);
   assert.strictEqual(defaultLabel(none.root), 'Default');
 });

@@ -82,3 +82,14 @@ test('widgetList component functions are self-contained (toSource-safe)', () => 
   });
   assert.ok(/FONT_OPTIONS/.test(comp.initialize.toString()), 'font list is inlined');
 });
+
+test('font picker order is a permutation of the font indices, same in both copies', () => {
+  const { FONT_OPTIONS, FONT_PICKER_ORDER } = require('../src/pkjs/widget_options');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'src/ts/config_widget_list.ts'), 'utf8');
+  const m = src.match(/const FONT_PICKER_ORDER: number\[\] = \[([^\]]*)\]/);
+  assert.ok(m, 'FONT_PICKER_ORDER not found in config_widget_list.ts');
+  const inlined = m[1].split(',').map((x) => parseInt(x, 10));
+  assert.deepStrictEqual(inlined, FONT_PICKER_ORDER);
+  assert.deepStrictEqual(FONT_PICKER_ORDER.slice().sort((a, b) => a - b),
+    FONT_OPTIONS.map((_, i) => i));
+});

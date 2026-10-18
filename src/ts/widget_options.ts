@@ -69,7 +69,7 @@ export const FONT_OPTIONS: string[] = [
   'S Roboto',
   'M Gothic',
   'M Leco',
-  'L Bitham',
+  'XL Bitham',
   'L Droid serif',
   'L Leco',
   'XL Leco',
@@ -77,9 +77,14 @@ export const FONT_OPTIONS: string[] = [
   '2XL Leco 36',
   '2XL Leco 38',
   '3XL Leco',
-  '4XL Leco',
   '5XL Leco',
+  '5XL Leco bold',
 ];
+
+// Order of the font picker on the config page: font indices sorted by rendered width
+// (mean digit advance, measured on emery). The indices themselves never change, they are
+// stored. KEEP IN SYNC with the copy in config_widget_list.ts (tests/widget_options_sync).
+export const FONT_PICKER_ORDER: number[] = [0, 1, 2, 3, 4, 5, 6, 9, 8, 7, 10, 12, 13, 11, 14, 15, 16];
 
 export const ROTATING_ID = 255;
 

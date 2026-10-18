@@ -30,7 +30,7 @@ const CONTRACT_FONTS = [
   ['S Roboto', 'ROBOTO_CONDENSED_21'],
   ['M Gothic', 'GOTHIC_28_BOLD'],
   ['M Leco', 'LECO_20_BOLD_NUMBERS'],
-  ['L Bitham', 'BITHAM_30_BLACK'],
+  ['XL Bitham', 'BITHAM_30_BLACK'],
   ['L Droid serif', 'DROID_SERIF_28_BOLD'],
   ['L Leco', 'LECO_26_BOLD_NUMBERS_AM_PM'],
   ['XL Leco', 'LECO_32_BOLD_NUMBERS'],
@@ -38,8 +38,8 @@ const CONTRACT_FONTS = [
   ['2XL Leco 36', 'LECO_36_BOLD_NUMBERS'],
   ['2XL Leco 38', 'LECO_38_BOLD_NUMBERS'],
   ['3XL Leco', 'LECO_42_NUMBERS'],
-  ['4XL Leco', 'LECO_60_NUMBERS_AM_PM'],
-  ['5XL Leco', 'LECO_60_BOLD_NUMBERS_AM_PM'],
+  ['5XL Leco', 'LECO_60_NUMBERS_AM_PM'],
+  ['5XL Leco bold', 'LECO_60_BOLD_NUMBERS_AM_PM'],
 ];
 
 // WidgetType enum body from widgets.h -> { NAME: value }.

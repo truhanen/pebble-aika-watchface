@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Emulator helper for Nyquist (emery). Every emulator-facing call uses --vnc
+# Emulator helper for Aika (emery). Every emulator-facing call uses --vnc
 # consistently (mixing --vnc and non---vnc restarts QEMU; see the
 # pebble-emulator skill).
 #

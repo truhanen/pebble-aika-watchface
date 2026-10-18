@@ -1,1 +1,1 @@
-https://github.com/truhanen/pebble-nyquist-watchface-2
+https://github.com/truhanen/pebble-aika-watchface

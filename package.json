@@ -1,5 +1,5 @@
 {
-  "name": "pebble-nyquist-3",
+  "name": "pebble-aika-watchface",
   "author": "Tuukka Ruhanen",
   "version": "1.0.0",
   "keywords": [
@@ -15,7 +15,7 @@
     "pebble-clay": "^1.0.4"
   },
   "pebble": {
-    "displayName": "Nyquist",
+    "displayName": "Aika",
     "uuid": "55a7038e-c87b-432a-8816-50108f72670c",
     "sdkVersion": "3",
     "enableMultiJS": true,

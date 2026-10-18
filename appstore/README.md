@@ -1,4 +1,4 @@
-# Pebble appstore listing — Nyquist
+# Pebble appstore listing — Aika
 
 Listing material for the Pebble appstore, kept under version control so it is
 ready to upload. **Watchface** listing (lighter asset set than a watchapp).

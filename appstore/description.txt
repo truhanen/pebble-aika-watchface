@@ -1,1 +1,38 @@
-Nyquist is a bold analog watchface with an edge tick ring, three configurable widget columns (left, right and centre) and optional rotating widget groups. Each widget has its own font and can show an icon, a unit label or nothing. Widgets cover weather (temperature, forecast low/high, UV index, maximum rain in the next 1–12 hours from FMI or Open-Meteo), health (steps, distance, sleep, heart rate), battery level and estimated battery days, electricity spot price, crypto and currency rates, Tuya smart-home values and LEDs, and an alternate time zone. Night mode, colour themes and a battery/Bluetooth warning border are included. Configure everything from your phone.
+A readable watchface.
+
+Extremely bold analog hands, with the minute hand extending past the edges of the screen, for the highest visibility.
+
+Widget values are drawn on top of the clock hands. Values are what counts.
+
+Widgets can show their measurement units (°C, %, ...), instead of ambiguous & duplicated icons.
+
+Widget units & icons are drawn under the clock hands. It's alright to see them most of the time. The hands are the more important component.
+
+The clock center (optionally) "breathes" up & down following the minute hand's direction. This reduces the distortion from the minute hand's changing length, and makes the face feel closer to a square than the rectangular screen really is.
+
+Widget fonts, sizes, positions, icons, & units are fully customizable. Available widget categories include:
+- Time
+- Date
+- Weather
+- Rain
+- Health
+- Sleep
+- Battery
+- Crypto
+- Currency
+- Electricity spot price
+- Tuya sensors & switch states
+- Bluetooth
+
+Other configurable features:
+- Colors
+- Night mode
+- Battery & Bluetooth warning signals (border & widget)
+- Weather units & data sources (Open-Meteo or FMI)
+- Rotating widget groups
+- Language options
+- Periodic vibrations
+
+The comprehensive widget system is adopted from another open source watchface, Sykerö TimeStyle, github.com/Sykero-Software/TimeStylePebble, which is based on TimeStyle by freakified.
+
+The analog hands are adopted from an earlier watchface of mine, Nyquist, github.com/truhanen/pebble-nyquist-watchface.

@@ -43,6 +43,8 @@
 #   tuyaleds STATES       TuyaLeds string, one char per switch: 1 on, 0 off, ? unknown
 #   colors 0xFG 0xBG      time colour and background colour (SettingColorTime/BG)
 #   delay CS              overview GIF frames only: frame delay in 1/100 s
+#   clock HHMM            overview GIF frames only: this frame shows HH:MM:00 and the running
+#                         fake clock restarts from there (see the GIF section below)
 #   night                 night window active now (custom window around the real hour)
 SCENES=$(cat <<'EOF'
 defaults
@@ -126,22 +128,30 @@ EOF
 )
 
 # ---------------------------------------------------------------------------------
-# Overview GIF: one layout built up frame by frame (independent of the scenes above), at a
+# Overview GIF: it opens with one "breath" (a round of bare-face minute frames, see `breath`
+# below), then one layout is built up frame by frame (independent of the scenes above), at a
 # constant 1 fps (the last frame is held for 2 s). One GIF second = one watch minute:
 # every frame advances the fake clock (TestTime/TestSeconds) by its own delay x 60. The
-# first frame applies the defaults above and the gifdefaults; later frames send only what
+# `clock HHMM` line of a frame sets the clock to HH:MM:00 and restarts the running clock from
+# there; without it the clock runs on (it starts at 09:00:00). The first frame applies the defaults above and the gifdefaults; later frames send only what
 # they list; gifeach lines are re-sent in every frame (the emulator's phone side overwrites
 # the weather on its own). `delay CS` is the frame delay in 1/100 s. In a widget list
 # `A B | C D` stacks A B at the top and C D at the bottom (spacers are added
 # automatically, see autopad); bottom groups are listed top to bottom, so the corner
 # widget is the last one. `colors 0xFG 0xBG` sets the time and background colours.
 # The "bigger" frame is all Leco, one step up: S Gothic (3) -> M Leco (6), M Gothic (5) ->
-# L Leco (9), L Bitham (7) -> XL Leco (10); the date, weekday, steps and heart rate take
+# L Leco (9), XL Bitham (7) -> XL Leco (10); the date, weekday, steps and heart rate take
 # M Leco (6) (the date then doesn't hit the corner icons). Weekday and seconds are M Gothic (5)
 # in the normal frames and S Gothic (3) in the smaller frame; seconds are L Leco (9) in the
 # Leco frames. So they never touch the digital time.
 # The size cycle goes to the smaller fonts (units off and back on there), back to normal,
 # then to the Leco fonts, which stay for the colour frames.
+# `breath HHMM N CS` expands to N bare frames (no widgets, the first frame's default
+# colours) named breath00.., frame i showing HHMM + i minutes at :00 s with its own `clock`;
+# together they last exactly CS centiseconds (whole-cs delays, 3 and 4 cs for 60 frames in
+# 200 cs, evenly spread). The watch's moving clock centre makes the face "breathe" over the
+# hour: 08:00 -> 09:00 is one full breath (pivot down by :22, back up from :38). The
+# "time" frame that follows (09:00) restarts the main sequence's clock with `clock 0900`.
 # README / appstore stills: "<GIF frame name> <still name>", copied to
 # screenshots/readme/NN-<still name>.png, numbered from 02 in this order (01 is the GIF).
 STILLS="corners little-widgets
@@ -156,14 +166,11 @@ currency 216,EUR/USD,1.08
 gifeach
 rain 0 0 0 0 40
 int WeatherTemperature=19 WeatherCondition=0 WeatherForecastCondition=2 WeatherForecastHighTemp=18 WeatherForecastLowTemp=11
-frame empty
-delay 100
-left 
-right 
-center 
+breath 0800 60 200
 
 frame time
 delay 100
+clock 0900
 left 
 right 
 center date_iso/5 digital/7
@@ -429,6 +436,7 @@ apply_line() {
     steps)   send_int TestSteps="$rest" ;;
     hr)      send_int TestHeartRate="$rest" ;;
     delay)   FRAME_DELAY=$rest ;;
+    clock)   ;;   # handled by the GIF loop before the frame is applied
     colors)  send_int SettingColorTime=$((${rest% *})) SettingColorBG=$((${rest#* })) ;;
     sleep)   send_int TestSleepMin="${rest% *}" TestDeepSleepMin="${rest#* }" ;;
     crypto|currency)
@@ -510,6 +518,16 @@ while IFS= read -r line; do
     gifdefaults) cur="$WORK/gifdefaults" ;;
     gifeach) cur="$WORK/gifeach" ;;
     frame\ *) fnames+=("${line#frame }"); cur="$WORK/frame.${line#frame }" ;;
+    breath\ *)   # breath HHMM N CS: N bare minute frames over CS centiseconds in total
+      read -r _ b_hhmm b_n b_cs <<<"$line"
+      b_min=$((10#${b_hhmm:0:2} * 60 + 10#${b_hhmm:2:2}))
+      for ((b = 0; b < b_n; b++)); do
+        bn=$(printf 'breath%02d' $b); fnames+=("$bn")
+        m=$(( (b_min + b) % 1440 ))
+        printf 'delay %d\nclock %02d%02d\n' $((b_cs * (b + 1) / b_n - b_cs * b / b_n)) \
+          $((m / 60)) $((m % 60)) >"$WORK/frame.$bn"
+      done
+      cur="" ;;
     *) [ -n "$cur" ] || die "frame data: line before any frame"; printf '%s\n' "$line" >>"$cur" ;;
   esac
 done <<<"$GIFFRAMES"
@@ -553,14 +571,19 @@ done
 
 # --- overview GIF -------------------------------------------------------------------------
 # Frames: GIFFRAMES. The fake clock starts at 09:00:00 and runs one watch minute per GIF
-# second (frame i shows 09:00:00 + (sum of the earlier delays) x 60 s).
+# second (frame i shows 09:00:00 + (sum of the earlier delays) x 60 s), unless a `clock`
+# line restarts the clock at some frame (then: that time + the delays since that frame).
 if [ $want_gif = 1 ]; then
   GIFDIR="$ROOT/screenshots/gif_frames"; rm -rf "$GIFDIR"; mkdir -p "$GIFDIR"   # gitignored
-  elapsed=0; fi=0; gifargs=(); gifargs2=()
+  [ ${#fnames[@]} -le 99 ] || die "more than 99 GIF frames (two-digit frame numbers)"
+  elapsed=0; total=0; base=$((9 * 3600)); fi=0; gifargs=(); gifargs2=()
   for fn in "${fnames[@]}"; do
     fi=$((fi + 1))
     echo "Frame $(printf '%02d' $fi) $fn"
-    secs=$((elapsed * 60 / 100)); t=$((9 * 3600 + secs))
+    # the clock is read before the frame's lines are applied: a `clock` line restarts it here
+    clk=$(sed -n 's/^clock //p' "$WORK/frame.$fn" | tail -1)
+    if [ -n "$clk" ]; then base=$((10#${clk:0:2} * 3600 + 10#${clk:2:2} * 60)); elapsed=0; fi
+    secs=$((elapsed * 60 / 100)); t=$(( (base + secs) % 86400 ))
     FRAME_DELAY=100
     if [ $fi = 1 ]; then
       while IFS= read -r l; do apply_line "$l"; done <"$WORK/defaults"
@@ -576,9 +599,9 @@ if [ $want_gif = 1 ]; then
     f="$GIFDIR/$(printf '%02d' $fi)-$fn.png"
     capture "$f"
     gifargs+=(-delay "$FRAME_DELAY" "$f")
-    elapsed=$((elapsed + FRAME_DELAY))
+    elapsed=$((elapsed + FRAME_DELAY)); total=$((total + FRAME_DELAY))
   done
-  echo "Assembling 01-overview.gif ($fi frames, $((elapsed / 100)).$((elapsed % 100)) s)..."
+  echo "Assembling 01-overview.gif ($fi frames, $((total / 100)).$(printf '%02d' $((total % 100))) s)..."
   # One palette over all frames: the watch is 8-bit colour, so this is lossless.
   magick "$GIFDIR"/[0-9][0-9]-*.png +append -colors 256 -unique-colors "$WORK/palette.png"
   magick -loop 0 "${gifargs[@]}" -dither None -remap "$WORK/palette.png" \

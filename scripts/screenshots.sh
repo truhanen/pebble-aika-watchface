@@ -128,9 +128,10 @@ EOF
 )
 
 # ---------------------------------------------------------------------------------
-# Overview GIF: it opens with one "breath" (a round of bare-face minute frames, see `breath`
-# below), then one layout is built up frame by frame (independent of the scenes above), at a
-# constant 1 fps (the last frame is held for 2 s). One GIF second = one watch minute:
+# Overview GIF: it opens with a 1 s still of the bare face, then one "breath" (a round of
+# bare-face minute frames, see `breath` below, 2.67 s), then one layout is built up frame by
+# frame (independent of the scenes above), at 1.5 fps (the last frame is held for 2 s). One
+# GIF second = one watch minute:
 # every frame advances the fake clock (TestTime/TestSeconds) by its own delay x 60. The
 # `clock HHMM` line of a frame sets the clock to HH:MM:00 and restarts the running clock from
 # there; without it the clock runs on (it starts at 09:00:00). The first frame applies the defaults above and the gifdefaults; later frames send only what
@@ -166,85 +167,88 @@ currency 216,EUR/USD,1.08
 gifeach
 rain 0 0 0 0 40
 int WeatherTemperature=19 WeatherCondition=0 WeatherForecastCondition=2 WeatherForecastHighTemp=18 WeatherForecastLowTemp=11
-breath 0800 60 200
+frame still
+delay 100
+clock 0800
+breath 0800 60 267
 
 frame time
-delay 100
+delay 67
 clock 0900
 left 
 right 
 center date_iso/5 digital/7
 
 frame corners
-delay 100
+delay 67
 left weather_icon | date_wkday/5
 right bat_icon | seconds/5
 center date_iso/5 digital/7
 
 frame grow2
-delay 100
+delay 67
 left weather_icon weather/7:u | hr/5:i date_wkday/5
 right bat_icon bat/5:u | 200/3:u seconds/5
 center date_iso/5 digital/7
 
 frame grow3
-delay 100
+delay 67
 left weather_icon weather/7:u forecast/3:u | steps/5:i hr/5:i date_wkday/5
 right bat_icon bat/5:u battery_days/5:u | 216/3:u 200/3:u seconds/5
 center date_iso/5 digital/7
 
 frame full
-delay 100
+delay 67
 left weather_icon weather/7:u forecast/3:u rain12/3:u | steps/5:i hr/5:i date_wkday/5
 right bat_icon bat/5:u battery_days/5:u | elec/3:u 216/3:u 200/3:u seconds/5
 center date_iso/5 digital/7
 
 frame smaller
-delay 100
+delay 67
 left weather_icon weather/5:u forecast/2:u rain12/2:u | steps/3:i hr/3:i date_wkday/3
 right bat_icon bat/3:u battery_days/3:u | elec/2:u 216/2:u 200/2:u seconds/3
 center date_iso/3 digital/5
 
 frame no-units
-delay 100
+delay 67
 left weather_icon weather/5:n forecast/2:n rain12/2:n | steps/3:n hr/3:n date_wkday/3
 right bat_icon bat/3:n battery_days/3:n | elec/2:n 216/2:n 200/2:n seconds/3
 center date_iso/3 digital/5
 
 frame units
-delay 100
+delay 67
 left weather_icon weather/5:u forecast/2:u rain12/2:u | steps/3:i hr/3:i date_wkday/3
 right bat_icon bat/3:u battery_days/3:u | elec/2:u 216/2:u 200/2:u seconds/3
 center date_iso/3 digital/5
 
 frame smaller-back
-delay 100
+delay 67
 left weather_icon weather/7:u forecast/3:u rain12/3:u | steps/5:i hr/5:i date_wkday/5
 right bat_icon bat/5:u battery_days/5:u | elec/3:u 216/3:u 200/3:u seconds/5
 center date_iso/5 digital/7
 
 frame bigger
-delay 100
+delay 67
 left weather_icon weather/10:u forecast/6:u rain12/6:u | steps/6:i hr/6:i date_wkday/6
 right bat_icon bat/9:u battery_days/9:u | elec/6:u 216/6:u 200/6:u seconds/9
 center date_iso/6 digital/10
 
 frame color1
-delay 100
+delay 67
 left weather_icon weather/10:u forecast/6:u rain12/6:u | steps/6:i hr/6:i date_wkday/6
 right bat_icon bat/9:u battery_days/9:u | elec/6:u 216/6:u 200/6:u seconds/9
 center date_iso/6 digital/10
 colors 0x000055 0xFFFFAA
 
 frame color2
-delay 100
+delay 67
 left weather_icon weather/10:u forecast/6:u rain12/6:u | steps/6:i hr/6:i date_wkday/6
 right bat_icon bat/9:u battery_days/9:u | elec/6:u 216/6:u 200/6:u seconds/9
 center date_iso/6 digital/10
 colors 0x55FF55 0x000000
 
 frame color3
-delay 100
+delay 67
 left weather_icon weather/10:u forecast/6:u rain12/6:u | steps/6:i hr/6:i date_wkday/6
 right bat_icon bat/9:u battery_days/9:u | elec/6:u 216/6:u 200/6:u seconds/9
 center date_iso/6 digital/10

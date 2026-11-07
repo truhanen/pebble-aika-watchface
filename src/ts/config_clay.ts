@@ -151,14 +151,17 @@ const config = [
         '<b>font</b> of its value (Default = M Gothic at the edges, XL Bitham ' +
         'in the center column), reorder with ▲ / ▼, remove with ✕, and add more with ' +
         '“+ Add widget”.<br><br>' +
-        'The <b>◉ / U / ⊘</b> button after the dropdown picks that widget’s ' +
-        '<b>identifier</b>: <b>◉</b> = its icon (battery, weather, steps, heart rate, …), ' +
-        '<b>U</b> = its unit (%, °C, h, bpm, UVI, a coin code, …), <b>⊘</b> = none, ' +
-        'leaving only the value and making the widget shorter so you can fit more along the ' +
-        'edge. A widget offers only the identifiers it has; one without an icon shows its ' +
-        'unit by default.<br>' +
-        '(Widgets with no separate identifier — Empty, the dates, Seconds and the ' +
-        'icon-only widgets — have no such button.)' },
+        'The button after the dropdown (<b>V◉</b> / <b>VU</b> / <b>V</b> / <b>◉</b>) picks ' +
+        'what is shown for that widget; <b>V</b> stands for its <b>value</b> and ' +
+        '<b>◉</b> for its <b>icon</b>: <b>V◉</b> = the value with its icon (battery, ' +
+        'weather, steps, heart rate, …), <b>VU</b> = the value with its unit (%, °C, h, ' +
+        'bpm, UVI, a coin code, …), <b>V</b> = the value alone, making the widget ' +
+        'shorter so you can fit more along the edge, and <b>◉</b> = the icon alone. ' +
+        'Tap the button to cycle through the choices a widget has; a widget without an ' +
+        'icon has no <b>V◉</b> or <b>◉</b> and starts with its unit.<br>' +
+        '(Widgets with nothing to switch — Empty, the dates, Seconds and the widgets that ' +
+        'only show an icon, such as Bluetooth or an icon from a plugin — have an inactive ' +
+        'button or none.)' },
       { type: 'text', id: 'widgets-power-warning', defaultValue:
         '<b>⚡ Battery note.</b> The watchface redraws <i>everything</i> at once — ' +
         'there is no partial refresh — so anything that forces a faster refresh ' +

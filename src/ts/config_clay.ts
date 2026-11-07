@@ -210,6 +210,20 @@ const config = [
     ],
   },
 
+  // --------------------------------------------------------------------- Plugins
+  {
+    type: 'section',
+    items: [
+      { type: 'heading', id: 'heading-plugins', defaultValue: 'Plugins' },
+      { type: 'text', defaultValue:
+        'Show numeric values from the phone\'s Pebble plugins (e.g. weather) in a widget. ' +
+        'Add a property, then place it in one of the widget lists above; each slot becomes ' +
+        'one widget named CATEGORY Plugin Item Instance Prop (e.g. WEATHER FMI Loc Jyv Tem). ' },
+      { type: 'pluginCatalog', messageKey: 'PluginCatalog', defaultValue: '' },
+      { type: 'pluginList', messageKey: 'PluginList', defaultValue: [] },
+    ],
+  },
+
   // --------------------------------------------------------------- Weather
   {
     type: 'section',
@@ -301,20 +315,6 @@ const config = [
         'Trim: cut N leading digits (1.160, trim 2 → 60). ' +
         'Leave the label empty to show the quote currency (e.g. USD); short labels fit best.' },
       { type: 'currencyList', messageKey: 'CurrencyList', defaultValue: [] },
-    ],
-  },
-
-  // --------------------------------------------------------------------- Plugins
-  {
-    type: 'section',
-    items: [
-      { type: 'heading', id: 'heading-plugins', defaultValue: 'Plugins' },
-      { type: 'text', defaultValue:
-        'Show numeric values from the phone\'s Pebble plugins (e.g. weather) in a widget. ' +
-        'Add a property, then place it in one of the widget lists above; each slot becomes ' +
-        'one widget named CATEGORY Plugin Item Instance Prop (e.g. WEATHER FMI Loc Jyv Tem). ' },
-      { type: 'pluginCatalog', messageKey: 'PluginCatalog', defaultValue: '' },
-      { type: 'pluginList', messageKey: 'PluginList', defaultValue: [] },
     ],
   },
 

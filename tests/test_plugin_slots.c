@@ -22,6 +22,15 @@ int main(void) {
   assert(PluginSlots_get(slots, 1) == NULL);          // never received
   assert(PluginSlots_get(slots, 16) == NULL);         // out of range
 
+  // unused tail bytes are zero, so persisted blobs are deterministic
+  {
+    PluginSlot dirty[PLUGIN_SLOT_COUNT];
+    memset(dirty, 0xAA, sizeof(dirty));
+    assert(PluginSlots_parse("3" US "18.3" US "C", dirty) == 1);
+    for (int i = 5; i < PLUGIN_VALUE_LEN; i++) { assert(dirty[3].value[i] == 0); }
+    for (int i = 2; i < PLUGIN_UNIT_LEN; i++) { assert(dirty[3].unit[i] == 0); }
+  }
+
   // a later message updates only the slots it mentions
   assert(PluginSlots_parse("0" US "-4" US "\xc2\xb0" "C", slots) == 1);
   assert(strcmp(slots[0].value, "-4") == 0);

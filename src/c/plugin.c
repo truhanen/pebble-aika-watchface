@@ -49,7 +49,7 @@ bool Plugin_iconMissing(uint8_t wid) { return Plugin_isIconWid(wid) && Plugin_ic
 
 void Plugin_setIcon(uint8_t slot, uint8_t w, uint8_t h, const uint8_t *palette, uint16_t paletteLen,
                     const uint8_t *pixels, uint16_t pixelLen) {
-  if (slot >= PLUGIN_SLOT_COUNT || !palette || !pixels
+  if (slot >= PLUGIN_SLOT_COUNT || !Plugin_isIconWid((uint8_t)(PLUGIN_WID_BASE + slot)) || !palette || !pixels
       || !PluginIcon_valid(w, h, paletteLen, pixelLen)) { return; }
   GColor *pal = (GColor *)malloc(16 * sizeof(GColor));   // 4bpp palette: 16 entries
   if (!pal) { return; }
@@ -85,11 +85,13 @@ void Plugin_init() {
   // A blob of another size (an older build's slot layout) is dropped, not misread.
   const size_t half = sizeof(PluginSlot) * HALF;
   if (persist_exists(PLUGIN_PERSIST_KEY_LO)
-      && persist_read_data(PLUGIN_PERSIST_KEY_LO, &Plugin_slots[0], half) != (int)half) {
+      && (persist_get_size(PLUGIN_PERSIST_KEY_LO) != (int)half
+          || persist_read_data(PLUGIN_PERSIST_KEY_LO, &Plugin_slots[0], half) != (int)half)) {
     memset(&Plugin_slots[0], 0, half);
   }
   if (persist_exists(PLUGIN_PERSIST_KEY_HI)
-      && persist_read_data(PLUGIN_PERSIST_KEY_HI, &Plugin_slots[HALF], half) != (int)half) {
+      && (persist_get_size(PLUGIN_PERSIST_KEY_HI) != (int)half
+          || persist_read_data(PLUGIN_PERSIST_KEY_HI, &Plugin_slots[HALF], half) != (int)half)) {
     memset(&Plugin_slots[HALF], 0, half);
   }
   for (int i = 0; i < PLUGIN_SLOT_COUNT; i++) {   // a corrupt blob must not leave unterminated text

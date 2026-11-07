@@ -381,7 +381,6 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     if (v > LEGACY_HIDE_FLAG && v <= (LEGACY_HIDE_FLAG | 25)) {
       return { id: v - LEGACY_HIDE_FLAG, ident: 'none', font: FONT_DEFAULT };
     }
-    if (v === 37) { return { id: 7, ident: 'iconly', font: FONT_DEFAULT }; }   // retired weather icon
     return { id: v, ident: 'icon', font: FONT_DEFAULT };
   }
 

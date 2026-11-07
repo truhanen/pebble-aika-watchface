@@ -46,6 +46,8 @@ uint8_t PluginSlots_parse(const char *data, PluginSlot *slots) {
     copy_field(idBuf, sizeof(idBuf), s, e);
     int idx = atoi(idBuf);
     char value[PLUGIN_VALUE_LEN], unit[PLUGIN_UNIT_LEN];
+    memset(value, 0, sizeof(value));   // deterministic persisted blobs (no stack garbage)
+    memset(unit, 0, sizeof(unit));
     if (!next_field(&p, &s, &e, false)) { break; }
     copy_field(value, PLUGIN_VALUE_LEN, s, e);
     if (!next_field(&p, &s, &e, true)) { break; }   // unit: last field, may end the string

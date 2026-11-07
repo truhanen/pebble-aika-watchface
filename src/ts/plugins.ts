@@ -4,8 +4,8 @@
 /* Plugin-sourced widgets (ids 144..159): numeric properties of phone-side plugins
    (Pebble SDK 4.44+ Pebble.subscribeToSource), e.g. the built-in weather plugin.
    Selections come from localStorage `plugin_selections`, a JSON array whose index n
-   feeds widget id 144+n (max 16); the config page that writes it comes later. For
-   emulator testing set it by hand from the pkjs context:
+   feeds widget id 144+n (max 16); the Settings > Plugins config page writes it. For
+   emulator testing (the config page cannot load there) set it by hand from the pkjs context:
      localStorage.setItem('plugin_selections', JSON.stringify([
        {plugin:'00000000-0000-0000-0001-000000000002', category:'weather',
         item:'location', instanceId:'1', property:'temperature'}]));
@@ -64,7 +64,17 @@ export function updatePlugins(forceUpdate?: boolean): void {
   if (typeof Pebble.subscribeToSource !== 'function') { return; }   // old phone app
   const sels = readSelections();
   const groups = groupSelections(sels);
-  if (groups.length === 0) { return; }
+  if (groups.length === 0) {
+    // No selections: still push all '--' records (once, via LAST_SENT_KEY) so stale values
+    // clear and the watch's cold-poll loop (Plugin_find == NULL) ends.
+    const empty = packPluginData([]);
+    if (!forceUpdate && window.localStorage.getItem(LAST_SENT_KEY) === empty) { return; }
+    Pebble.sendAppMessage(buildPluginMessage([]), () => {
+      window.localStorage.setItem(LAST_SENT_KEY, empty);
+      console.log('plugins: sent empty PluginData');
+    }, () => { console.log('plugins: failed to send to Pebble'); });
+    return;
+  }
 
   const last = parseInt(window.localStorage.getItem(LAST_FETCH_KEY) || '0', 10);
   const now = Math.floor(Date.now() / 1000);

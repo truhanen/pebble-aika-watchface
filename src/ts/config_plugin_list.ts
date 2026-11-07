@@ -8,8 +8,9 @@
    Category -> Plugin -> Item -> [Instance] -> Property, fed by the PluginCatalog baked
    into clay-settings by PKJS (plugins_catalog.ts); the Instance select exists only for
    items with several instances and shows the instance NAME when it has one, else its
-   number; the stable instanceId is what is stored. Only numeric properties are offered
-   (icon properties come with the icon widgets later).
+   number; the stable instanceId is what is stored. Numeric properties are offered
+   under their name and icon properties as "name (icon)" (stored with shape 'icon'); a
+   property with both is listed twice.
 
    SLOT STABILITY: removing a row that is not the last one EMPTIES the slot (it stays as
    an "unused slot" row that can be reused) instead of shifting the later rows, so every

@@ -130,9 +130,9 @@ EOF
 # ---------------------------------------------------------------------------------
 # Overview GIF: it opens with a 1 s still of the bare face, then one "breath" (a round of
 # bare-face minute frames, see `breath` below, 2.67 s), then one layout is built up frame by
-# frame (independent of the scenes above), at 1.5 fps (the last frame is held for 2 s). One
-# GIF second = one watch minute:
-# every frame advances the fake clock (TestTime/TestSeconds) by its own delay x 60. The
+# frame (independent of the scenes above), at 1.5 fps (the last frame is held for 2 s). Every
+# frame advances the fake clock (TestTime/TestSeconds) by GIF_TICK s, so the minute steps
+# once per frame. The
 # `clock HHMM` line of a frame sets the clock to HH:MM:00 and restarts the running clock from
 # there; without it the clock runs on (it starts at 09:00:00). The first frame applies the defaults above and the gifdefaults; later frames send only what
 # they list; gifeach lines are re-sent in every frame (the emulator's phone side overwrites
@@ -143,14 +143,14 @@ EOF
 # The "bigger" frame is all Leco, one step up: S Gothic (3) -> M Leco (6), M Gothic (5) ->
 # L Leco (9), XL Bitham (7) -> XL Leco (10); the date, weekday, steps and heart rate take
 # M Leco (6) (the date then doesn't hit the corner icons). Weekday and seconds are M Gothic (5)
-# in the normal frames and S Gothic (3) in the smaller frame; seconds are L Leco (9) in the
-# Leco frames. So they never touch the digital time.
-# The size cycle goes to the smaller fonts (units off and back on there), back to normal,
-# then to the Leco fonts, which stay for the colour frames.
+# in the normal frames and seconds are L Leco (9) in the Leco frames. So they never touch the
+# digital time.
+# After the build-up the identifiers go off and back on, then the fonts go to Leco, which
+# stays for the colour frames.
 # `breath HHMM N CS` expands to N bare frames (no widgets, the first frame's default
 # colours) named breath00.., frame i showing HHMM + i minutes at :00 s with its own `clock`;
-# together they last exactly CS centiseconds (whole-cs delays, 3 and 4 cs for 60 frames in
-# 200 cs, evenly spread). The watch's moving clock centre makes the face "breathe" over the
+# together they last exactly CS centiseconds (whole-cs delays, 4 and 5 cs for 60 frames in
+# 267 cs, evenly spread). The watch's moving clock centre makes the face "breathe" over the
 # hour: 08:00 -> 09:00 is one full breath (pivot down by :22, back up from :38). The
 # "time" frame that follows (09:00) restarts the main sequence's clock with `clock 0900`.
 # README / appstore stills: "<GIF frame name> <still name>", copied to
@@ -197,67 +197,49 @@ left weather_icon weather/7:u forecast/3:u | steps/5:i hr/5:i date_wkday/5
 right bat_icon bat/5:u battery_days/5:u | 216/3:u 200/3:u seconds/5
 center date_iso/5 digital/7
 
-frame full
-delay 67
-left weather_icon weather/7:u forecast/3:u rain12/3:u | steps/5:i hr/5:i date_wkday/5
-right bat_icon bat/5:u battery_days/5:u | elec/3:u 216/3:u 200/3:u seconds/5
-center date_iso/5 digital/7
-
-frame smaller
-delay 67
-left weather_icon weather/5:u forecast/2:u rain12/2:u | steps/3:i hr/3:i date_wkday/3
-right bat_icon bat/3:u battery_days/3:u | elec/2:u 216/2:u 200/2:u seconds/3
-center date_iso/3 digital/5
-
 frame no-units
 delay 67
-left weather_icon weather/5:n forecast/2:n rain12/2:n | steps/3:n hr/3:n date_wkday/3
-right bat_icon bat/3:n battery_days/3:n | elec/2:n 216/2:n 200/2:n seconds/3
-center date_iso/3 digital/5
+left weather_icon weather/7:n forecast/3:n | steps/5:n hr/5:n date_wkday/5
+right bat_icon bat/5:n battery_days/5:n | 216/3:n 200/3:n seconds/5
+center date_iso/5 digital/7
 
 frame units
 delay 67
-left weather_icon weather/5:u forecast/2:u rain12/2:u | steps/3:i hr/3:i date_wkday/3
-right bat_icon bat/3:u battery_days/3:u | elec/2:u 216/2:u 200/2:u seconds/3
-center date_iso/3 digital/5
-
-frame smaller-back
-delay 67
-left weather_icon weather/7:u forecast/3:u rain12/3:u | steps/5:i hr/5:i date_wkday/5
-right bat_icon bat/5:u battery_days/5:u | elec/3:u 216/3:u 200/3:u seconds/5
+left weather_icon weather/7:u forecast/3:u | steps/5:i hr/5:i date_wkday/5
+right bat_icon bat/5:u battery_days/5:u | 216/3:u 200/3:u seconds/5
 center date_iso/5 digital/7
 
 frame bigger
 delay 67
-left weather_icon weather/10:u forecast/6:u rain12/6:u | steps/6:i hr/6:i date_wkday/6
-right bat_icon bat/9:u battery_days/9:u | elec/6:u 216/6:u 200/6:u seconds/9
+left weather_icon weather/10:u forecast/6:u | steps/6:i hr/6:i date_wkday/6
+right bat_icon bat/9:u battery_days/9:u | 216/6:u 200/6:u seconds/9
 center date_iso/6 digital/10
 
 frame color1
 delay 67
-left weather_icon weather/10:u forecast/6:u rain12/6:u | steps/6:i hr/6:i date_wkday/6
-right bat_icon bat/9:u battery_days/9:u | elec/6:u 216/6:u 200/6:u seconds/9
+left weather_icon weather/10:u forecast/6:u | steps/6:i hr/6:i date_wkday/6
+right bat_icon bat/9:u battery_days/9:u | 216/6:u 200/6:u seconds/9
 center date_iso/6 digital/10
 colors 0x000055 0xFFFFAA
 
 frame color2
 delay 67
-left weather_icon weather/10:u forecast/6:u rain12/6:u | steps/6:i hr/6:i date_wkday/6
-right bat_icon bat/9:u battery_days/9:u | elec/6:u 216/6:u 200/6:u seconds/9
+left weather_icon weather/10:u forecast/6:u | steps/6:i hr/6:i date_wkday/6
+right bat_icon bat/9:u battery_days/9:u | 216/6:u 200/6:u seconds/9
 center date_iso/6 digital/10
 colors 0x55FF55 0x000000
 
 frame color3
 delay 67
-left weather_icon weather/10:u forecast/6:u rain12/6:u | steps/6:i hr/6:i date_wkday/6
-right bat_icon bat/9:u battery_days/9:u | elec/6:u 216/6:u 200/6:u seconds/9
+left weather_icon weather/10:u forecast/6:u | steps/6:i hr/6:i date_wkday/6
+right bat_icon bat/9:u battery_days/9:u | 216/6:u 200/6:u seconds/9
 center date_iso/6 digital/10
 colors 0xFFAA00 0x000055
 
 frame color4
 delay 200
-left weather_icon weather/10:u forecast/6:u rain12/6:u | steps/6:i hr/6:i date_wkday/6
-right bat_icon bat/9:u battery_days/9:u | elec/6:u 216/6:u 200/6:u seconds/9
+left weather_icon weather/10:u forecast/6:u | steps/6:i hr/6:i date_wkday/6
+right bat_icon bat/9:u battery_days/9:u | 216/6:u 200/6:u seconds/9
 center date_iso/6 digital/10
 colors 0xFFFFFF 0xAA0000
 EOF
@@ -270,7 +252,7 @@ cd "$ROOT"
 OUT="$ROOT/screenshots/readme"
 EMU="$ROOT/scripts/emu.sh"
 SHOTS="$ROOT/screenshots/test"
-GIF_DELAY=200   # centiseconds per overview frame
+GIF_TICK=60   # fake-clock seconds per overview frame
 
 want_gif=1
 keep=0
@@ -574,9 +556,9 @@ for n in "${names[@]}"; do
 done
 
 # --- overview GIF -------------------------------------------------------------------------
-# Frames: GIFFRAMES. The fake clock starts at 09:00:00 and runs one watch minute per GIF
-# second (frame i shows 09:00:00 + (sum of the earlier delays) x 60 s), unless a `clock`
-# line restarts the clock at some frame (then: that time + the delays since that frame).
+# Frames: GIFFRAMES. The fake clock starts at 09:00:00 and runs GIF_TICK s per frame (frame i
+# shows 09:00:00 + i x GIF_TICK s), unless a `clock` line restarts the clock at some frame
+# (then: that time + GIF_TICK s per frame since that frame).
 if [ $want_gif = 1 ]; then
   GIFDIR="$ROOT/screenshots/gif_frames"; rm -rf "$GIFDIR"; mkdir -p "$GIFDIR"   # gitignored
   [ ${#fnames[@]} -le 99 ] || die "more than 99 GIF frames (two-digit frame numbers)"
@@ -587,7 +569,7 @@ if [ $want_gif = 1 ]; then
     # the clock is read before the frame's lines are applied: a `clock` line restarts it here
     clk=$(sed -n 's/^clock //p' "$WORK/frame.$fn" | tail -1)
     if [ -n "$clk" ]; then base=$((10#${clk:0:2} * 3600 + 10#${clk:2:2} * 60)); elapsed=0; fi
-    secs=$((elapsed * 60 / 100)); t=$(( (base + secs) % 86400 ))
+    t=$(( (base + elapsed * GIF_TICK) % 86400 ))
     FRAME_DELAY=100
     if [ $fi = 1 ]; then
       while IFS= read -r l; do apply_line "$l"; done <"$WORK/defaults"
@@ -603,7 +585,7 @@ if [ $want_gif = 1 ]; then
     f="$GIFDIR/$(printf '%02d' $fi)-$fn.png"
     capture "$f"
     gifargs+=(-delay "$FRAME_DELAY" "$f")
-    elapsed=$((elapsed + FRAME_DELAY)); total=$((total + FRAME_DELAY))
+    elapsed=$((elapsed + 1)); total=$((total + FRAME_DELAY))
   done
   echo "Assembling 01-overview.gif ($fi frames, $((total / 100)).$(printf '%02d' $((total % 100))) s)..."
   # One palette over all frames: the watch is 8-bit colour, so this is lossless.

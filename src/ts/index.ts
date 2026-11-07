@@ -6,6 +6,8 @@ import * as electricity from './electricity';
 import * as crypto from './crypto';
 import * as currency from './currency';
 import * as tuya from './tuya';
+import * as plugins from './plugins';
+import { anyPluginWidget } from './plugins_parse';
 import cryptoListComponent from './config_crypto_list';
 import currencyListComponent from './config_currency_list';
 import tuyaListComponent from './config_tuya_list';
@@ -58,6 +60,9 @@ Pebble.addEventListener('ready', () => {
   if (window.localStorage.getItem('disable_tuya') === null) {
     window.localStorage.setItem('disable_tuya', 'yes');
   }
+  if (window.localStorage.getItem('disable_plugins') === null) {
+    window.localStorage.setItem('disable_plugins', 'yes');
+  }
 });
 
 // Listen for incoming messages
@@ -85,6 +90,7 @@ Pebble.addEventListener('appmessage', (msg) => {
   crypto.updateCrypto(cold);
   currency.updateCurrency(cold);
   tuya.updateTuya(cold);
+  plugins.updatePlugins(cold);
 });
 
 // Bake the discovered Tuya catalog + a default (empty) sensor list into clay-settings
@@ -212,6 +218,8 @@ Pebble.addEventListener('webviewclosed', (e) => {
   // or is the LED-row widget (23)
   const anyTuya = widgetIDs.some((id) => (id >= 128 && id < 144) || id === 23);
   window.localStorage.setItem('disable_tuya', anyTuya ? 'no' : 'yes');
+  // plugins: enabled iff a placed widget id is in the plugin range [144, 160)
+  window.localStorage.setItem('disable_plugins', anyPluginWidget(widgetIDs) ? 'no' : 'yes');
 
   console.log('Preparing message: ' + JSON.stringify(dict));
   Pebble.sendAppMessage(dict, () => {
@@ -220,5 +228,6 @@ Pebble.addEventListener('webviewclosed', (e) => {
     crypto.updateCrypto(true);
     currency.updateCurrency(true);
     tuya.updateTuya(true);
+    plugins.updatePlugins(true);
   }, () => { console.log('Failed to send config data!'); });
 });

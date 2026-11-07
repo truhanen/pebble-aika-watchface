@@ -18,6 +18,7 @@
 #include "crypto.h"
 #include "currency.h"
 #include "tuya.h"
+#include "plugin.h"
 #include "tuya_leds.h"
 #include "battery_days.h"
 #include "sleep_calc.h"
@@ -470,6 +471,21 @@ static bool unit_slot(const WidgetCtx *c, char *buf, size_t n) {
   return true;
 }
 
+/***** plugin slots (phone-side plugin properties, ids 144..159) *****/
+
+static bool value_plugin(const WidgetCtx *c, char *buf, size_t n) {
+  PluginSlot *s = Plugin_find(c->id);
+  snprintf(buf, n, "%s", s ? s->value : "--");
+  return true;
+}
+
+static bool unit_plugin(const WidgetCtx *c, char *buf, size_t n) {
+  PluginSlot *s = Plugin_find(c->id);
+  if (!s || !s->unit[0]) { return false; }
+  snprintf(buf, n, "%s", s->unit);
+  return true;
+}
+
 /********** descriptors **********/
 
 static const WidgetDesc DESC_EMPTY = { NULL, ICON_NONE, NULL };
@@ -500,9 +516,11 @@ static const WidgetDesc DESC_ELECTRICITY = { value_electricity, ICON_NONE, unit_
 static const WidgetDesc DESC_CHEAP = { value_cheap_time, ICON_NONE, unit_cheap_price };
 static const WidgetDesc DESC_TUYA_LEDS = { NULL, ICON_LEDS, NULL };
 static const WidgetDesc DESC_SLOT = { value_slot, ICON_NONE, unit_slot };
+static const WidgetDesc DESC_PLUGIN = { value_plugin, ICON_NONE, unit_plugin };
 
 static const WidgetDesc *desc_for(uint8_t id) {
   if (Crypto_isWid(id) || Currency_isWid(id) || Tuya_isWid(id)) { return &DESC_SLOT; }
+  if (Plugin_isWid(id)) { return &DESC_PLUGIN; }
   if (id >= DATE_D_M_DOT && id <= DATE_ISO) { return &DESC_DATE; }
   switch (id) {
     case EMPTY:                return &DESC_EMPTY;

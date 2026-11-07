@@ -25,7 +25,7 @@ function readySource() {
 
 test("the 'ready' handler performs no data fetches", () => {
   const src = readySource();
-  const calls = ['updateWeather', 'updateElectricity', 'updateCrypto', 'updateCurrency', 'updateTuya'];
+  const calls = ['updateWeather', 'updateElectricity', 'updateCrypto', 'updateCurrency', 'updateTuya', 'updatePlugins'];
   const found = calls.filter((c) => src.indexOf(c) !== -1);
   assert.deepStrictEqual(found, [],
     "'ready' must not call any updateX (it runs on every watchface relaunch): " + found.join(', '));
@@ -33,7 +33,7 @@ test("the 'ready' handler performs no data fetches", () => {
 
 test("the 'ready' handler still seeds the disable_* defaults", () => {
   const src = readySource();
-  ['disable_weather', 'disable_electricity', 'disable_crypto', 'disable_currency', 'disable_tuya']
+  ['disable_weather', 'disable_electricity', 'disable_crypto', 'disable_currency', 'disable_tuya', 'disable_plugins']
     .forEach((k) => assert.ok(src.indexOf(k) !== -1, k + ' default must still be seeded on ready'));
 });
 
@@ -41,9 +41,9 @@ test('the appmessage poll handler routes the cold flag into every source', () =>
   const js = indexSource();
   const start = js.indexOf("addEventListener('appmessage'");
   assert.ok(start !== -1);
-  const src = js.slice(start, start + 1500);
+  const src = js.slice(start, start + 1800);
   assert.ok(src.indexOf('isColdPollRequest') !== -1, 'the poll handler must detect a cold request');
-  ['updateWeather(', 'updateElectricity(', 'updateCrypto(', 'updateCurrency(', 'updateTuya(']
+  ['updateWeather(', 'updateElectricity(', 'updateCrypto(', 'updateCurrency(', 'updateTuya(', 'updatePlugins(']
     .forEach((c) => {
       const at = src.indexOf(c);
       assert.ok(at !== -1, c + ' must be called from the poll handler');

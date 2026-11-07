@@ -7,6 +7,7 @@
 #include "crypto.h"
 #include "currency.h"
 #include "tuya.h"
+#include "plugin.h"
 #include "tuya_leds.h"
 #include "languages.h"
 #include "night_window_calc.h"
@@ -167,6 +168,12 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   if (tuya_tuple != NULL && tuya_tuple->type == TUPLE_CSTRING) {
     Tuya_parse(tuya_tuple->value->cstring);
     persist_write_string(TUYA_PERSIST_KEY_DATA, tuya_tuple->value->cstring);
+  }
+
+  // Plugin widgets: slot/value/unit records for ids 144..159; Plugin_parse persists.
+  Tuple *plugin_tuple = dict_find(iterator, MESSAGE_KEY_PluginData);
+  if (plugin_tuple != NULL && plugin_tuple->type == TUPLE_CSTRING) {
+    Plugin_parse(plugin_tuple->value->cstring);
   }
 
   // Tuya LED row: compact per-switch state string ('1'/'0'/'?'), own message key.

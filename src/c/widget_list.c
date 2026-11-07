@@ -33,6 +33,7 @@ bool WidgetList_isDrawableId(uint8_t id) {
   if (id >= WL_CRYPTO_WID_BASE && id < WL_CRYPTO_WID_BASE + WL_MAX_CRYPTO) { return true; }
   if (id >= WL_CURRENCY_WID_BASE && id < WL_CURRENCY_WID_BASE + WL_MAX_CURRENCY) { return true; }
   if (id >= WL_TUYA_WID_BASE && id < WL_TUYA_WID_BASE + WL_MAX_TUYA) { return true; }
+  if (id >= WL_PLUGIN_WID_BASE && id < WL_PLUGIN_WID_BASE + WL_MAX_PLUGINS) { return true; }
   return false;
 }
 

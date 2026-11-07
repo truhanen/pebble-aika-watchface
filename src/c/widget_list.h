@@ -27,6 +27,8 @@
 #define WL_MAX_CURRENCY      7
 #define WL_TUYA_WID_BASE     128
 #define WL_MAX_TUYA          16
+#define WL_PLUGIN_WID_BASE   144   // src/c/plugin.h (PLUGIN_WID_BASE / PLUGIN_SLOT_COUNT)
+#define WL_MAX_PLUGINS       16
 
 #define WIDGET_ROTATING_MARKER 0xFF
 #define MAX_GROUP_MEMBERS      6
@@ -62,7 +64,7 @@ typedef struct {
 } WidgetSlot;
 
 // Drawable id: a normal type 0..WL_MAX_WIDGET_TYPE (not the retired DATE) or a crypto /
-// currency / tuya wid. EMPTY(0) draws nothing but is a real slot (it reserves the ink
+// currency / tuya / plugin wid. EMPTY(0) draws nothing but is a real slot (it reserves the ink
 // height of its font), so lists keep it.
 bool WidgetList_isDrawableId(uint8_t id);
 

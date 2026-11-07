@@ -30,7 +30,8 @@ int main(void) {
   assert(!WidgetList_isDrawableId(39));     // the separate Battery % widget is gone
   assert(WidgetList_isDrawableId(40) && WidgetList_isDrawableId(44));   // rain max 1 h .. 12 h
   assert(!WidgetList_isDrawableId(45));
-  assert(WidgetList_isDrawableId(128) && WidgetList_isDrawableId(143) && !WidgetList_isDrawableId(144));
+  assert(WidgetList_isDrawableId(128) && WidgetList_isDrawableId(143));
+  assert(WidgetList_isDrawableId(144) && WidgetList_isDrawableId(159) && !WidgetList_isDrawableId(160));   // plugins
   assert(WidgetList_isDrawableId(200) && WidgetList_isDrawableId(215));
   assert(WidgetList_isDrawableId(216) && WidgetList_isDrawableId(222) && !WidgetList_isDrawableId(223));
   assert(!WidgetList_isDrawableId(255));    // the group marker is not an id

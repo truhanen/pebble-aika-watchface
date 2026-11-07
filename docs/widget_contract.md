@@ -55,6 +55,7 @@ Each widget declares which identifiers it has (an icon, a unit, or both). When t
 | 35 digital time | (no icon; shows the unit) | AM / PM (12 h only) |
 | 14, 18, 19 electricity | (no icon; shows the unit) | `c/kWh` fraction |
 | crypto / currency / tuya | (no icon; shows the unit) | the label |
+| 144..159 plugin | (no icon yet; shows the unit) | the plugin value's unit (`°C`); none = no identifier |
 | 23 Tuya LEDs | the LED row | (none) |
 | 26..34 dates, 5 seconds, 11 beats, 36..38 icon-only | no identifier switch | |
 
@@ -134,6 +135,7 @@ These are dynamic ranges, unchanged:
 | Ids | Source |
 |---|---|
 | 128..143 | Tuya |
+| 144..159 | Plugin properties: selection `n` (localStorage `plugin_selections`, index `n`) is id 144+n. The phone sends `PluginData`, a string of `slot<US>value<US>unit` records (US = 0x1f), `slot` = `id - 144`. The watch shows `--` until a slot has arrived. |
 | 200..215 | Crypto |
 | 216..222 | Currency |
 

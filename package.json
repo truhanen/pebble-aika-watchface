@@ -18,6 +18,27 @@
     "displayName": "Aika",
     "uuid": "55a7038e-c87b-432a-8816-50108f72670c",
     "sdkVersion": "3",
+    "usesPermissions": [
+      "Location",
+      {
+        "name": "Internet",
+        "parameters": {
+          "domains": [
+            "opendata.fmi.fi",
+            "api.open-meteo.com",
+            "api.porssisahko.net",
+            "api.coingecko.com",
+            "open.er-api.com",
+            "openapi.tuyaeu.com",
+            "openapi.tuyaus.com",
+            "openapi.tuyain.com",
+            "openapi.tuyacn.com",
+            "openapi-weaz.tuyaeu.com",
+            "openapi-ueaz.tuyaus.com"
+          ]
+        }
+      }
+    ],
     "enableMultiJS": true,
     "targetPlatforms": [
       "emery"
@@ -99,7 +120,8 @@
       "TestDate",
       "TestSeconds",
       "SettingMovingCentre",
-      "SettingMinuteOffscreen"
+      "SettingMinuteOffscreen",
+      "PluginData"
     ],
     "resources": {
       "media": [

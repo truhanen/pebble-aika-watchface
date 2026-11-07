@@ -30,6 +30,8 @@ const CURRENCY_WID_BASE = 216;
 const MAX_CURRENCY = 7;
 const TUYA_WID_BASE = 128;
 const MAX_TUYA = 16;
+const PLUGIN_WID_BASE = 144;
+const MAX_PLUGINS = 16;
 const ROTATING_MARKER = 255;
 const MAX_GROUP_MEMBERS = 6;
 const DEFAULT_INTERVAL = 3;         // 1 min
@@ -53,6 +55,7 @@ function isValidId(id: number): boolean {
   if (id >= CRYPTO_WID_BASE && id < CRYPTO_WID_BASE + MAX_CRYPTO) { return true; }
   if (id >= CURRENCY_WID_BASE && id < CURRENCY_WID_BASE + MAX_CURRENCY) { return true; }
   if (id >= TUYA_WID_BASE && id < TUYA_WID_BASE + MAX_TUYA) { return true; }
+  if (id >= PLUGIN_WID_BASE && id < PLUGIN_WID_BASE + MAX_PLUGINS) { return true; }
   return false;
 }
 

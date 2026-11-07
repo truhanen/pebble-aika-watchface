@@ -9,6 +9,7 @@
 #include "crypto.h"
 #include "currency.h"
 #include "tuya.h"
+#include "plugin.h"
 #include "tuya_leds.h"
 #include "widgets.h"
 #include "widget_list.h"
@@ -216,7 +217,8 @@ static void main_window_unload(Window *window) {
 static bool isPhoneDataWidget(WidgetType w) {
   return w == ELECTRICITY || w == NEXT_CHEAP_ELEC || w == CHEAPEST_ELEC_HOUR
       || w == TUYA_LEDS
-      || Crypto_isWid((uint8_t)w) || Currency_isWid((uint8_t)w) || Tuya_isWid((uint8_t)w);
+      || Crypto_isWid((uint8_t)w) || Currency_isWid((uint8_t)w) || Tuya_isWid((uint8_t)w)
+      || Plugin_isWid((uint8_t)w);
 }
 
 static void phone_data_scan_cb(uint8_t w, void *ctx) {
@@ -260,6 +262,7 @@ static bool widget_source_missing(uint8_t w) {
       if (Crypto_isWid(w))   { return Crypto_find(w) == NULL; }
       if (Currency_isWid(w)) { return Currency_find(w) == NULL; }
       if (Tuya_isWid(w))     { return Tuya_find(w) == NULL; }
+      if (Plugin_isWid(w))   { return Plugin_find(w) == NULL; }
       return false;
   }
 }
@@ -446,6 +449,7 @@ static void init() {
   Crypto_init();
   Currency_init();
   Tuya_init();
+  Plugin_init();
   TuyaLeds_init();
 
   // init the messaging thing

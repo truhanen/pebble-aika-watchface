@@ -61,13 +61,13 @@ test('every contract id is accepted, in order', () => {
   assert.deepStrictEqual(rest.filter((_, i) => i % 2 === 0), ok.slice(20));
 });
 
-test('accepts the dynamic ranges: tuya 128..143, crypto 200..215, currency 216..222', () => {
-  const ids = [128, 143, 200, 215, 216, 222];
+test('accepts the dynamic ranges: tuya 128..143, plugins 144..159, crypto 200..215, currency 216..222', () => {
+  const ids = [128, 143, 144, 159, 200, 215, 216, 222];
   assert.deepStrictEqual(widgetListToPayload(ids.map((id) => w(id))).filter((_, i) => i % 2 === 0), ids);
 });
 
-test('drops ids outside the contract: 1 (internal), 4 (retired), 39, 45+, gaps, 144..199, 223+', () => {
-  [1, 4, 39, 45, 46, 63, 64, 100, 127, 144, 199, 223, 254, 255, 256, -1].forEach((id) => {
+test('drops ids outside the contract: 1 (internal), 4 (retired), 39, 45+, gaps, 160..199, 223+', () => {
+  [1, 4, 39, 45, 46, 63, 64, 100, 127, 160, 199, 223, 254, 255, 256, -1].forEach((id) => {
     assert.deepStrictEqual(widgetListToPayload([w(id)]), [], 'id ' + id + ' must be dropped');
   });
   assert.deepStrictEqual(widgetListToPayload([w(7), w(99), w(10)]), [7, 31, 10, 31]);

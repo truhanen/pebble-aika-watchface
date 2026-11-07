@@ -213,7 +213,8 @@ const tuyaListComponent = {
     '<button type="button" class="tul-add">+ Add sensor</button>' +
     '</div>',
   style:
-    '.tul-status{margin:0 0 8px 0;font-size:0.85rem;color:#bbb}' +
+    // Clay's own side padding (0.75rem): this root is not a .component, so it gets none.
+    '.tul-status{margin:0 0 8px 0;padding:0 0.75rem;font-size:0.85rem;color:#bbb}' +
     '.tul-row{display:flex;flex-wrap:wrap;align-items:center;border-bottom:1px solid #555;padding:6px 0;margin:0 0 6px 0}' +
     '.tul-line{flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:center;margin:0}' +
     '.tul-row select,.tul-row input{min-width:0;height:2.6rem;margin:0 4px 0 0;' +

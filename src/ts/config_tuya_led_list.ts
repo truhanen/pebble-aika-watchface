@@ -203,7 +203,8 @@ const tuyaLedListComponent = {
     '<button type="button" class="tll-add">+ Add switch</button>' +
     '</div>',
   style:
-    '.tll-status{margin:0 0 8px 0;font-size:0.85rem;color:#bbb}' +
+    // Clay's own side padding (0.75rem): this root is not a .component, so it gets none.
+    '.tll-status{margin:0 0 8px 0;padding:0 0.75rem;font-size:0.85rem;color:#bbb}' +
     '.tll-row{display:flex;flex-wrap:wrap;align-items:center;border-bottom:1px solid #555;padding:6px 0;margin:0 0 6px 0}' +
     '.tll-row select{min-width:0;height:2.6rem;margin:0 4px 0 0;' +
       'background-color:#767676;color:#fff;border:none;border-radius:0.3rem;padding:0 0.4rem;color-scheme:dark}' +

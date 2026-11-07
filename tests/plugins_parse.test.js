@@ -105,3 +105,18 @@ test('anyPluginWidget gates on ids 144..159; the widget list accepts them', () =
   assert.deepStrictEqual(widgetListToPayload([{ id: 144, ident: 'unit', font: 31 }, { id: 159, ident: 'none', font: 31 }, { id: 160 }]),
     [144, 31 | 0x40, 159, 31 | 0x20]);
 });
+
+test('allNoData: true only when every result is "--" (failed fetch -> immediate retry)', () => {
+  const m = require('../src/pkjs/plugins_parse');
+  assert.strictEqual(m.allNoData([m.noData(0), m.noData(3)]), true);
+  assert.strictEqual(m.allNoData([m.noData(0), { slot: 1, value: '18', unit: 'C' }]), false);
+  assert.strictEqual(m.allNoData([]), true);
+});
+
+test('formatNumber: negative and long values stay within the 11-byte watch buffer', () => {
+  const m = require('../src/pkjs/plugins_parse');
+  assert.strictEqual(m.formatNumber(-12.54), '-12.5');
+  assert.strictEqual(m.formatNumber(-1234567.89), '-1234568');
+  assert.ok(m.formatNumber(1e21).length <= 11);
+  assert.strictEqual(m.formatNumber(0.0004), '0');
+});

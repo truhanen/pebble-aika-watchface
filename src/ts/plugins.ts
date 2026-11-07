@@ -15,7 +15,7 @@
    Pure logic lives in plugins_parse.ts (unit-tested). */
 
 import { parseSelections, groupSelections, resultFor, noData, packPluginData,
-  buildPluginMessage, PluginResult, SelectionGroup, PluginSelection } from './plugins_parse';
+  buildPluginMessage, allNoData, PluginResult, SelectionGroup, PluginSelection } from './plugins_parse';
 
 const LAST_SENT_KEY = 'plugins_last_sent';    // last PluginData string we pushed
 const LAST_FETCH_KEY = 'plugins_last_fetch';  // unix-seconds of the last fetch attempt
@@ -79,6 +79,8 @@ export function updatePlugins(forceUpdate?: boolean): void {
       results = results.concat(r);
       if (--pending > 0) { return; }
       const packed = packPluginData(results);
+      // A failed fetch must not hold off the retry for MIN_FETCH_INTERVAL_S.
+      if (allNoData(results)) { window.localStorage.removeItem(LAST_FETCH_KEY); }
       if (!forceUpdate && window.localStorage.getItem(LAST_SENT_KEY) === packed) {
         console.log('plugins: nothing changed, not sending');
         return;

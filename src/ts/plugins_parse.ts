@@ -157,6 +157,13 @@ export function resultFor(slot: number, sel: PluginSelection, envelope: any): Pl
   return { slot: slot, value: value, unit: unit };
 }
 
+// True when a fetch produced nothing usable (every slot "--": the subscription failed or
+// timed out). plugins.ts then forgets the fetch time so the next watch poll retries at once
+// instead of waiting out the burst-coalescing throttle.
+export function allNoData(results: PluginResult[]): boolean {
+  return results.every((r) => r.value === NO_DATA);
+}
+
 // Records for every slot 0..MAX_PLUGINS-1, so a slot without a selection (or a removed
 // one) reads "--" on the watch instead of looking like missing data to its cold-poll
 // check. A result for a slot overrides the default.

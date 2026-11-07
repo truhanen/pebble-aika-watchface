@@ -135,7 +135,7 @@ These are dynamic ranges, unchanged:
 | Ids | Source |
 |---|---|
 | 128..143 | Tuya |
-| 144..159 | Plugin properties: selection `n` (localStorage `plugin_selections`, index `n`) is id 144+n. The phone sends `PluginData`, a string of `slot<US>value<US>unit` records (US = 0x1f), `slot` = `id - 144`. The watch shows `--` until a slot has arrived. |
+| 144..159 | Plugin properties: selection `n` (localStorage `plugin_selections`, index `n`) is id 144+n. The phone sends `PluginData`, a string of `slot<US>value<US>unit` records (US = 0x1f), `slot` = `id - 144`. The watch shows `--` until a slot has arrived. The slots (value + unit) are persisted (keys 320/321), so they show at once after a restart. Layout note: a plugin widget in the top slot of the left edge sits beside the date, so its unit (and a long value) can be squeezed out -- the same rule as for every other widget there (e.g. the `37/43` forecast), not a plugin-specific bug. |
 | 200..215 | Crypto |
 | 216..222 | Currency |
 

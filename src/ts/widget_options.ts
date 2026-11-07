@@ -13,7 +13,8 @@ export interface WidgetOption { id: number; label: string; }
 
 // KEEP IN SYNC with docs/widget_contract.md, src/c/widgets.h (WidgetType) and the
 // inlined STATIC_OPTIONS copy in config_widget_list.ts (tests/widget_options_sync).
-// Id 1 (BT disconnect, internal) and 4 (retired date) are deliberately not listed.
+// Id 1 (BT disconnect, internal), 4 (retired date) and 37 (the old weather icon, merged into 7
+// as its icon-only mode, see ICONLY below) are deliberately not listed.
 export const STATIC_WIDGETS: WidgetOption[] = [
   { id: 0, label: 'EMPTY' },
   { id: 255, label: '🔁 Rotating' },
@@ -31,8 +32,7 @@ export const STATIC_WIDGETS: WidgetOption[] = [
   { id: 33, label: 'DATE dd mon' },
   { id: 34, label: 'DATE yyyy-mm-dd' },
   { id: 6, label: 'DATE week number' },
-  { id: 7, label: 'WEATHER temperature' },
-  { id: 37, label: 'WEATHER condition icon' },
+  { id: 7, label: 'WEATHER condition' },
   { id: 8, label: 'WEATHER forecast low/high' },
   { id: 13, label: 'WEATHER UV index' },
   { id: 40, label: 'WEATHER max rain 1 h' },
@@ -143,7 +143,10 @@ export function memberOptions(rows: any, pluginRows?: any): WidgetOption[] {
 // WidgetDesc table in src/c/widgets.c (icon / unit per widget) and the inlined copy in
 // config_widget_list.ts. Widgets with neither (Empty, seconds, dates, beats) and the
 // icon-only ones (36..38: nothing to switch off) are not toggleable.
-export type WidgetIdent = 'icon' | 'unit' | 'none';
+// 'iconly' = the icon alone (flags bit 7), offered by WEATHER condition (7) only; it is the
+// old widget 37.
+export type WidgetIdent = 'icon' | 'unit' | 'none' | 'iconly';
+export const ICONLY_IDS: number[] = [7];
 const IDENT_ICON_IDS: number[] = [2, 7, 8, 9, 10, 12, 20, 21, 22, 23, 24, 25, 40, 41, 42, 43, 44];
 const IDENT_UNIT_IDS: number[] = [2, 3, 6, 7, 8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 24, 25, 35, 40, 41, 42, 43, 44];
 
@@ -159,6 +162,7 @@ export function identModes(id: number, pluginIcon?: boolean): WidgetIdent[] {
   if (icon) { out.push('icon'); }
   if (unit) { out.push('unit'); }
   if (out.length) { out.push('none'); }
+  if (ICONLY_IDS.indexOf(id) !== -1) { out.push('iconly'); }
   return out;
 }
 

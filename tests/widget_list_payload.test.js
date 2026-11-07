@@ -53,12 +53,13 @@ test('Empty (0) is a valid slot', () => {
 
 test('every contract id is accepted, in order', () => {
   const ok = [0, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-    25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 40, 41, 42, 43, 44];
+    25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 40, 41, 42, 43, 44];   // 37 = legacy input, sent as 7
+  const sent = ok.map((id) => (id === 37 ? 7 : id));
   // list in two halves so the 64-byte cap does not truncate
   const half = widgetListToPayload(ok.slice(0, 20).map((id) => w(id)));
-  assert.deepStrictEqual(half.filter((_, i) => i % 2 === 0), ok.slice(0, 20));
+  assert.deepStrictEqual(half.filter((_, i) => i % 2 === 0), sent.slice(0, 20));
   const rest = widgetListToPayload(ok.slice(20).map((id) => w(id)));
-  assert.deepStrictEqual(rest.filter((_, i) => i % 2 === 0), ok.slice(20));
+  assert.deepStrictEqual(rest.filter((_, i) => i % 2 === 0), sent.slice(20));
 });
 
 test('accepts the dynamic ranges: tuya 128..143, plugins 144..159, crypto 200..215, currency 216..222', () => {
@@ -201,7 +202,7 @@ test('legacy flat lists: a malformed group tail stops parsing', () => {
 test('widgetListIds returns the plain ids, without flags or group markers', () => {
   const list = [w(7, true, 5), rot(1, [w(15, true, 3), w(16)]), w(10, false, 12)];
   assert.deepStrictEqual(widgetListIds(list), [7, 15, 16, 10]);
-  assert.deepStrictEqual(widgetListIds([w(37, true)]), [37]);
+  assert.deepStrictEqual(widgetListIds([w(37, true)]), [7]);   // legacy 37 is sent as 7
   assert.deepStrictEqual(widgetListIds(undefined), []);
 });
 
@@ -243,4 +244,34 @@ test('rain max ids 40..44 encode with their identifier modes', () => {
 
 test('id 39 (the retired Battery % widget) is no longer valid; 38 still is', () => {
   assert.deepStrictEqual(widgetListToPayload([wi(39, 'icon'), wi(38, 'icon')]), [38, 31]);
+});
+
+// ------------------------------------------------- weather merge (37 -> 7 + icon-only)
+
+const iconly = (id, font) => ({ id: id, ident: 'iconly', font: font === undefined ? 31 : font });
+
+test('weather merge: legacy 37 alone is sent as id 7 with the icon-only bit, font kept', () => {
+  assert.deepStrictEqual(widgetListToPayload([w(37)]), [7, 31 | 0x80]);
+  assert.deepStrictEqual(widgetListToPayload([w(37, true, 5)]), [7, 5 | 0x80]);   // hide dropped
+  assert.deepStrictEqual(widgetListToPayload([{ id: 37, ident: 'unit', font: 9 }]), [7, 9 | 0x80]);
+  // (a bare 37 in the legacy FLAT int encoding is still the hidden id 5: 0x20 | 5)
+  assert.deepStrictEqual(widgetListToPayload([37]), [5, 31 | 0x20]);
+});
+
+test('weather merge: 37 inside a rotating group', () => {
+  assert.deepStrictEqual(widgetListToPayload([rot(2, [w(37, false, 4), w(10)])]),
+    [255, 2, 2, 7, 4 | 0x80, 10, 31]);
+});
+
+test('weather merge: a list with both 7 and 37 keeps both as two id-7 slots', () => {
+  assert.deepStrictEqual(widgetListToPayload([w(7, true), w(37)]), [7, 31 | 0x20, 7, 31 | 0x80]);
+  assert.deepStrictEqual(widgetListIds([w(7), w(37)]), [7, 7]);
+});
+
+test('weather merge: the new icon-only mode round-trips; the bit is cleared on other ids', () => {
+  assert.deepStrictEqual(widgetListToPayload([iconly(7, 6)]), [7, 6 | 0x80]);
+  assert.deepStrictEqual(widgetListToPayload([iconly(10, 6)]), [10, 6]);
+  assert.deepStrictEqual(widgetListToPayload([rot(1, [iconly(7), iconly(2)])]), [255, 2, 1, 7, 31 | 0x80, 2, 31]);
+  // migrating is idempotent: the payload of a migrated value is the payload of the legacy one
+  assert.deepStrictEqual(widgetListToPayload([iconly(7, 5)]), widgetListToPayload([w(37, false, 5)]));
 });

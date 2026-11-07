@@ -65,8 +65,8 @@ test('Empty rows have a font control and its value is read and encoded', () => {
 });
 
 test('icon-only widgets have no font control; text widgets in groups do', () => {
-  const { root } = mount([w(36), w(37), w(38), w(10),
-    { rotating: true, interval: 3, members: [w(37), w(10), w(0 + 2)] }]);
+  const { root } = mount([w(36), w(36), w(38), w(10),
+    { rotating: true, interval: 3, members: [w(38), w(10), w(0 + 2)] }]);
   const rows = root.querySelectorAll('.wl-row');
   for (let i = 0; i < 3; i++) { assert.strictEqual(rows[i].querySelectorAll('.wl-fontbox').length, 0); }
   assert.strictEqual(rows[3].querySelectorAll('.wl-fontbox').length, 1);
@@ -91,8 +91,8 @@ test('every row in a list has the same slot elements with placeholders for missi
     w(10),           // plain widget
     w(0),            // Empty (has font, no hide)
     w(36),           // icon-only (no font, no hide)
-    w(37),           // icon-only
-    { rotating: true, interval: 3, members: [w(2), w(10), w(37)] },  // rotating group
+    w(38),           // icon-only
+    { rotating: true, interval: 3, members: [w(2), w(10), w(38)] },  // rotating group
   ], { defaultFont: 5 });
 
   const { root: topList } = mount([w(35)], { defaultFont: 7 });  // single-row top list
@@ -147,7 +147,7 @@ test('rotating group member rows align with outer rows (no right inset on group)
   const { root } = mount([
     w(10),           // plain widget
     w(0),            // Empty
-    { rotating: true, interval: 3, members: [w(2), w(10), w(37)] },  // rotating group
+    { rotating: true, interval: 3, members: [w(2), w(10), w(38)] },  // rotating group
   ], { defaultFont: 5 });
 
   // Get the computed style of the group to verify it has no right padding/margin that would prevent alignment
@@ -255,7 +255,7 @@ test('the button of every offered widget cycles exactly identModes()', () => {
 test('identModes: the documented widgets', () => {
   assert.deepStrictEqual(identModes(2), ['icon', 'unit', 'none']);
   assert.deepStrictEqual(identModes(22), ['icon', 'unit', 'none']);
-  assert.deepStrictEqual(identModes(7), ['icon', 'unit', 'none']);
+  assert.deepStrictEqual(identModes(7), ['icon', 'unit', 'none', 'iconly']);   // WEATHER condition: N, N U, N-only, icon only
   assert.deepStrictEqual(identModes(13), ['unit', 'none']);
   assert.deepStrictEqual(identModes(210), ['unit', 'none']);
   assert.deepStrictEqual(identModes(23), ['icon', 'none']);
@@ -288,6 +288,32 @@ test('a saved retired Battery % (39) loads as battery (2) in unit mode, never as
   assert.deepStrictEqual(v[0], { id: 2, ident: 'unit', font: 31 });
   assert.deepStrictEqual(v[1], { id: 2, ident: 'none', font: 5 });
   assert.ok(!/Crypto #/.test(root.innerHTML));
+});
+
+test('the picker no longer offers the retired weather icon (37); WEATHER condition (7) does', () => {
+  assert.strictEqual(STATIC_WIDGETS.find((o) => o.id === 37), undefined);
+  const { root } = mount([w(7)]);
+  const opts = Array.from(root.querySelectorAll('.wl-sel option')).map((o) => o.value);
+  assert.ok(opts.indexOf('7') !== -1 && opts.indexOf('37') === -1);
+  assert.ok(/WEATHER condition</.test(root.innerHTML));
+});
+
+test('a saved legacy weather icon (37) loads as 7 in icon-only mode, font kept, never "Unknown #37"', () => {
+  const { root, self } = mount([{ id: 37, ident: 'icon', font: 31 }, { id: 37, ident: 'none', font: 5 }, { id: 37, ident: 'icon', font: 31 },
+    { rotating: true, interval: 3, members: [{ id: 37, ident: 'icon', font: 4 }, w(10)] }]);
+  const v = component.manipulator.get.call(self);
+  assert.deepStrictEqual(v[0], { id: 7, ident: 'iconly', font: 31 });
+  assert.deepStrictEqual(v[1], { id: 7, ident: 'iconly', font: 5 });
+  assert.deepStrictEqual(v[2], { id: 7, ident: 'iconly', font: 31 });
+  assert.deepStrictEqual(v[3].members[0], { id: 7, ident: 'iconly', font: 4 });
+  assert.ok(!/Unknown #/.test(root.innerHTML));
+});
+
+test('a list holding both 7 (temperature) and 37 keeps two id-7 slots', () => {
+  const { self } = mount([{ id: 7, ident: 'none', font: 31 }, { id: 37, ident: 'icon', font: 31 }]);
+  const v = component.manipulator.get.call(self);
+  assert.deepStrictEqual(v, [{ id: 7, ident: 'none', font: 31 }, { id: 7, ident: 'iconly', font: 31 }]);
+  assert.deepStrictEqual(widgetListToPayload(v), [7, 31 | 0x20, 7, 31 | 0x80]);
 });
 
 test('an unknown id is labelled "Unknown #N", not as a crypto rate', () => {

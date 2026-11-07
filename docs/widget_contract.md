@@ -32,11 +32,13 @@ A list is a sequence of slots. Each slot is either:
 | 0–4 | Font index 0..16, see the table below. 31 means "position default": 5 for the edges, 7 (Bitham large) for the centre column. |
 | 5 | Identifier NONE (hidden). |
 | 6 | Identifier UNIT (the widget's unit label instead of its icon). |
-| 7 | Reserved, must be 0. |
+| 7 | Identifier ICONONLY: draw only the condition icon (the old widget 37). Valid on id 7 only; it dominates bits 5/6. Cleared by the sanitizers (watch and phone) on every other id. |
 
-Identifier mode = bits 5/6: neither = ICON, bit 6 = UNIT, bit 5 = NONE. Both bits set is invalid and is read as NONE (the sanitizer rewrites it to NONE).
+Identifier mode = bits 5/6: neither = ICON, bit 6 = UNIT, bit 5 = NONE. Both bits set is invalid and is read as NONE (the sanitizer rewrites it to NONE). Bit 7 on id 7 selects ICONONLY and overrides bits 5/6 (the sanitizer clears them).
 
-Each widget declares which identifiers it has (an icon, a unit, or both). When the requested mode is unavailable the watch falls back: UNIT -> ICON -> NONE, or ICON -> UNIT -> NONE. The config page offers only the available modes, in the order ICON (`◉`), UNIT (`U`), NONE (`⊘`); a widget with no identifier at all has no button. Older stored config entries `{id, hide, font}` load as hide -> `none`, else `icon`; the stored field is now `ident: 'icon'|'unit'|'none'`.
+Each widget declares which identifiers it has (an icon, a unit, or both). When the requested mode is unavailable the watch falls back: UNIT -> ICON -> NONE, or ICON -> UNIT -> NONE. The config page offers only the available modes, in the order ICON (`◉`), UNIT (`U`), NONE (`⊘`); a widget with no identifier at all has no button. Older stored config entries `{id, hide, font}` load as hide -> `none`, else `icon`; the stored field is now `ident: 'icon'|'unit'|'none'|'iconly'`.
+
+**WEATHER condition (id 7)** offers four modes, cycled `◉` (icon + temperature), `U` (temperature + unit), `⊘` (temperature only) and `▣` (the condition icon alone, flags bit 7). The ICONONLY mode draws exactly what the old widget 37 drew (same icon size, shadow and placement). In the fallback-slot choice an ICONONLY id-7 slot is not preferred as a replaceable weather slot (as 37 was not).
 
 | Widget | Icon mode | Unit mode |
 |---|---|---|
@@ -113,7 +115,7 @@ These ids are kept, ported to the new API, and listed on the config page:
 | 3 | Alternate time zone | TIME alt time zone |
 | 5 | Seconds | TIME seconds |
 | 6 | Week number | DATE week number |
-| 7 | Current weather | WEATHER temperature |
+| 7 | Current weather | WEATHER condition |
 | 8 | Today's forecast | WEATHER forecast low/high |
 | 9 | Sleep | SLEEP hours |
 | 10 | Steps | HEALTH steps |
@@ -161,8 +163,10 @@ Other existing ids:
 | 34 | Date `yyyy-mm-dd` | DATE yyyy-mm-dd | 2026-07-04 |
 | 35 | Digital time | TIME digital | Follows `clock_is_24h_style()`. In 12 h mode AM/PM is drawn as a unit. The leading zero follows `SettingShowLeadingZero`. |
 | 36 | Battery icon only | BATTERY icon | |
-| 37 | Weather icon only | WEATHER condition icon | |
+| 37 | **Retired**: weather icon only | (not offered) | Merged into id 7 as its ICONONLY mode (flags bit 7); see "Migration" below. |
 | 38 | Bluetooth icon only | MISC bluetooth icon | Shows a connected or disconnected glyph. |
 
 - Weekday and month names are localised (`languages.c`).
+
+**Migration of id 37 (weather merge).** Id 37 is accepted as legacy input only and is rewritten to `7` with the ICONONLY bit, keeping the font bits and dropping bits 5/6 (the old widget had no identifier switch). This happens everywhere a list is read: on the watch in `WidgetList_sanitize` / `WidgetList_parse` (plain slots and rotating-group members; the sanitizer runs on every received list and again when the persisted settings load, so a stored `37` is rewritten on the first start of the new build, and parse reads it correctly even before that), and on the phone in `widgetListToPayload` plus the config component's `normEntry` (a Clay-stored `{id: 37, ident, font}` loads as `{id: 7, ident: 'iconly', font}`; legacy flat int lists keep the old meaning of 37 = hidden id 5). No settings-version bump is needed: the persisted layout does not change. A list that holds both 7 and 37 stays valid: duplicates of an id are allowed in the lists, so it becomes two id-7 slots (e.g. `[7 NONE, 7 ICONONLY]`), nothing is dropped or de-duplicated. ICONONLY on any id other than 7 is cleared.
 - `MAX_WIDGET_TYPE` is 38. Id 39 (a separate Battery % widget) existed briefly and is gone: widget 2 in unit mode replaces it.

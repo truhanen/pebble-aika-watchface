@@ -7,12 +7,14 @@ uint8_t WidgetList_flagFont(uint8_t flags) {
   return f <= WL_FONT_MAX ? f : WL_FONT_POS_DEFAULT;
 }
 WlIdent WidgetList_flagIdent(uint8_t flags) {
+  if (flags & WL_FLAG_ICONONLY) { return WL_IDENT_ICONONLY; }
   if (flags & WL_FLAG_NONE) { return WL_IDENT_NONE; }
   return (flags & WL_FLAG_UNIT) ? WL_IDENT_UNIT : WL_IDENT_ICON;
 }
 
 WlIdent WidgetList_resolveIdent(WlIdent requested, bool has_icon, bool has_unit) {
   if (requested == WL_IDENT_NONE) { return WL_IDENT_NONE; }
+  if (requested == WL_IDENT_ICONONLY) { return has_icon ? WL_IDENT_ICON : WL_IDENT_NONE; }
   if (requested == WL_IDENT_UNIT) {
     return has_unit ? WL_IDENT_UNIT : (has_icon ? WL_IDENT_ICON : WL_IDENT_NONE);
   }
@@ -21,8 +23,19 @@ WlIdent WidgetList_resolveIdent(WlIdent requested, bool has_icon, bool has_unit)
 
 uint8_t WidgetList_cleanFlags(uint8_t flags) {
   WlIdent m = WidgetList_flagIdent(flags);
+  if (m == WL_IDENT_ICONONLY) { return (uint8_t)(WidgetList_flagFont(flags) | WL_FLAG_ICONONLY); }
   return (uint8_t)(WidgetList_flagFont(flags) |
                    (m == WL_IDENT_NONE ? WL_FLAG_NONE : (m == WL_IDENT_UNIT ? WL_FLAG_UNIT : 0)));
+}
+
+void WidgetList_canonical(uint8_t *id, uint8_t *flags) {
+  if (*id == WL_LEGACY_WEATHER_ICON_ID) {
+    *id = WL_WEATHER_CURRENT_ID;
+    *flags = (uint8_t)(WidgetList_flagFont(*flags) | WL_FLAG_ICONONLY);
+    return;
+  }
+  if (*id != WL_WEATHER_CURRENT_ID) { *flags &= (uint8_t)~WL_FLAG_ICONONLY; }
+  *flags = WidgetList_cleanFlags(*flags);
 }
 
 bool WidgetList_isDrawableId(uint8_t id) {
@@ -72,8 +85,10 @@ static bool read_slot(const uint8_t *b, int len, int *i, RawSlot *s) {
     for (int m = 0; m < n; m++) {
       uint8_t id = b[p + 2 * m];
       if (s->count < MAX_GROUP_MEMBERS && WidgetList_isDrawableId(id)) {
+        uint8_t fl = b[p + 2 * m + 1];
+        WidgetList_canonical(&id, &fl);
         s->id[s->count] = id;
-        s->flags[s->count] = WidgetList_cleanFlags(b[p + 2 * m + 1]);
+        s->flags[s->count] = fl;
         s->count++;
       }
     }
@@ -82,8 +97,10 @@ static bool read_slot(const uint8_t *b, int len, int *i, RawSlot *s) {
   }
   if (*i + 1 >= len) { *i = len; return false; }       // truncated plain slot
   if (WidgetList_isDrawableId(b[*i])) {
-    s->id[0] = b[*i];
-    s->flags[0] = WidgetList_cleanFlags(b[*i + 1]);
+    uint8_t id = b[*i], fl = b[*i + 1];
+    WidgetList_canonical(&id, &fl);
+    s->id[0] = id;
+    s->flags[0] = fl;
     s->count = 1;
   }
   *i += 2;

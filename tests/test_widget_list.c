@@ -47,7 +47,9 @@ int main(void) {
     assert(WidgetList_flagIdent(D | U | H) == WL_IDENT_NONE);       // both bits: invalid -> NONE
     assert(WidgetList_cleanFlags(D | U) == (D | U));                // UNIT kept
     assert(WidgetList_cleanFlags(5 | U | H) == (5 | H));            // both -> canonical NONE
-    assert(WidgetList_cleanFlags(5 | 0x80) == 5);                   // reserved bit cleared
+    assert(WidgetList_cleanFlags(5 | 0x80) == (5 | 0x80));          // ICONONLY kept
+    assert(WidgetList_cleanFlags(5 | 0x80 | U | H) == (5 | 0x80));  // and dominates NONE/UNIT
+    assert(WidgetList_flagIdent(D | 0x80) == WL_IDENT_ICONONLY);
     assert(WidgetList_cleanFlags(20 | U) == (D | U));               // bad font, unit kept
     // a list round-trips UNIT and rewrites both-bits to NONE
     uint8_t l[] = { 2, D | U, 7, D | U | H, 12, D | H };
@@ -67,7 +69,7 @@ int main(void) {
   assert(WidgetList_flagFont(31) == WL_FONT_POS_DEFAULT);
   assert(WidgetList_flagFont(17) == WL_FONT_POS_DEFAULT && WidgetList_flagFont(30) == WL_FONT_POS_DEFAULT);
   assert(WidgetList_flagFont(5 | H) == 5 && WidgetList_flagIdent(5 | H) == WL_IDENT_NONE && WidgetList_flagIdent(5) == WL_IDENT_ICON);
-  assert(WidgetList_cleanFlags(5 | H | 0xC0) == (5 | H));       // reserved bits cleared
+  assert(WidgetList_cleanFlags(5 | H | 0x40) == (5 | H));       // both identifier bits -> NONE
   assert(WidgetList_cleanFlags(20 | H) == (D | H));              // bad font -> default, hide kept
 
   // --- intervalSeconds ---
@@ -212,6 +214,24 @@ int main(void) {
     assert(WidgetSlot_activeIndex(&s, 30) == 0); }  // wraps
   { WidgetSlot s; s.count = 1;
     assert(WidgetSlot_activeIndex(&s, 12345) == 0); }
+
+  // --- weather merge: legacy id 37 reads as id 7 + ICONONLY, font kept ---
+  { uint8_t b[] = {37, 5}; int n = SAN(b, 64, 16);
+    assert(n == 2 && b[0] == 7 && b[1] == (5 | 0x80)); }
+  { uint8_t b[] = {37, D | H}; int n = SAN(b, 64, 16);              // NONE/UNIT dropped
+    assert(n == 2 && b[0] == 7 && b[1] == (D | 0x80)); }
+  { uint8_t b[] = {0xFF, 3, 1, 10, D, 37, 9, 2, D}; int n = SAN(b, 64, 16);   // inside a group
+    assert(n == 9 && b[5] == 7 && b[6] == (9 | 0x80) && b[7] == 2); }
+  { uint8_t b[] = {7, D | H, 37, D}; int n = SAN(b, 64, 16);        // both present: two id-7 slots
+    assert(n == 4 && b[0] == 7 && b[1] == (D | H) && b[2] == 7 && b[3] == (D | 0x80)); }
+  { uint8_t b[] = {7, D | 0x80, 10, D | 0x80}; int n = SAN(b, 64, 16);  // ICONONLY only on id 7
+    assert(n == 4 && b[1] == (D | 0x80) && b[3] == D); }
+  { uint8_t b[] = {37, D, 7, D | H}; WidgetSlot s[4];
+    int n = WidgetList_parse(b, sizeof b, s, 4);
+    assert(n == 2 && s[0].members[0] == 7 && WidgetList_flagIdent(s[0].flags[0]) == WL_IDENT_ICONONLY);
+    assert(s[1].members[0] == 7 && WidgetList_flagIdent(s[1].flags[0]) == WL_IDENT_NONE); }
+  { uint8_t b[] = {7, D | 0x80}; int n = SAN(b, 64, 16);            // idempotent
+    assert(n == 2 && b[0] == 7 && b[1] == (D | 0x80)); }
 
   printf("All widget_list tests passed\n");
   return 0;

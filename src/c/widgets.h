@@ -44,7 +44,7 @@ typedef enum {
   DATE_ISO                  = 34,   // 2026-07-04
   DIGITAL_TIME              = 35,
   BATTERY_ICON              = 36,   // icon only
-  WEATHER_ICON              = 37,   // icon only
+  WEATHER_ICON              = 37,   // retired id: saved lists read it as WEATHER_CURRENT + WL_FLAG_ICONONLY; internal descriptor id of that mode
   BLUETOOTH_ICON            = 38,   // icon only, connected or disconnected glyph
   RAIN_MAX_1H               = 40,   // max hourly rain in the next N hours (40..44: 1/3/6/9/12 h)
   RAIN_MAX_3H               = 41,

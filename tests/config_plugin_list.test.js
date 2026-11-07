@@ -233,5 +233,5 @@ test('icon properties: selectable, stored with shape icon, row marked, picker of
 test('identModes: plugin icon widgets have no identifier switch', () => {
   assert.deepStrictEqual(identModes(150, true), []);
   assert.deepStrictEqual(identModes(150, false), ['unit', 'none']);
-  assert.deepStrictEqual(identModes(7, true), ['icon', 'unit', 'none']);   // only plugin ids are affected
+  assert.deepStrictEqual(identModes(7, true), ['icon', 'unit', 'none', 'iconly']);   // only plugin ids are affected
 });

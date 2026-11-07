@@ -62,7 +62,7 @@ static void set_defaults(void) {
 #define VALUE_ONLY (WL_FONT_POS_DEFAULT | WL_FLAG_NONE)
 #define WITH_UNIT (WL_FONT_POS_DEFAULT | WL_FLAG_UNIT)
 #define FIVE_EMPTY EMPTY, D, EMPTY, D, EMPTY, D, EMPTY, D, EMPTY, D
-  static const uint8_t LEFT[] = { WEATHER_ICON, D, WEATHER_CURRENT, VALUE_ONLY, FIVE_EMPTY,
+  static const uint8_t LEFT[] = { WEATHER_CURRENT, D | WL_FLAG_ICONONLY, WEATHER_CURRENT, VALUE_ONLY, FIVE_EMPTY,
                                   STEP_COUNTER, D };
   static const uint8_t RIGHT[] = { BATTERY_ICON, D, BATTERY_METER, WITH_UNIT, FIVE_EMPTY,
                                    HEARTRATE, D };

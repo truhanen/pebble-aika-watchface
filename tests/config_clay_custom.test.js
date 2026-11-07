@@ -209,12 +209,19 @@ test('legacy flat list values (0x20 hide flag, rotating marker) still gate setti
   assert.strictEqual(rot.byId['heading-weather'].shown, false);
 });
 
-test('icon-only weather (37): weather source settings shown, units hidden', () => {
+test('icon-only weather (legacy 37 or 7 in icon-only mode): weather source settings shown, units hidden', () => {
   const c = render([37]);
   openSectionFor(c, 'weather_loc_mode');
   assert.strictEqual(c.byId['heading-weather'].shown, true);
   assert.strictEqual(c.byKey['weather_loc_mode'].shown, true);
   assert.strictEqual(c.byKey['weather_datasource'].shown, true);
+  assert.strictEqual(c.byKey['SettingUseMetric'].shown, false);
+});
+
+test('WEATHER condition in icon-only mode gates like the old icon-only widget', () => {
+  const c = render([], { rawLeft: [{ id: 7, ident: 'iconly', font: 31 }] });
+  openSectionFor(c, 'weather_loc_mode');
+  assert.strictEqual(c.byId['heading-weather'].shown, true);
   assert.strictEqual(c.byKey['SettingUseMetric'].shown, false);
 });
 
@@ -618,14 +625,14 @@ test('Widgets section: three widgetLists in order (centre first), with the expec
   assert.strictEqual(lists[2].defaultFont, 5);
   const ids = (l) => l.defaultValue.map((e) => e.id);
   assert.deepStrictEqual(ids(lists[0]), [30, 0]);   // date at the top, Empty below it
-  assert.deepStrictEqual(ids(lists[1]), [37, 7, 0, 0, 0, 0, 0, 10]);
+  assert.deepStrictEqual(ids(lists[1]), [7, 7, 0, 0, 0, 0, 0, 10]);
   assert.deepStrictEqual(ids(lists[2]), [36, 2, 0, 0, 0, 0, 0, 12]);
   lists.forEach((l) => l.defaultValue.forEach((e) => {
     assert.strictEqual(e.font, 31, 'defaults use the position default font');
   }));
-  // the temperature shows its value only (no identifier); battery shows icon and the % unit
+  // the weather icon (WEATHER condition, icon only) over the temperature, which shows its value only (no identifier); battery shows icon and the % unit
   assert.deepStrictEqual(lists[1].defaultValue.map((e) => e.ident),
-    ['icon', 'none', 'icon', 'icon', 'icon', 'icon', 'icon', 'icon']);
+    ['iconly', 'none', 'icon', 'icon', 'icon', 'icon', 'icon', 'icon']);
   assert.deepStrictEqual(lists[2].defaultValue.map((e) => e.ident),
     ['icon', 'unit', 'icon', 'icon', 'icon', 'icon', 'icon', 'icon']);
   const labels = items.filter((it) => it.type === 'text' && /^<b>(Center|Left|Right) /.test(it.defaultValue))

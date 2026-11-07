@@ -29,7 +29,8 @@
 #   sleep TOTAL DEEP      minutes slept / minutes of it restful
 #   int Key=V ...         any integer AppMessage key (emu.sh int), e.g. WeatherTemperature
 #   left|right|center LIST   widget list of a column, space separated slots:
-#                           ID[/FONT][:i|u|n]   i = icon, u = unit, n = no identifier;
+#                           ID[/FONT][:i|u|n|o]   i = icon, u = unit, n = no identifier,
+#                           o = icon only (weather only; `weather_icon` = `weather:o`, bytes 7 + bit 7);
 #                           ID is a number or an alias (see ALIASES in the python helper)
 #                           FONT 0..16 (docs/widget_contract.md), default = the position's font
 #                           rG<code>=SLOT,SLOT,...  rotating group, <code> 0..5 =
@@ -289,7 +290,7 @@ ALIASES = {
   'uv': 13, 'elec': 14, 'cheap_next': 18, 'cheapest': 19, 'distance': 21,
   'battery_days': 22, 'date_d_m': 26, 'date_dd_mm': 27, 'date_wkday_dd': 30,
   'date_wkday_d_m': 31, 'date_wkday': 32, 'date_dd_mon': 33, 'date_iso': 34,
-  'digital': 35, 'bat_icon': 36, 'weather_icon': 37, 'bt_icon': 38,
+  'digital': 35, 'bat_icon': 36, 'weather_icon': 7, 'bt_icon': 38,
   'tuya_leds': 23, 'sleep_bar': 25, 'deep': 20, 'sleep_deep': 24,
   'rain1': 40, 'rain3': 41, 'rain6': 42, 'rain9': 43, 'rain12': 44,
 }
@@ -297,12 +298,14 @@ def member(tok):
   ident = 0
   if ':' in tok:
     tok, m = tok.split(':')
-    ident = {'i': 0, 'u': 0x40, 'n': 0x20}[m]
+    ident = {'i': 0, 'u': 0x40, 'n': 0x20, 'o': 0x80}[m]
   font = 31
   if '/' in tok:
     tok, f = tok.split('/')
     font = int(f)
   wid = ALIASES[tok] if tok in ALIASES else int(tok)
+  if tok == 'weather_icon': ident = 0x80   # WEATHER condition, icon only (the old widget 37)
+  if wid == 37: wid, ident = 7, 0x80       # legacy id: the merged widget in icon-only mode
   return [wid, font | ident]
 # --- autopad: "A B | C D" = group A B at the top, group C D at the bottom, `empty` spacers
 # in between so the slack is ~0 (min gap 5 px). A Python port of the watch's slot heights
@@ -321,7 +324,7 @@ INFO = {0: (0, 0, None), 2: (1, 1, '%'), 3: (1, 0, None), 5: (1, 0, None), 6: (1
         11: (1, 0, None), 12: (1, 1, 'bpm'), 13: (1, 0, 'UVI'), 14: (1, 0, 'c/kWh'),
         18: (1, 0, 'c/kWh'), 19: (1, 0, 'c/kWh'), 20: (1, 1, 'h'), 21: (1, 1, 'km'),
         22: (1, 1, 'd'), 23: (0, 1, None), 24: (1, 1, 'h'), 25: (1, 1, 'h'),
-        35: (1, 0, None), 36: (0, 1, None), 37: (0, 1, None), 38: (0, 1, None),
+        35: (1, 0, None), 36: (0, 1, None), 38: (0, 1, None),
         40: (1, 1, 'mm/h'), 41: (1, 1, 'hi mm/3 h'), 42: (1, 1, 'hi mm/6 h'),
         43: (1, 1, 'hi mm/9 h'), 44: (1, 1, 'hi mm/12 h')}
 for w in range(26, 35): INFO[w] = (1, 0, None)
@@ -332,11 +335,11 @@ def center_offset(outer, inner):
   return d // 2 if d >= 0 else -((-d + 1) // 2)
 def height(wid, font, ident):
   if wid not in INFO: sys.exit('autopad: no height model for widget %d' % wid)
-  value, gfx, unit = INFO[wid]
+  value, gfx, unit = (0, 1, None) if (wid == 7 and ident == 0x80) else INFO[wid]   # icon only
   if font == 31: font = 5
   ink = DIGIT_H[font] if (value or wid == 0) else 0
   # identifier: unit -> icon -> none, or icon -> unit -> none (docs/widget_contract.md)
-  order = {0: ['icon', 'unit'], 0x40: ['unit', 'icon'], 0x20: []}[ident]
+  order = {0: ['icon', 'unit'], 0x40: ['unit', 'icon'], 0x20: [], 0x80: ['icon']}[ident]
   mode = next((m for m in order if (m == 'icon' and gfx) or (m == 'unit' and unit)), None)
   if mode is None:
     return ink
@@ -361,7 +364,7 @@ def height(wid, font, ident):
   return bottom - top
 INNER, GAP = 214, 5
 def autopad(top, bottom):
-  heights = [height(m[0], m[1] & 31, m[1] & 0x60) for m in top + bottom]
+  heights = [height(m[0], m[1] & 31, m[1] & 0xE0 if m[1] & 0x80 else m[1] & 0x60) for m in top + bottom]
   m = len(heights)
   best = None
   from itertools import combinations_with_replacement as cwr

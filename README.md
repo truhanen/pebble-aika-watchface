@@ -18,6 +18,7 @@ A readable analog watchface for the Pebble Time 2.
 - **Extremely bold analog hands**, the minute hand extending past the edges of the screen, for the highest visibility.
 - **Widget values are drawn on top of the clock hands.** Values are what counts.
 - **Units instead of ambiguous icons:** a widget can show its measurement unit (°C, %, mm/h, c/kWh, …), its icon, or nothing.
+- **One weather condition widget:** *WEATHER condition* shows the condition icon with the temperature, the temperature with its unit, the temperature alone, or just the icon. (Older lists with the separate weather icon widget are migrated automatically.)
 - **Units and icons are drawn under the hands.** You see them most of the time; the hands come first.
 - **A "breathing" clock centre** (on by default): the centre moves up and down with the minute hand's direction. This reduces the distortion from the minute hand's changing length and makes the face feel closer to a square than the rectangular screen really is.
 - **Fully customizable widgets:** fonts, sizes, positions, icons and units, in three columns (left edge, right edge, centre).

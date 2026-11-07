@@ -13,7 +13,8 @@
    `id, flags`, or a rotating group: WIDGET_ROTATING_MARKER, count, interval_code,
    then count x (id, flags). flags: bits 0-4 font index (31 = the position's default),
    bit 5 no identifier (NONE), bit 6 the unit as identifier (UNIT; neither bit = ICON,
-   both bits = invalid, read as NONE), bit 7 reserved (cleared). */
+   both bits = invalid, read as NONE), bit 7 ICONONLY (only valid on WEATHER_CURRENT: draws just
+   the condition icon, the old widget 37; it dominates bits 5/6; cleared on every other id). */
 
 // Numeric mirrors -- keep in sync with src/c/widgets.h (MAX_WIDGET_TYPE),
 // src/c/crypto.h (CRYPTO_WID_BASE / MAX_CRYPTO), src/c/tuya.h, src/ts/widget_list_payload.ts,
@@ -37,7 +38,9 @@
 #define WL_FLAG_FONT_MASK   0x1F
 #define WL_FLAG_NONE        0x20   // identifier hidden
 #define WL_FLAG_UNIT        0x40   // identifier is the unit
-#define WL_FLAG_RESERVED    0x80
+#define WL_FLAG_ICONONLY    0x80   // WEATHER condition: the icon alone (legacy id 37)
+#define WL_LEGACY_WEATHER_ICON_ID 37   // retired: read as WEATHER_CURRENT (7) + WL_FLAG_ICONONLY
+#define WL_WEATHER_CURRENT_ID 7
 #define WL_FONT_MAX         16     // highest font index (widget_fonts.h)
 #define WL_FONT_POS_DEFAULT 31     // "use the position's default font"
 
@@ -46,15 +49,18 @@
 uint8_t WidgetList_flagFont(uint8_t flags);
 
 // What stands beside a widget's value: its icon, its unit, or nothing.
-typedef enum { WL_IDENT_ICON = 0, WL_IDENT_UNIT = 1, WL_IDENT_NONE = 2 } WlIdent;
+typedef enum { WL_IDENT_ICON = 0, WL_IDENT_UNIT = 1, WL_IDENT_NONE = 2, WL_IDENT_ICONONLY = 3 } WlIdent;
 // The identifier mode of a flags byte; both bits set (invalid) reads as NONE.
 WlIdent WidgetList_flagIdent(uint8_t flags);
 // The mode a widget really shows: `requested` if the widget has it, else the fallback
 // UNIT -> ICON -> NONE or ICON -> UNIT -> NONE (NONE is always available).
 WlIdent WidgetList_resolveIdent(WlIdent requested, bool has_icon, bool has_unit);
 // A flags byte in canonical form: out-of-range font -> 31, both identifier bits ->
-// NONE, reserved bit cleared.
+// NONE; ICONONLY (bit 7) is kept and then the only identifier bit.
 uint8_t WidgetList_cleanFlags(uint8_t flags);
+// Canonical (id, flags) of a list entry: the legacy id 37 becomes id 7 + ICONONLY (font
+// kept, NONE/UNIT dropped); ICONONLY on any id other than 7 is cleared.
+void WidgetList_canonical(uint8_t *id, uint8_t *flags);
 
 typedef struct {
   uint8_t members[MAX_GROUP_MEMBERS];   // widget ids

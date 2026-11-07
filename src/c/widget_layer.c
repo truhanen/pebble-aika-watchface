@@ -74,6 +74,10 @@ static void measure_member(int pos, const WidgetSlot *slot, int member, WidgetCt
   ctx->id = slot->members[member];
   ctx->font = (uint8_t)font_for(pos, slot->flags[member]);
   ctx->ident = (uint8_t)WidgetList_flagIdent(slot->flags[member]);
+  if (ctx->ident == WL_IDENT_ICONONLY) {     // WEATHER condition, icon only: the icon-only descriptor
+    ctx->id = WEATHER_ICON;
+    ctx->ident = WL_IDENT_ICON;
+  }
   Widgets_get(ctx->id)->measure(ctx, size);
 }
 
@@ -112,7 +116,8 @@ static bool auto_battery_shown(void) {
 static int replaceable_slot(const WidgetSlot *slots, int count) {
   for (int i = 0; i < count; i++) {
     if (slots[i].count == 1 &&
-        (slots[i].members[0] == WEATHER_CURRENT || slots[i].members[0] == WEATHER_FORECAST_TODAY)) {
+        ((slots[i].members[0] == WEATHER_CURRENT && !(slots[i].flags[0] & WL_FLAG_ICONONLY)) ||
+         slots[i].members[0] == WEATHER_FORECAST_TODAY)) {
       return i;
     }
   }

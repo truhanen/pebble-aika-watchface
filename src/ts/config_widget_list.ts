@@ -8,7 +8,7 @@
    an array of slot objects:
      { id, ident, font }                                  plain widget
      { rotating: true, interval, members: [{id, ident, font}, ...] }
-   `ident` is 'icon' | 'unit' | 'none': what stands beside the value; the button on the
+   `ident` is 'icon' | 'unit' | 'none' | 'iconly' (icon alone, WEATHER condition only): what stands beside the value; the button on the
    row cycles the modes the widget offers (older entries: hide -> 'none').
    `font` is 0..16 (widget_options.ts FONT_OPTIONS) or 31 = the position's default
    font. Older stored values (a flat marker-encoded int array: 255, count, interval,
@@ -56,6 +56,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     if (IDENT_ICON_IDS.indexOf(id) !== -1) { out.push('icon'); }
     if (slot || IDENT_UNIT_IDS.indexOf(id) !== -1) { out.push('unit'); }
     if (out.length) { out.push('none'); }
+    if (id === 7) { out.push('iconly'); }   // the icon alone (the old widget 37)
     return out;
   }
   // The ident a freshly chosen widget starts with: its unit where the unit is the point
@@ -74,11 +75,11 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     return modes[0];
   }
   function normIdent(raw: any): string {
-    if (raw && (raw.ident === 'icon' || raw.ident === 'unit' || raw.ident === 'none')) { return raw.ident; }
+    if (raw && (raw.ident === 'icon' || raw.ident === 'unit' || raw.ident === 'none' || raw.ident === 'iconly')) { return raw.ident; }
     return (raw && raw.hide) ? 'none' : 'icon';
   }
-  const IDENT_GLYPH: any = { icon: '◉', unit: 'U', none: '⊘' };
-  const IDENT_TITLE: any = { icon: 'Identifier: icon', unit: 'Identifier: unit', none: 'Identifier: none' };
+  const IDENT_GLYPH: any = { icon: '◉', unit: 'U', none: '⊘', iconly: '▣' };
+  const IDENT_TITLE: any = { icon: 'Identifier: icon', unit: 'Identifier: unit', none: 'Identifier: none', iconly: 'Identifier: icon only' };
   // Has a font setting: text widgets and Empty (the font sets the slot height), not
   // the icon-only widgets nor a rotating group's header (its members have their own).
   function hasFontId(id: number): boolean {
@@ -123,8 +124,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     { id: 33, label: 'DATE dd mon' },
     { id: 34, label: 'DATE yyyy-mm-dd' },
     { id: 6, label: 'DATE week number' },
-    { id: 7, label: 'WEATHER temperature' },
-    { id: 37, label: 'WEATHER condition icon' },
+    { id: 7, label: 'WEATHER condition' },
     { id: 8, label: 'WEATHER forecast low/high' },
     { id: 13, label: 'WEATHER UV index' },
     { id: 40, label: 'WEATHER max rain 1 h' },
@@ -370,7 +370,9 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   function normEntry(raw: any): { id: number; ident: string; font: number } {
     if (raw && typeof raw === 'object') {
       const id = parseInt(raw.id, 10) || 0;
-      const ident = normIdent(raw);
+      let ident = normIdent(raw);
+      // The retired "WEATHER condition icon" (37) is now WEATHER condition (7) in icon-only mode.
+      if (id === 37) { return { id: 7, ident: 'iconly', font: normFont(raw.font) }; }
       // The retired "Battery %" widget (39) is now battery (2) in unit mode.
       if (id === 39) { return { id: 2, ident: ident === 'none' ? 'none' : 'unit', font: normFont(raw.font) }; }
       return { id: id, ident: ident, font: normFont(raw.font) };
@@ -379,6 +381,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     if (v > LEGACY_HIDE_FLAG && v <= (LEGACY_HIDE_FLAG | 25)) {
       return { id: v - LEGACY_HIDE_FLAG, ident: 'none', font: FONT_DEFAULT };
     }
+    if (v === 37) { return { id: 7, ident: 'iconly', font: FONT_DEFAULT }; }   // retired weather icon
     return { id: v, ident: 'icon', font: FONT_DEFAULT };
   }
 

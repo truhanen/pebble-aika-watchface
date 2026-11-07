@@ -61,7 +61,13 @@ function clayConfigCustom(this: ClayConfigThis, minified: unknown): void {
   function widgetIds(): number[] {
     const ids: number[] = [];
     function addEntry(raw: any): void {
-      if (raw && typeof raw === 'object') { ids.push(parseInt(raw.id, 10) || 0); return; }
+      if (raw && typeof raw === 'object') {
+        const id = parseInt(raw.id, 10) || 0;
+        // WEATHER condition in icon-only mode counts as the old icon-only widget 37: it
+        // needs the weather source but shows no temperature (so no unit setting).
+        ids.push(id === 7 && raw.ident === 'iconly' ? 37 : id);
+        return;
+      }
       const v = parseInt(raw, 10) || 0;
       ids.push((v > 0x20 && v <= 0x39) ? v - 0x20 : v);
     }

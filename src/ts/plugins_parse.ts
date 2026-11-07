@@ -54,6 +54,21 @@ export function parseSelections(json: string | null): (PluginSelection | null)[]
   return out;
 }
 
+// The config page's pluginList value (array of selections / nulls for empty slots, or the
+// JSON of one) -> the JSON string stored as localStorage `plugin_selections`: same slot
+// order, unusable entries as null, trailing nulls trimmed, capped at MAX_PLUGINS. Always
+// round-trips through parseSelections. Slot n stays widget id 144+n even when an earlier
+// slot is emptied.
+export function serializeSelections(value: any): string {
+  let arr: any = value;
+  if (typeof arr === 'string') { try { arr = JSON.parse(arr); } catch (e) { arr = []; } }
+  if (!Array.isArray(arr)) { arr = []; }
+  const out: (PluginSelection | null)[] = [];
+  for (let i = 0; i < arr.length && i < MAX_PLUGINS; i++) { out.push(normalizeSelection(arr[i])); }
+  while (out.length > 0 && out[out.length - 1] === null) { out.pop(); }
+  return JSON.stringify(out);
+}
+
 // Selection groups sharing one subscription: same plugin + category + item.
 export interface SelectionGroup {
   plugin?: string;

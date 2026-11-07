@@ -38,6 +38,7 @@ Open the watchface's settings in the Pebble app.
 - **Widgets:** three lists, the left edge, the right edge and the centre column. Each column is laid out top to bottom, spread between the top and bottom of the screen. Add *Empty* widgets to push the others into the corners.
 - In each widget row, **Aa** picks the font and **◉ / U / ⊘** picks the identifier: the icon, the unit, or none.
 - **Rotating groups** let several widgets take turns in one slot.
+- **Plugins:** on a Pebble app with plugin support, the *Plugins* section lists the numeric values the phone's plugins offer (e.g. weather). Add a row (category, plugin, item, instance, property), then place it from the widget lists; it is named like `WEATHER FMI Loc Jyv Tem`. Removing a row in the middle leaves its slot empty so the other plugin widgets keep working (an emptied slot shows `--`).
 - **Clock:** the *Moving clock centre* and *Minute hand runs off the screen* toggles, leading zero and periodic vibration.
 - **Battery:** the face redraws everything at once, so the *Seconds* widget (60 redraws a minute) and fast rotating groups cost battery. Intervals of a minute or longer are free.
 

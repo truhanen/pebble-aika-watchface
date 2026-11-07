@@ -41,7 +41,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   const IDENT_UNIT_IDS: number[] = [2, 3, 6, 7, 8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 24, 25, 35, 40, 41, 42, 43, 44];
   // The modes the button cycles for an id, in order; [] = no identifier (placeholder).
   function identModes(id: number): string[] {
-    const slot = (id >= 128 && id <= 143) || (id >= 200 && id <= 222) || (id >= 15 && id <= 17);
+    const slot = (id >= 128 && id <= 159) || (id >= 200 && id <= 222) || (id >= 15 && id <= 17);
     const out: string[] = [];
     if (IDENT_ICON_IDS.indexOf(id) !== -1) { out.push('icon'); }
     if (slot || IDENT_UNIT_IDS.indexOf(id) !== -1) { out.push('unit'); }
@@ -227,6 +227,28 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     }
     return out;
   }
+  // Plugin rows (pluginList component): wid + the generated widget name, empty slots skipped.
+  function readPluginRows(): { wid: number; name: string }[] {
+    const out: { wid: number; name: string }[] = [];
+    const rowEls = document.querySelectorAll('.pl-root .pl-row');
+    for (let i = 0; i < rowEls.length; i++) {
+      const el = rowEls[i] as HTMLElement;
+      out.push({ wid: parseInt(el.getAttribute('data-wid') || '0', 10) || 0, name: el.getAttribute('data-name') || '' });
+    }
+    return out;
+  }
+  // KEEP IN SYNC with addPluginOptions() in src/ts/widget_options.ts.
+  function pluginOptionsInto(out: { id: number; label: string }[]): void {
+    const arr = readPluginRows();
+    for (let i = 0; i < arr.length; i++) {
+      const r = arr[i];
+      if (r.wid < 144 || r.wid >= 160 || r.name === '') { continue; }
+      const cat = r.name.split(' ')[0];
+      let at = -1;
+      for (let k = 0; k < out.length; k++) { if (out[k].label.split(' ')[0] === cat) { at = k; } }
+      if (at === -1) { out.push({ id: r.wid, label: r.name }); } else { out.splice(at + 1, 0, { id: r.wid, label: r.name }); }
+    }
+  }
   function currentOptions(): { id: number; label: string }[] {
     const out: { id: number; label: string }[] = STATIC_OPTIONS.slice();
     const arr = readCryptoRows();
@@ -262,6 +284,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
       const label = (typeof r.label === 'string' && r.label !== '') ? r.label : (r.code || 'Tuya');
       out.push({ id: twid, label: 'MISC ' + label });
     }
+    pluginOptionsInto(out);
     return out;
   }
 
@@ -270,6 +293,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   function missingLabel(id: number): string {
     if (id >= 200 && id <= 222) { return 'RATE #' + id; }
     if (id >= 128 && id <= 143) { return 'MISC #' + id; }
+    if (id >= 144 && id <= 159) { return 'PLUGIN #' + (id - 143); }
     return 'Unknown #' + id;
   }
 
@@ -696,19 +720,28 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     else if (sel.classList.contains('wl-msel')) { sel.innerHTML = memberOptionsHtml(cur); }
   });
 
+  // Rebuild every select's options with the current labels (coin names, plugin names),
+  // preserving each selection.
+  function refreshAllSelects(): void {
+    const mains = root.querySelectorAll('.wl-row .wl-sel');
+    for (let i = 0; i < mains.length; i++) {
+      const sel = mains[i] as HTMLSelectElement; sel.innerHTML = mainOptionsHtml(parseInt(sel.value, 10) || 0);
+    }
+    const mems = root.querySelectorAll('.wl-row .wl-msel');
+    for (let i = 0; i < mems.length; i++) {
+      const sel = mems[i] as HTMLSelectElement; sel.innerHTML = memberOptionsHtml(parseInt(sel.value, 10) || 0);
+    }
+  }
+
   // After ALL components build (cryptoList DOM now exists), refresh every select's
   // options with real coin labels, preserving each selection.
   if (clayConfig && clayConfig.on && clayConfig.EVENTS) {
-    clayConfig.on(clayConfig.EVENTS.AFTER_BUILD, function() {
-      const mains = root.querySelectorAll('.wl-row .wl-sel');
-      for (let i = 0; i < mains.length; i++) {
-        const sel = mains[i] as HTMLSelectElement; sel.innerHTML = mainOptionsHtml(parseInt(sel.value, 10) || 0);
-      }
-      const mems = root.querySelectorAll('.wl-row .wl-msel');
-      for (let i = 0; i < mems.length; i++) {
-        const sel = mems[i] as HTMLSelectElement; sel.innerHTML = memberOptionsHtml(parseInt(sel.value, 10) || 0);
-      }
-    });
+    clayConfig.on(clayConfig.EVENTS.AFTER_BUILD, refreshAllSelects);
+  }
+  // The pluginList component builds its rows (and their names) after the catalogue is
+  // read, and again on every edit: it announces that with this DOM event.
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('plugin-rows-changed', refreshAllSelects);
   }
 }
 

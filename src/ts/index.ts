@@ -7,7 +7,10 @@ import * as crypto from './crypto';
 import * as currency from './currency';
 import * as tuya from './tuya';
 import * as plugins from './plugins';
-import { anyPluginWidget } from './plugins_parse';
+import { anyPluginWidget, serializeSelections } from './plugins_parse';
+import { buildCatalogue, gatherInstances } from './plugins_catalog';
+import pluginListComponent from './config_plugin_list';
+import pluginCatalogComponent from './config_plugin_catalog';
 import cryptoListComponent from './config_crypto_list';
 import currencyListComponent from './config_currency_list';
 import tuyaListComponent from './config_tuya_list';
@@ -31,6 +34,8 @@ clay.registerComponent(currencyListComponent);
 clay.registerComponent(tuyaCatalogComponent);
 clay.registerComponent(tuyaListComponent);
 clay.registerComponent(tuyaLedListComponent);
+clay.registerComponent(pluginCatalogComponent);
+clay.registerComponent(pluginListComponent);
 
 // Listen for when the watchface is opened.
 //
@@ -106,29 +111,62 @@ function seedTuyaCatalog() {
   window.localStorage.setItem('clay-settings', JSON.stringify(stored));
 }
 
+// Bake the plugin catalogue (Pebble.enumeratePlugins(), supported shapes only, plus the
+// instance names of multi-instance items) into clay-settings for the pluginList component.
+// Empty catalogue when the phone app has no plugin support.
+const PLUGIN_CATALOGUE_TIMEOUT_MS = 2000;   // never hold the config page back longer
+function seedPluginCatalog(done: () => void) {
+  let enumerated: any[] = [];
+  try {
+    if (typeof Pebble.enumeratePlugins === 'function') { enumerated = Pebble.enumeratePlugins() || []; }
+  } catch (e) { console.log('plugins: enumerate failed ' + e); }
+  const cat = buildCatalogue(enumerated);
+  gatherInstances(cat, typeof Pebble.subscribeToSource === 'function'
+    ? (req: any) => Pebble.subscribeToSource!(req) : undefined, PLUGIN_CATALOGUE_TIMEOUT_MS, (full) => {
+    try {
+      const stored = JSON.parse(window.localStorage.getItem('clay-settings') || '{}') || {};
+      stored.PluginCatalog = JSON.stringify(full);
+      // The saved selections are the list's value (Clay restores PluginList from clay-settings
+      // after the first save; before that fall back to what plugins.ts reads).
+      if (stored.PluginList === undefined) {
+        try { stored.PluginList = JSON.parse(window.localStorage.getItem('plugin_selections') || '[]'); }
+        catch (e) { stored.PluginList = []; }
+      }
+      window.localStorage.setItem('clay-settings', JSON.stringify(stored));
+    } catch (e) { console.log('plugins: seeding catalogue failed ' + e); }
+    done();
+  });
+}
+
 Pebble.addEventListener('showConfiguration', () => {
   migrateCryptoList();
   let opened = false;
+  let tuyaReady = false;
+  let pluginsReady = false;
   const openConfig = () => {
-    if (opened) { return; }
+    if (opened || !tuyaReady || !pluginsReady) { return; }
     opened = true;
     seedTuyaCatalog();
     Pebble.openURL(clay.generateUrl());
   };
+  // Both catalogues are seeded into clay-settings before the URL is generated; the plugin
+  // one is time-bounded inside gatherInstances.
+  seedPluginCatalog(() => { pluginsReady = true; openConfig(); });
+  const tuyaDone = () => { tuyaReady = true; openConfig(); };
   if (tuya.hasCachedCatalog()) {
     // Devices were discovered before: open instantly from the cached catalog and
     // refresh it in the background for the next open. A newly-added Tuya device
     // appears one config-open later — worth it to avoid a multi-second wait every
     // time. seedTuyaCatalog() (in openConfig) already ran, so the background
     // saveCatalog only affects the next open.
-    openConfig();
+    tuyaDone();
     tuya.discoverCatalog(() => {});
   } else {
     // First open with credentials (no cache yet): block on discovery so the sensor
     // list is populated, with a fallback so a hung Tuya request never wedges the
     // config page. No creds -> discoverCatalog calls back immediately (opens fast).
-    const fallback = setTimeout(openConfig, 12000);
-    tuya.discoverCatalog(() => { clearTimeout(fallback); openConfig(); });
+    const fallback = setTimeout(tuyaDone, 12000);
+    tuya.discoverCatalog(() => { clearTimeout(fallback); tuyaDone(); });
   }
 });
 
@@ -218,6 +256,12 @@ Pebble.addEventListener('webviewclosed', (e) => {
   // or is the LED-row widget (23)
   const anyTuya = widgetIDs.some((id) => (id >= 128 && id < 144) || id === 23);
   window.localStorage.setItem('disable_tuya', anyTuya ? 'no' : 'yes');
+  // plugins: the selections come from the pluginList component (slot n = widget id 144+n);
+  // plugins.ts reads them from localStorage on every poll. A first save from an old phone
+  // app (no component value) must not wipe stored selections.
+  if (s.PluginList !== undefined) {
+    window.localStorage.setItem('plugin_selections', serializeSelections(s.PluginList));
+  }
   // plugins: enabled iff a placed widget id is in the plugin range [144, 160)
   window.localStorage.setItem('disable_plugins', anyPluginWidget(widgetIDs) ? 'no' : 'yes');
 

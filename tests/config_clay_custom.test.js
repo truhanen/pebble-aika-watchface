@@ -43,7 +43,8 @@ function makeElement() {
 // it: give hide/show only to non-custom items, and derive `.shown` from the `hide`
 // class on $element (the real visibility mechanism), not a separate flag.
 const CUSTOM_TYPES = {
-  widgetList: 1, cryptoList: 1, currencyList: 1, tuyaCatalog: 1, tuyaList: 1
+  widgetList: 1, cryptoList: 1, currencyList: 1, tuyaCatalog: 1, tuyaList: 1,
+  pluginCatalog: 1, pluginList: 1
 };
 
 function makeItem(cfg) {
@@ -473,10 +474,10 @@ test('accordion: chevron flips ▸ -> ▾ when a section opens', () => {
   assert.match(w.$manipulatorTarget.innerHTML, /▾/, 'open shows ▾');
 });
 
-test('accordion: Widgets is a single group (13 rows, not split by sub-labels)', () => {
+test('accordion: Widgets is a single group (14 rows, not split by sub-labels)', () => {
   const c = render([]);
   const headings = c.getAllItems().filter((it) => it.config.type === 'heading');
-  assert.strictEqual(headings.length, 13, 'exactly 13 accordion heading rows (13 sections 1:1)');
+  assert.strictEqual(headings.length, 14, 'exactly 14 accordion heading rows (14 sections 1:1)');
   const head = openSectionFor(c, 'SettingFallbackColumn');
   assert.strictEqual(head.config.defaultValue, 'Widgets',
     'fallback setting opens under the "Widgets" heading, not a sub-label');

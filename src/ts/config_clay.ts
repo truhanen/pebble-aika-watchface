@@ -304,6 +304,20 @@ const config = [
     ],
   },
 
+  // --------------------------------------------------------------------- Plugins
+  {
+    type: 'section',
+    items: [
+      { type: 'heading', id: 'heading-plugins', defaultValue: 'Plugins' },
+      { type: 'text', defaultValue:
+        'Show numeric values from the phone\'s Pebble plugins (e.g. weather) in a widget. ' +
+        'Add a property, then place it in one of the widget lists above; each slot becomes ' +
+        'one widget named CATEGORY Plugin Item Instance Prop (e.g. WEATHER FMI Loc Jyv Tem). ' },
+      { type: 'pluginCatalog', messageKey: 'PluginCatalog', defaultValue: '' },
+      { type: 'pluginList', messageKey: 'PluginList', defaultValue: [] },
+    ],
+  },
+
   // ------------------------------------------------------------------ Tuya sensors
   {
     type: 'section',

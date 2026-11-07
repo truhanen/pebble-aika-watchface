@@ -88,7 +88,29 @@ export const FONT_PICKER_ORDER: number[] = [0, 1, 2, 3, 4, 5, 6, 9, 8, 7, 10, 12
 
 export const ROTATING_ID = 255;
 
-export function buildOptions(rows: any): WidgetOption[] {
+// Plugin widget options (ids 144..159): one per configured pluginList row, labelled with
+// the row's generated name (plugin_names.ts: "WEATHER FMI Loc Jyv Tem"), inserted after
+// the last option of the same category (the label's first word, e.g. the WEATHER group)
+// or appended when the category is new. KEEP IN SYNC with pluginOptionsInto() inlined in
+// config_widget_list.ts.
+export function addPluginOptions(out: WidgetOption[], pluginRows: any): void {
+  const arr: any[] = Array.isArray(pluginRows) ? pluginRows : [];
+  for (let i = 0; i < arr.length; i++) {
+    const r = arr[i];
+    if (!r) { continue; }
+    const wid = parseInt(r.wid, 10);
+    const name = (typeof r.name === 'string') ? r.name : '';
+    if (isNaN(wid) || wid < PLUGIN_WID_BASE || wid >= PLUGIN_WID_BASE + 16 || name === '') { continue; }
+    const cat = name.split(' ')[0];
+    let at = -1;
+    for (let k = 0; k < out.length; k++) { if (out[k].label.split(' ')[0] === cat) { at = k; } }
+    if (at === -1) { out.push({ id: wid, label: name }); } else { out.splice(at + 1, 0, { id: wid, label: name }); }
+  }
+}
+
+export const PLUGIN_WID_BASE = 144;
+
+export function buildOptions(rows: any, pluginRows?: any): WidgetOption[] {
   const out: WidgetOption[] = STATIC_WIDGETS.slice();
   const arr: any[] = Array.isArray(rows) ? rows : [];
   for (let i = 0; i < arr.length; i++) {
@@ -101,13 +123,14 @@ export function buildOptions(rows: any): WidgetOption[] {
       ? r.label : coin.toUpperCase();
     out.push({ id: wid, label: label });
   }
+  addPluginOptions(out, pluginRows);
   return out;
 }
 
 // Options valid as a rotating-group MEMBER: every drawable widget except Empty (0)
 // and Rotating (255) — no nesting, no empty members.
-export function memberOptions(rows: any): WidgetOption[] {
-  const all = buildOptions(rows);
+export function memberOptions(rows: any, pluginRows?: any): WidgetOption[] {
+  const all = buildOptions(rows, pluginRows);
   const out: WidgetOption[] = [];
   for (let i = 0; i < all.length; i++) {
     const o = all[i];
@@ -127,7 +150,7 @@ const IDENT_UNIT_IDS: number[] = [2, 3, 6, 7, 8, 9, 10, 12, 13, 14, 18, 19, 20, 
 // The modes the config button cycles through for a widget id, in cycle order; [] = the
 // widget has no identifier (the button is a placeholder).
 export function identModes(id: number): WidgetIdent[] {
-  const slot = (id >= 128 && id <= 143) || (id >= 200 && id <= 222) || (id >= 15 && id <= 17);
+  const slot = (id >= 128 && id <= 159) || (id >= 200 && id <= 222) || (id >= 15 && id <= 17);
   const icon = IDENT_ICON_IDS.indexOf(id) !== -1;
   const unit = slot || IDENT_UNIT_IDS.indexOf(id) !== -1;
   const out: WidgetIdent[] = [];

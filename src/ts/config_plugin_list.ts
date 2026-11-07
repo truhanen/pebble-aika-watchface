@@ -433,13 +433,14 @@ const pluginListComponent = {
     '<button type="button" class="pl-add">+ Add plugin widget</button>' +
     '</div>',
   style:
-    '.pl-status{margin:0 0 8px 0;font-size:0.85rem;color:#bbb}' +
+    // The small texts get Clay's own side padding (0.75rem), as this root is not a .component.
+    '.pl-status{margin:0 0 8px 0;padding:0 0.75rem;font-size:0.85rem;color:#bbb}' +
     '.pl-row{border-bottom:1px solid #555;padding:6px 0;margin:0 0 6px 0}' +
     '.pl-line{display:flex;flex-wrap:wrap;align-items:center;margin:0}' +
     '.pl-row select{min-width:0;height:2.6rem;margin:0 4px 4px 0;flex:1 1 6rem;' +
       'background-color:#767676;color:#fff;border:none;border-radius:0.3rem;padding:0 0.4rem;color-scheme:dark}' +
     '.pl-row button{flex:0 0 auto;min-width:0;width:2.6rem;height:2.6rem;margin:0 0 4px 0;padding:0}' +
-    '.pl-name{font-size:0.8rem;color:#bbb}' +
+    '.pl-name{padding:0 0.75rem;font-size:0.8rem;color:#bbb}' +
     '.pl-empty .pl-name{font-style:italic}' +
     '.pl-add{margin:8px 0 10px 0}',
   manipulator: {

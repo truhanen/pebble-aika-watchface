@@ -149,7 +149,7 @@ test('unavailable stored selections survive a load (not silently dropped)', () =
   const gone = { plugin: 'old-uuid', category: 'gone', item: 'thing', property: 'val' };
   const t = setup([gone]);
   assert.deepStrictEqual(t.get(), [gone]);
-  assert.match(t.rows()[0].querySelector('.pl-cat').textContent, /gone \(unavailable\)/);
+  assert.match(t.rows()[0].querySelector('.pl-cat').textContent, /GONE \(unavailable\)/);
 });
 
 test('no plugins on the phone: hint shown, Add hidden, stored selections kept', () => {
@@ -215,7 +215,7 @@ test('icon properties: selectable, stored with shape icon, row marked, picker of
   assert.strictEqual(t.rows()[1].getAttribute('data-shape'), 'i');
   const opt = t.rows()[1].querySelector('.pl-prop option:checked');
   assert.strictEqual(opt.value, 'condition|i');
-  assert.strictEqual(opt.textContent, 'condition (icon)');
+  assert.strictEqual(opt.textContent, 'Condition (icon)');
   // numeric widget keeps its unit / none button, the icon one has just a placeholder
   const wrows = Array.from(t.wroot.querySelectorAll('.wl-row'));
   assert.strictEqual(wrows[0].querySelector('.wl-main .wl-hide').tagName, 'BUTTON');

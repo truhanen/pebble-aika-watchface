@@ -214,15 +214,18 @@ function pluginListInitialize(this: any, _minified: any, clayConfig: any): void 
         '<button type="button" class="pl-del" style="visibility:hidden" title="Remove">&#10005;</button>' +
       '</div><div class="pl-name">Unused slot ' + (slot + 1) + ' (choose a category to use it)</div></div>';
   }
-  function optionsHtml(values: string[], labels: string[], sel: string, blank: boolean): string {
+  // Display-only casing of option text: categories ALL-CAPS, the rest first letter upper-cased.
+  function capFirst(t: string): string { return t === '' ? t : t.charAt(0).toUpperCase() + t.slice(1); }
+  function optionsHtml(values: string[], labels: string[], sel: string, blank: boolean, upper?: boolean): string {
+    const disp = function (t: string): string { return upper ? t.toUpperCase() : capFirst(t); };
     let html = blank ? '<option value=""' + (sel === '' ? ' selected' : '') + '>-</option>' : '';
     let found = false;
     for (let i = 0; i < values.length; i++) {
       if (values[i] === sel) { found = true; }
-      html += '<option value="' + escAttr(values[i]) + '"' + (values[i] === sel ? ' selected' : '') + '>' + escAttr(labels[i]) + '</option>';
+      html += '<option value="' + escAttr(values[i]) + '"' + (values[i] === sel ? ' selected' : '') + '>' + escAttr(disp(labels[i])) + '</option>';
     }
     if (!found && sel !== '') {
-      html = '<option value="' + escAttr(sel) + '" selected>' + escAttr(sel) + ' (unavailable)</option>' + html;
+      html = '<option value="' + escAttr(sel) + '" selected>' + escAttr(disp(sel)) + ' (unavailable)</option>' + html;
     }
     return html;
   }
@@ -230,7 +233,7 @@ function pluginListInitialize(this: any, _minified: any, clayConfig: any): void 
     const cs = categories();
     const v: string[] = [], l: string[] = [];
     for (let i = 0; i < cs.length; i++) { v.push(cs[i].c); l.push(cs[i].c); }
-    return optionsHtml(v, l, sel, true);
+    return optionsHtml(v, l, sel, true, true);
   }
   // Fill every empty level of a selection with the first available choice.
   function fillDefaults(sel: any): any {

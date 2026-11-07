@@ -31,6 +31,7 @@ interface PebbleSourceRequest {
   category: string;
   item: string;
   properties?: string[];
+  iconPixelSize?: { w: number; h: number };   // only needed when an icon property is read
   onData: (envelope: PebblePluginEnvelope) => void;
   onError?: (err: any) => void;
 }

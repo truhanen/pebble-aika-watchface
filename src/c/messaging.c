@@ -175,6 +175,17 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   if (plugin_tuple != NULL && plugin_tuple->type == TUPLE_CSTRING) {
     Plugin_parse(plugin_tuple->value->cstring);
   }
+  // One plugin icon bitmap (its own message): slot, size, 3-byte palette, 4bpp pixels.
+  Tuple *icon_slot_tuple = dict_find(iterator, MESSAGE_KEY_PluginIconSlot);
+  Tuple *icon_w_tuple = dict_find(iterator, MESSAGE_KEY_PluginIconWidth);
+  Tuple *icon_h_tuple = dict_find(iterator, MESSAGE_KEY_PluginIconHeight);
+  Tuple *icon_pal_tuple = dict_find(iterator, MESSAGE_KEY_PluginIconPalette);
+  Tuple *icon_pix_tuple = dict_find(iterator, MESSAGE_KEY_PluginIconPixels);
+  if (icon_slot_tuple && icon_w_tuple && icon_h_tuple && icon_pal_tuple && icon_pix_tuple) {
+    Plugin_setIcon((uint8_t)icon_slot_tuple->value->int32, (uint8_t)icon_w_tuple->value->int32,
+                   (uint8_t)icon_h_tuple->value->int32, icon_pal_tuple->value->data, icon_pal_tuple->length,
+                   icon_pix_tuple->value->data, icon_pix_tuple->length);
+  }
 
   // Tuya LED row: compact per-switch state string ('1'/'0'/'?'), own message key.
   Tuple *tuya_leds_tuple = dict_find(iterator, MESSAGE_KEY_TuyaLeds);

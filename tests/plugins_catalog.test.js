@@ -33,7 +33,7 @@ test('buildCatalogue keeps supported shapes only, skips series.* and unsupported
   assert.strictEqual(loc.u, WEATHER);
   assert.strictEqual(loc.n, 'Weather');
   assert.deepStrictEqual(loc.i[0], { i: 'location', m: 1,
-    s: [['temperature', 'n'], ['condition', 'i'], ['pic', 'ni']] });
+    s: [['temperature', 'n'], ['condition', 'i'], ['pic', 'n']] });   // `image` is not drawable: 'pic' stays numeric only
   const steps = cat.c[1].p[0];
   assert.deepStrictEqual(steps.i.map((i) => i.i), ['steps', 'sleep']);
   assert.strictEqual(steps.i[0].m, undefined);

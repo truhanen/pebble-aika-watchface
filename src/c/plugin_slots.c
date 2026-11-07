@@ -54,6 +54,7 @@ uint8_t PluginSlots_parse(const char *data, PluginSlot *slots) {
       PluginSlot *slot = &slots[idx];
       memcpy(slot->value, value, PLUGIN_VALUE_LEN);
       memcpy(slot->unit, unit, PLUGIN_UNIT_LEN);
+      slot->kind = (strcmp(value, PLUGIN_ICON_MARK) == 0) ? PLUGIN_KIND_ICON : PLUGIN_KIND_NUMBER;
       slot->has = 1;
       applied++;
     }
@@ -64,4 +65,21 @@ uint8_t PluginSlots_parse(const char *data, PluginSlot *slots) {
 PluginSlot *PluginSlots_get(PluginSlot *slots, uint8_t index) {
   if (index >= PLUGIN_SLOT_COUNT || !slots[index].has) { return NULL; }
   return &slots[index];
+}
+
+bool PluginIcon_valid(uint8_t w, uint8_t h, uint16_t paletteLen, uint16_t pixelLen) {
+  if (w < 1 || w > PLUGIN_ICON_MAX_DIM || h < 1 || h > PLUGIN_ICON_MAX_DIM) { return false; }
+  return paletteLen == PLUGIN_ICON_PALETTE_LEN && pixelLen == (uint16_t)h * ((w + 1) / 2);
+}
+
+void PluginIcon_copyRows(uint8_t *dst, uint16_t dstStride, const uint8_t *src, uint8_t w, uint8_t h) {
+  uint16_t srcStride = (uint16_t)((w + 1) / 2);
+  for (uint8_t y = 0; y < h; y++) {
+    memcpy(dst + (size_t)y * dstStride, src + (size_t)y * srcStride, srcStride);
+    if (dstStride > srcStride) { memset(dst + (size_t)y * dstStride + srcStride, 0, dstStride - srcStride); }
+  }
+}
+
+uint8_t PluginIcon_colour(uint8_t idx, uint8_t stroke, uint8_t fill) {
+  return idx == 0 ? stroke : (idx == 1 ? fill : 0x00);
 }

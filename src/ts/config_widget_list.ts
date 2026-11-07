@@ -39,8 +39,18 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   // config_widget_list.test.js compares them for every offered id).
   const IDENT_ICON_IDS: number[] = [2, 7, 8, 9, 10, 12, 20, 21, 22, 23, 24, 25, 40, 41, 42, 43, 44];
   const IDENT_UNIT_IDS: number[] = [2, 3, 6, 7, 8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 24, 25, 35, 40, 41, 42, 43, 44];
+  // A plugin widget whose property is an icon (the pluginList row carries data-shape="i").
+  function isPluginIcon(id: number): boolean {
+    const rowEls = document.querySelectorAll('.pl-root .pl-row');
+    for (let i = 0; i < rowEls.length; i++) {
+      const el = rowEls[i] as HTMLElement;
+      if (parseInt(el.getAttribute('data-wid') || '0', 10) === id) { return el.getAttribute('data-shape') === 'i'; }
+    }
+    return false;
+  }
   // The modes the button cycles for an id, in order; [] = no identifier (placeholder).
   function identModes(id: number): string[] {
+    if (id >= 144 && id <= 159 && isPluginIcon(id)) { return []; }   // icon property: just the icon
     const slot = (id >= 128 && id <= 159) || (id >= 200 && id <= 222) || (id >= 15 && id <= 17);
     const out: string[] = [];
     if (IDENT_ICON_IDS.indexOf(id) !== -1) { out.push('icon'); }
@@ -731,6 +741,8 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     for (let i = 0; i < mems.length; i++) {
       const sel = mems[i] as HTMLSelectElement; sel.innerHTML = memberOptionsHtml(parseInt(sel.value, 10) || 0);
     }
+    // a plugin row may have become / stopped being an icon property: redraw the identifier buttons
+    renderSlots(readSlots());
   }
 
   // After ALL components build (cryptoList DOM now exists), refresh every select's

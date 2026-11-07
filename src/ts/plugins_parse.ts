@@ -6,11 +6,16 @@
    globals, so unit-testable with `node --test` (tests/plugins_parse.test.js).
    Wire format (KEEP IN SYNC with src/c/plugin_slots.c): PluginData is a string of
    `slot<US>value<US>unit` records, US = 0x1f, three fields per record, slot 0..15
-   (widget id = 144 + slot). */
+   (widget id = 144 + slot). An icon slot's value is ICON_MARK ("@"); its bitmap follows in
+   one AppMessage per slot (buildIconMessage: PluginIconSlot / Width / Height / Palette /
+   Pixels, byte arrays), so it never competes with PluginData. */
 
 export const MAX_PLUGINS = 16;       // matches PLUGIN_SLOT_COUNT in src/c/plugin_slots.h
 export const PLUGIN_WID_BASE = 144;  // matches WL_PLUGIN_WID_BASE in src/c/widget_list.h
 export const NO_DATA = '--';
+export const ICON_MARK = '@';        // PluginData value of a slot that shows a bitmap
+export const ICON_PIXEL_SIZE = 23;   // = WL_ICON_H: the size requested via iconPixelSize
+const MAX_ICON_DIM = 23;             // matches PLUGIN_ICON_MAX_DIM in src/c/plugin_slots.h
 const MAX_VALUE_BYTES = 11;          // watch buffers are 12 incl. NUL
 const MAX_UNIT_BYTES = 11;
 const DELIM = '\x1f';
@@ -21,9 +26,14 @@ export interface PluginSelection {
   item: string;
   instanceId?: string;    // instance UUID (or its 1-based number); absent = first
   property: string;
+  shape?: 'icon';         // absent = numericValue; 'icon' = the 3-colour bitmap shape
 }
 
-export interface PluginResult { slot: number; value: string; unit: string; }
+// A decoded icon: 4bpp palette-indexed pixels (rows of ceil(w/2) bytes) + 3 palette bytes
+// (GColor8: black, white, clear).
+export interface PluginIcon { width: number; height: number; palette: number[]; pixels: number[]; }
+
+export interface PluginResult { slot: number; value: string; unit: string; icon?: PluginIcon; }
 
 function str(v: any): string | undefined {
   return (typeof v === 'string' && v !== '') ? v : undefined;
@@ -39,6 +49,7 @@ export function normalizeSelection(raw: any): PluginSelection | null {
   if (plugin) { sel.plugin = plugin; }
   const inst = (typeof raw.instanceId === 'number') ? String(raw.instanceId) : str(raw.instanceId);
   if (inst) { sel.instanceId = inst; }
+  if (raw.shape === 'icon') { sel.shape = 'icon'; }
   return sel;
 }
 
@@ -76,6 +87,7 @@ export interface SelectionGroup {
   item: string;
   properties: string[];
   slots: number[];
+  icons: boolean;         // some slot of the group shows an icon: subscribe with iconPixelSize
 }
 
 export function groupSelections(sels: (PluginSelection | null)[]): SelectionGroup[] {
@@ -87,12 +99,13 @@ export function groupSelections(sels: (PluginSelection | null)[]): SelectionGrou
     const key = (s.plugin || '') + '|' + s.category + '|' + s.item;
     let g = byKey[key];
     if (!g) {
-      g = { plugin: s.plugin, category: s.category, item: s.item, properties: [], slots: [] };
+      g = { plugin: s.plugin, category: s.category, item: s.item, properties: [], slots: [], icons: false };
       byKey[key] = g;
       groups.push(g);
     }
     if (g.properties.indexOf(s.property) === -1) { g.properties.push(s.property); }
     g.slots.push(i);
+    if (s.shape === 'icon') { g.icons = true; }
   }
   return groups;
 }
@@ -143,11 +156,83 @@ export function noData(slot: number): PluginResult {
   return { slot: slot, value: NO_DATA, unit: '' };
 }
 
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+// Base64 (padding optional, whitespace ignored) -> bytes, or null on any other character.
+// Pure so it works where atob is absent (pkjs).
+export function base64ToBytes(s: any): number[] | null {
+  if (typeof s !== 'string') { return null; }
+  const clean = s.replace(/[\s=]+/g, '');
+  if (clean.length % 4 === 1) { return null; }
+  const out: number[] = [];
+  let acc = 0, bits = 0;
+  for (let i = 0; i < clean.length; i++) {
+    const v = B64.indexOf(clean.charAt(i));
+    if (v === -1) { return null; }
+    acc = (acc << 6) | v;
+    bits += 6;
+    if (bits >= 8) { bits -= 8; out.push((acc >> bits) & 0xff); acc &= (1 << bits) - 1; }
+  }
+  return out;
+}
+
+// An envelope icon `{pixels, palette, width, height}` (base64 strings) -> PluginIcon, or
+// null when missing, undecodable, oversized or too short for width x height.
+export function decodeIcon(raw: any): PluginIcon | null {
+  if (!raw || typeof raw !== 'object') { return null; }
+  const w = raw.width, h = raw.height;
+  if (typeof w !== 'number' || typeof h !== 'number' || w < 1 || h < 1 || w > MAX_ICON_DIM
+      || h > MAX_ICON_DIM || Math.floor(w) !== w || Math.floor(h) !== h) { return null; }
+  const pixels = base64ToBytes(raw.pixels), palette = base64ToBytes(raw.palette);
+  if (!pixels || !palette || palette.length !== 3) { return null; }
+  const need = h * Math.ceil(w / 2);
+  if (pixels.length < need) { return null; }
+  return { width: w, height: h, palette: palette, pixels: pixels.slice(0, need) };
+}
+
+// The icon AppMessage of one slot (own message: ~290 bytes of byte arrays).
+export function buildIconMessage(slot: number, icon: PluginIcon): Record<string, any> {
+  return { PluginIconSlot: slot, PluginIconWidth: icon.width, PluginIconHeight: icon.height,
+    PluginIconPalette: icon.palette, PluginIconPixels: icon.pixels };
+}
+
+// A cheap identity of an icon for the unchanged-bitmap check.
+export function iconKey(icon: PluginIcon): string {
+  return icon.width + 'x' + icon.height + ':' + icon.palette.join(',') + ':' + icon.pixels.join(',');
+}
+
+// The icon messages to send now: one per result with an icon whose key differs from
+// `sent` (slot -> key last delivered), all of them when `force`. Each carries its key so
+// the caller records it only after a successful send.
+export function iconMessages(results: PluginResult[], sent: Record<string, string>,
+                             force: boolean): { slot: number; key: string; msg: Record<string, any> }[] {
+  const out: { slot: number; key: string; msg: Record<string, any> }[] = [];
+  results.forEach((r) => {
+    if (!r.icon) { return; }
+    const key = iconKey(r.icon);
+    if (!force && sent[String(r.slot)] === key) { return; }
+    out.push({ slot: r.slot, key: key, msg: buildIconMessage(r.slot, r.icon) });
+  });
+  return out;
+}
+
+// `sent` restricted to slots that still show an icon: a slot that switched to a number
+// loses its bitmap on the watch, so selecting the same icon again must resend it.
+export function pruneIconKeys(sent: Record<string, string>, results: PluginResult[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  results.forEach((r) => { if (r.icon && sent[String(r.slot)] !== undefined) { out[String(r.slot)] = sent[String(r.slot)]; } });
+  return out;
+}
+
 // The slot's result for a selection, read from the fetched envelope: formatted value
 // + unit, or "--" / "" when the instance, property or numericValue is missing.
 export function resultFor(slot: number, sel: PluginSelection, envelope: any): PluginResult {
   const inst = pickInstance(envelope, sel.instanceId);
   const prop = inst && inst.properties ? inst.properties[sel.property] : undefined;
+  if (sel.shape === 'icon') {
+    const icon = decodeIcon(prop ? (prop as any).icon : undefined);
+    return icon ? { slot: slot, value: ICON_MARK, unit: '', icon: icon } : noData(slot);
+  }
   const nv = prop ? prop.numericValue : undefined;
   if (!nv || typeof nv.value !== 'number') { return noData(slot); }
   const value = formatNumber(nv.value);

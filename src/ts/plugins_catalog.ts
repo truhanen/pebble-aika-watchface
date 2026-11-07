@@ -11,8 +11,8 @@
      item = { i: itemId, m: 1 (supports multiple instances; omitted otherwise),
               s: [ [propertyId, 'n' | 'i' | 'ni'] ... ],
               n: [ { i: instanceId, n: name ('' = unnamed) } ... ] (multi-instance items only) }
-   Shape letters: n = numericValue (selectable now), i = icon/image (recorded for the
-   icon widgets of a later phase). Everything else (shortText, series.*, ...) is skipped. */
+   Shape letters: n = numericValue, i = icon (the 3-colour bitmap shape; `image` is not
+   drawable by the watch). Everything else (shortText, series.*, ...) is skipped. */
 
 export interface CatInstance { i: string; n: string; }
 export interface CatItem {
@@ -32,7 +32,7 @@ function shapeLetters(shapes: any): string {
   if (Array.isArray(shapes)) {
     for (let k = 0; k < shapes.length; k++) {
       if (shapes[k] === 'numericValue') { n = true; }
-      else if (shapes[k] === 'icon' || shapes[k] === 'image') { i = true; }
+      else if (shapes[k] === 'icon') { i = true; }
     }
   }
   return (n ? 'n' : '') + (i ? 'i' : '');

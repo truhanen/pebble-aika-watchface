@@ -148,8 +148,10 @@ const IDENT_ICON_IDS: number[] = [2, 7, 8, 9, 10, 12, 20, 21, 22, 23, 24, 25, 40
 const IDENT_UNIT_IDS: number[] = [2, 3, 6, 7, 8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 24, 25, 35, 40, 41, 42, 43, 44];
 
 // The modes the config button cycles through for a widget id, in cycle order; [] = the
-// widget has no identifier (the button is a placeholder).
-export function identModes(id: number): WidgetIdent[] {
+// widget has no identifier (the button is a placeholder). `pluginIcon` = the id is a plugin
+// widget (144..159) whose property is an icon: just the icon, nothing to switch.
+export function identModes(id: number, pluginIcon?: boolean): WidgetIdent[] {
+  if (pluginIcon && id >= PLUGIN_WID_BASE && id < PLUGIN_WID_BASE + 16) { return []; }
   const slot = (id >= 128 && id <= 159) || (id >= 200 && id <= 222) || (id >= 15 && id <= 17);
   const icon = IDENT_ICON_IDS.indexOf(id) !== -1;
   const unit = slot || IDENT_UNIT_IDS.indexOf(id) !== -1;
@@ -162,8 +164,8 @@ export function identModes(id: number): WidgetIdent[] {
 
 // The mode a stored ident shows as for this id: itself when offered, else the watch's
 // fallback (unit -> icon -> none, icon -> unit -> none).
-export function resolveIdent(id: number, ident: WidgetIdent): WidgetIdent {
-  const modes = identModes(id);
+export function resolveIdent(id: number, ident: WidgetIdent, pluginIcon?: boolean): WidgetIdent {
+  const modes = identModes(id, pluginIcon);
   if (modes.length === 0 || ident === 'none' || modes.indexOf(ident) !== -1) { return ident; }
   return modes[0];
 }

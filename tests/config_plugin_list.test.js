@@ -98,9 +98,9 @@ test('instance select is hidden for single-instance items and instanceId is omit
 test('only numeric properties and categories with one are offered', () => {
   const t = setup([SEL1]);
   const cats = Array.from(t.rows()[0].querySelectorAll('.pl-cat option')).map((o) => o.value);
-  assert.deepStrictEqual(cats, ['', 'weather', 'health']);   // 'iconsonly' has nothing selectable
+  assert.deepStrictEqual(cats, ['', 'weather', 'health', 'iconsonly']);
   const props = Array.from(t.rows()[0].querySelectorAll('.pl-prop option')).map((o) => o.value);
-  assert.deepStrictEqual(props, ['temperature', 'uv_index']);
+  assert.deepStrictEqual(props, ['temperature', 'uv_index', 'condition|i']);
 });
 
 test('Add picks first choices, fills the first empty slot, caps at 16', () => {
@@ -204,4 +204,34 @@ test('components are self-contained (toSource-safe)', () => {
     catalogComponent.manipulator.get, catalogComponent.manipulator.set].forEach((fn) => {
     assert.ok(!/__spread|__read|__assign|_this|require\(/.test(fn.toString()), 'no helper/module references');
   });
+});
+
+test('icon properties: selectable, stored with shape icon, row marked, picker offers no identifier switch', () => {
+  const ICON = { plugin: WEATHER, category: 'weather', item: 'location', instanceId: 'u-jkl',
+    property: 'condition', shape: 'icon' };
+  const t = setup([SEL1, ICON], undefined, { widgets: [{ id: 144, ident: 'unit', font: 31 }, { id: 145, ident: 'icon', font: 31 }] });
+  assert.deepStrictEqual(t.get(), [SEL1, ICON]);
+  assert.strictEqual(t.rows()[0].getAttribute('data-shape'), null);
+  assert.strictEqual(t.rows()[1].getAttribute('data-shape'), 'i');
+  const opt = t.rows()[1].querySelector('.pl-prop option:checked');
+  assert.strictEqual(opt.value, 'condition|i');
+  assert.strictEqual(opt.textContent, 'condition (icon)');
+  // numeric widget keeps its unit / none button, the icon one has just a placeholder
+  const wrows = Array.from(t.wroot.querySelectorAll('.wl-row'));
+  assert.strictEqual(wrows[0].querySelector('.wl-main .wl-hide').tagName, 'BUTTON');
+  assert.ok(wrows[1].querySelector('.wl-main .wl-hide-ph'));
+  // switching the property back to a numeric one drops the shape
+  t.choose(t.rows()[1], 'pl-prop', 'temperature');
+  assert.deepStrictEqual(t.get()[1], { plugin: WEATHER, category: 'weather', item: 'location',
+    instanceId: 'u-jkl', property: 'temperature' });
+  // ... and an icon choice sets it
+  t.choose(t.rows()[0], 'pl-prop', 'condition|i');
+  assert.strictEqual(t.get()[0].shape, 'icon');
+  assert.strictEqual(t.get()[0].property, 'condition');
+});
+
+test('identModes: plugin icon widgets have no identifier switch', () => {
+  assert.deepStrictEqual(identModes(150, true), []);
+  assert.deepStrictEqual(identModes(150, false), ['unit', 'none']);
+  assert.deepStrictEqual(identModes(7, true), ['icon', 'unit', 'none']);   // only plugin ids are affected
 });

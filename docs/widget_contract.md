@@ -55,7 +55,8 @@ Each widget declares which identifiers it has (an icon, a unit, or both). When t
 | 35 digital time | (no icon; shows the unit) | AM / PM (12 h only) |
 | 14, 18, 19 electricity | (no icon; shows the unit) | `c/kWh` fraction |
 | crypto / currency / tuya | (no icon; shows the unit) | the label |
-| 144..159 plugin | (no icon yet; shows the unit) | the plugin value's unit (`°C`); none = no identifier |
+| 144..159 plugin, numeric property | (no icon; shows the unit) | the plugin value's unit (`°C`); none = no identifier |
+| 144..159 plugin, icon property | the plugin's bitmap alone (always shown; no identifier switch) | (same) |
 | 23 Tuya LEDs | the LED row | (none) |
 | 26..34 dates, 5 seconds, 11 beats, 36..38 icon-only | no identifier switch | |
 
@@ -135,7 +136,7 @@ These are dynamic ranges, unchanged:
 | Ids | Source |
 |---|---|
 | 128..143 | Tuya |
-| 144..159 | Plugin properties: selection `n` (localStorage `plugin_selections`, index `n`) is id 144+n. The phone sends `PluginData`, a string of `slot<US>value<US>unit` records (US = 0x1f), `slot` = `id - 144`. The watch shows `--` until a slot has arrived. The slots (value + unit) are persisted (keys 320/321), so they show at once after a restart. Layout note: a plugin widget in the top slot of the left edge sits beside the date, so its unit (and a long value) can be squeezed out -- the same rule as for every other widget there (e.g. the `37/43` forecast), not a plugin-specific bug. |
+| 144..159 | Plugin properties: selection `n` (localStorage `plugin_selections`, index `n`) is id 144+n. The phone sends `PluginData`, a string of `slot<US>value<US>unit` records (US = 0x1f), `slot` = `id - 144`. The watch shows `--` until a slot has arrived. The slots (value + unit) are persisted (keys 320/321), so they show at once after a restart. Layout note: a plugin widget in the top slot of the left edge sits beside the date, so its unit (and a long value) can be squeezed out -- the same rule as for every other widget there (e.g. the `37/43` forecast), not a plugin-specific bug. Icon properties (the plugin `icon` shape, `selection.shape = 'icon'`): the `PluginData` value of such a slot is the marker `@` and the bitmap follows in its own AppMessage per slot, so it never competes with `PluginData`: `PluginIconSlot` (int 0..15), `PluginIconWidth`, `PluginIconHeight` (int, <= 23), `PluginIconPalette` (bytes, exactly 3: GColor8 black `c0`, white `ff`, clear `00`), `PluginIconPixels` (bytes: 4bpp palette indices, high nibble first, rows of `ceil(w/2)` bytes, `h` rows; 276 bytes at 23 x 23). The phone requests `iconPixelSize` 23 x 23 (= the icon box) only for groups with an icon selection, and resends a bitmap only when it changed (or on a cold request). The watch draws it in the icon box with black -> the theme's icon stroke colour, white -> the icon fill colour, clear transparent. Icons are NOT persisted (16 x 276 bytes would not fit the persist store): the slot kind is, the bitmap is re-sent by the phone after a restart (the watch counts a missing bitmap as missing data and asks for a cold refresh), and the icon is blank until then. |
 | 200..215 | Crypto |
 | 216..222 | Currency |
 

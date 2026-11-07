@@ -33,7 +33,7 @@
 
 typedef enum {
   ICON_NONE, ICON_BATTERY, ICON_BT_OFF, ICON_BT_STATE, ICON_STEPS, ICON_HEART, ICON_WEATHER,
-  ICON_FORECAST, ICON_RAIN, ICON_SLEEP, ICON_DEEP_SLEEP, ICON_SLEEP_BAR, ICON_LEDS
+  ICON_FORECAST, ICON_RAIN, ICON_SLEEP, ICON_DEEP_SLEEP, ICON_SLEEP_BAR, ICON_LEDS, ICON_PLUGIN
 } IconKind;
 
 typedef struct {
@@ -122,6 +122,7 @@ static const WidgetDesc *desc_for(uint8_t id);
 // the fallback when the widget has not got it (widget_list.h).
 static WlIdent ident_of(const WidgetCtx *c) {
   const WidgetDesc *d = desc_for(c->id);
+  if (d && d->icon == ICON_PLUGIN) { return WL_IDENT_ICON; }   // icon property: nothing to switch
   return d ? WidgetList_resolveIdent((WlIdent)c->ident, d->icon != ICON_NONE, d->unit != NULL)
            : WL_IDENT_NONE;
 }
@@ -517,10 +518,11 @@ static const WidgetDesc DESC_CHEAP = { value_cheap_time, ICON_NONE, unit_cheap_p
 static const WidgetDesc DESC_TUYA_LEDS = { NULL, ICON_LEDS, NULL };
 static const WidgetDesc DESC_SLOT = { value_slot, ICON_NONE, unit_slot };
 static const WidgetDesc DESC_PLUGIN = { value_plugin, ICON_NONE, unit_plugin };
+static const WidgetDesc DESC_PLUGIN_ICON = { NULL, ICON_PLUGIN, NULL };   // the slot's bitmap alone
 
 static const WidgetDesc *desc_for(uint8_t id) {
   if (Crypto_isWid(id) || Currency_isWid(id) || Tuya_isWid(id)) { return &DESC_SLOT; }
-  if (Plugin_isWid(id)) { return &DESC_PLUGIN; }
+  if (Plugin_isWid(id)) { return Plugin_isIconWid(id) ? &DESC_PLUGIN_ICON : &DESC_PLUGIN; }
   if (id >= DATE_D_M_DOT && id <= DATE_ISO) { return &DESC_DATE; }
   switch (id) {
     case EMPTY:                return &DESC_EMPTY;
@@ -783,6 +785,13 @@ static void measure(const WidgetCtx *c, WidgetSize *out) {
       }
       break;
     }
+    case ICON_PLUGIN: {   // the bitmap's own size; the icon box until it has arrived
+      GBitmap *bmp = Plugin_icon(c->id);
+      GRect b = bmp ? gbitmap_get_bounds(bmp) : GRect(0, 0, WL_ICON_H, WL_ICON_H);
+      out->icon_w = b.size.w;
+      out->icon_h = b.size.h;
+      break;
+    }
     case ICON_SLEEP_BAR:
       out->icon_w = SLEEP_BAR_W;
       out->icon_h = SLEEP_BAR_H;
@@ -811,6 +820,7 @@ static void draw_icon_silhouette(GContext *g, const WidgetCtx *c, GRect box, GCo
     case ICON_BT_OFF:   draw_bt_strokes(g, box, false, color); break;
     case ICON_BATTERY:  draw_battery_silhouette(g, box, color); break;
     case ICON_LEDS:     draw_leds_silhouette(g, box, color); break;
+    case ICON_PLUGIN:   Plugin_drawIcon(g, c->id, box.origin, color, color); break;
     default: {
       GDrawCommandImage *img = icon_image(d->icon);
       if (img) {
@@ -849,6 +859,7 @@ static void draw_icon(GContext *g, const WidgetCtx *c, GRect box) {
     case ICON_BATTERY:   draw_battery(g, box, fg, bg); break;
     case ICON_SLEEP_BAR: draw_sleep_bar(g, box, fg); break;
     case ICON_LEDS:      draw_leds(g, box, fg); break;
+    case ICON_PLUGIN:    Plugin_drawIcon(g, c->id, box.origin, theme.iconStrokeColor, theme.iconFillColor); break;
     default: {
       GDrawCommandImage *img = icon_image(kind);
       if (img) {

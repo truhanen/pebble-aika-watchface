@@ -56,6 +56,44 @@ int main(void) {
   assert(strlen(slots[6].value) == PLUGIN_VALUE_LEN - 1);
   assert(strcmp(slots[6].unit, "\xc2\xb0\xc2\xb0\xc2\xb0\xc2\xb0\xc2\xb0") == 0);   // 10 of 11 bytes: the 6th would split
 
+  // the icon marker makes a slot an icon slot; a number makes it a number slot again
+  PluginSlots_parse("7" US "@" US "", slots);
+  assert(slots[7].has && slots[7].kind == PLUGIN_KIND_ICON);
+  assert(slots[3].kind == PLUGIN_KIND_NUMBER);
+  PluginSlots_parse("7" US "18" US "C", slots);
+  assert(slots[7].kind == PLUGIN_KIND_NUMBER);
+  PluginSlots_parse("7" US "@x" US "", slots);
+  assert(slots[7].kind == PLUGIN_KIND_NUMBER);
+
+  // icon validation: 1..23 square-ish, palette 3 bytes, pixels h * ceil(w/2)
+  assert(PLUGIN_ICON_MAX_PIXELS == 276);
+  assert(PluginIcon_valid(23, 23, 3, 276));
+  assert(PluginIcon_valid(5, 4, 3, 12));
+  assert(!PluginIcon_valid(23, 23, 3, 275));
+  assert(!PluginIcon_valid(23, 23, 2, 276));
+  assert(!PluginIcon_valid(24, 23, 3, 276));
+  assert(!PluginIcon_valid(0, 5, 3, 0));
+  assert(!PluginIcon_valid(5, 24, 3, 288));
+
+  // rows are copied into a (possibly wider) destination stride, padding zeroed
+  {
+    uint8_t src[2 * 3] = { 1, 2, 3, 4, 5, 6 };            // w=5 -> 3 bytes per row, h=2
+    uint8_t dst[2 * 4];
+    memset(dst, 0xee, sizeof(dst));
+    PluginIcon_copyRows(dst, 4, src, 5, 2);
+    uint8_t want[8] = { 1, 2, 3, 0, 4, 5, 6, 0 };
+    assert(memcmp(dst, want, 8) == 0);
+    uint8_t tight[6];
+    PluginIcon_copyRows(tight, 3, src, 5, 2);
+    assert(memcmp(tight, src, 6) == 0);
+  }
+
+  // palette: black -> stroke, white -> fill, clear stays clear
+  assert(PluginIcon_colour(0, 0xc0, 0xff) == 0xc0);
+  assert(PluginIcon_colour(1, 0xc0, 0xf0) == 0xf0);
+  assert(PluginIcon_colour(2, 0xc0, 0xff) == 0x00);
+  assert(PluginIcon_colour(9, 0xc0, 0xff) == 0x00);
+
   printf("PASS\n");
   return 0;
 }

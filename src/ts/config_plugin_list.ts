@@ -109,10 +109,11 @@ function pluginListInitialize(this: any, _minified: any, clayConfig: any): void 
   }
   function str(v: any): string { return (typeof v === 'string') ? v : (typeof v === 'number' ? String(v) : ''); }
 
-  // ---- catalogue lookups (numeric properties only: shape letter 'n')
-  function itemHasNumeric(it: any): boolean {
+  // ---- catalogue lookups (shape letters: 'n' numeric, 'i' icon bitmap). A property offering
+  // both is listed twice; an icon choice is the option value "name|i" (see propValue).
+  function itemHasNumeric(it: any): boolean {   // = has any supported property
     const s = it.s || [];
-    for (let i = 0; i < s.length; i++) { if (String(s[i][1]).indexOf('n') !== -1) { return true; } }
+    for (let i = 0; i < s.length; i++) { if (String(s[i][1]) !== '') { return true; } }
     return false;
   }
   function categories(): any[] {
@@ -164,8 +165,20 @@ function pluginListInitialize(this: any, _minified: any, clayConfig: any): void 
     const it = findItem(cat, uuid, item);
     const out: string[] = [];
     if (!it) { return out; }
-    for (let i = 0; i < it.s.length; i++) { if (String(it.s[i][1]).indexOf('n') !== -1) { out.push(it.s[i][0]); } }
+    for (let i = 0; i < it.s.length; i++) {
+      if (String(it.s[i][1]).indexOf('n') !== -1) { out.push(it.s[i][0]); }
+      if (String(it.s[i][1]).indexOf('i') !== -1) { out.push(it.s[i][0] + '|i'); }
+    }
     return out;
+  }
+  // The property select's value for a selection / the selection fields for a select value.
+  function propValue(sel: any): string { return sel.property + (sel.shape === 'icon' ? '|i' : ''); }
+  function propLabel(v: string): string {
+    return v.length > 2 && v.substring(v.length - 2) === '|i' ? v.substring(0, v.length - 2) + ' (icon)' : v;
+  }
+  function setProp(sel: any, v: string): void {
+    if (v.length > 2 && v.substring(v.length - 2) === '|i') { sel.property = v.substring(0, v.length - 2); sel.shape = 'icon'; }
+    else { sel.property = v; delete sel.shape; }
   }
   function instancesOf(cat: string, uuid: string, item: string): any[] {
     const it = findItem(cat, uuid, item);
@@ -222,6 +235,7 @@ function pluginListInitialize(this: any, _minified: any, clayConfig: any): void 
   function fillDefaults(sel: any): any {
     const out: any = { plugin: str(sel.plugin), category: str(sel.category), item: str(sel.item),
       instanceId: str(sel.instanceId), property: str(sel.property) };
+    if (sel.shape === 'icon') { out.shape = 'icon'; }
     if (out.category === '') { return null; }
     if (out.plugin === '') { const ps = pluginsOf(out.category); out.plugin = ps.length ? ps[0].u : ''; }
     if (out.item === '') { const its = itemsOf(out.category, out.plugin); out.item = its.length ? its[0].i : ''; }
@@ -229,7 +243,7 @@ function pluginListInitialize(this: any, _minified: any, clayConfig: any): void 
       const insts = instancesOf(out.category, out.plugin, out.item);
       out.instanceId = insts.length ? insts[0].i : '';
     }
-    if (out.property === '') { const pr = propsOf(out.category, out.plugin, out.item); out.property = pr.length ? pr[0] : ''; }
+    if (out.property === '') { const pr = propsOf(out.category, out.plugin, out.item); setProp(out, pr.length ? pr[0] : ''); }
     return out;
   }
   function selName(sel: any): any {
@@ -250,14 +264,17 @@ function pluginListInitialize(this: any, _minified: any, clayConfig: any): void 
     for (let i = 0; i < insts.length; i++) { nv.push(insts[i].i); nl.push(instanceLabel(insts[i], i)); }
     const showInst = insts.length > 0 || sel.instanceId !== '';
     const props = propsOf(sel.category, sel.plugin, sel.item);
-    return '<div class="pl-row" data-wid="' + (PLUGIN_BASE + slot) + '" data-name="' + escAttr(name) + '">' +
+    const pLabels: string[] = [];
+    for (let i = 0; i < props.length; i++) { pLabels.push(propLabel(props[i])); }
+    return '<div class="pl-row" data-wid="' + (PLUGIN_BASE + slot) + '" data-name="' + escAttr(name) + '"' +
+      (sel.shape === 'icon' ? ' data-shape="i"' : '') + '>' +
       '<div class="pl-line">' +
         '<select class="pl-cat" title="Category">' + catOptionsHtml(sel.category) + '</select>' +
         '<select class="pl-plugin" title="Plugin">' + optionsHtml(pv, pl, sel.plugin, false) + '</select>' +
         '<select class="pl-item" title="Item">' + optionsHtml(iv, il, sel.item, false) + '</select>' +
         '<select class="pl-inst" title="Instance"' + (showInst ? '' : ' style="display:none"') + '>' +
           optionsHtml(nv, nl, sel.instanceId, false) + '</select>' +
-        '<select class="pl-prop" title="Property">' + optionsHtml(props, props, sel.property, false) + '</select>' +
+        '<select class="pl-prop" title="Property">' + optionsHtml(props, pLabels, propValue(sel), false) + '</select>' +
         '<button type="button" class="pl-del" title="Remove">&#10005;</button>' +
       '</div><div class="pl-name">Widget: ' + escAttr(name) + '</div></div>';
   }
@@ -276,7 +293,8 @@ function pluginListInitialize(this: any, _minified: any, clayConfig: any): void 
       const inst = el.querySelector('.pl-inst') as HTMLSelectElement;
       const pr = el.querySelector('.pl-prop') as HTMLSelectElement;
       const sel: any = { plugin: pl ? pl.value : '', category: category, item: it ? it.value : '',
-        property: pr ? pr.value : '' };
+        property: '' };
+      if (pr) { setProp(sel, pr.value); }
       const instVal = (inst && inst.style.display !== 'none') ? inst.value : '';
       if (instVal !== '') { sel.instanceId = instVal; }
       rows.push(sel);
@@ -297,7 +315,7 @@ function pluginListInitialize(this: any, _minified: any, clayConfig: any): void 
     const el = root.querySelector('.pl-status') as HTMLElement;
     if (!el) { return; }
     el.textContent = (categories().length === 0)
-      ? 'No plugins available: this phone app has no plugin support, or no plugin offers numeric values. Update the Pebble app (plugin support needs SDK 4.44+) and reopen this page.'
+      ? 'No plugins available: this phone app has no plugin support, or no plugin offers numeric values or icons. Update the Pebble app (plugin support needs SDK 4.44+) and reopen this page.'
       : 'Add a plugin property, then place it in one of the widget lists above. Removing a slot in the middle leaves it empty so the other widgets keep their numbers.';
   }
   function notify(): void {
@@ -378,9 +396,9 @@ function pluginListInitialize(this: any, _minified: any, clayConfig: any): void 
       rows[idx] = ((t as HTMLSelectElement).value === '') ? null
         : { plugin: '', category: (t as HTMLSelectElement).value, item: '', instanceId: '', property: '' };
     } else if (sel && t.classList.contains('pl-plugin')) {
-      sel.item = ''; sel.instanceId = ''; sel.property = '';
+      sel.item = ''; sel.instanceId = ''; sel.property = ''; delete sel.shape;
     } else if (sel && t.classList.contains('pl-item')) {
-      sel.instanceId = ''; sel.property = '';
+      sel.instanceId = ''; sel.property = ''; delete sel.shape;
     }
     rebuild(trimTrailing(rows));
     self.trigger('change');

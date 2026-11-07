@@ -121,7 +121,12 @@
       "TestSeconds",
       "SettingMovingCentre",
       "SettingMinuteOffscreen",
-      "PluginData"
+      "PluginData",
+      "PluginIconSlot",
+      "PluginIconWidth",
+      "PluginIconHeight",
+      "PluginIconPalette",
+      "PluginIconPixels"
     ],
     "resources": {
       "media": [

@@ -15,9 +15,10 @@
    Pure logic lives in plugins_parse.ts (unit-tested). */
 
 import { parseSelections, groupSelections, resultFor, noData, packPluginData,
-  buildPluginMessage, allNoData, PluginResult, SelectionGroup, PluginSelection } from './plugins_parse';
+  buildPluginMessage, allNoData, iconMessages, pruneIconKeys, ICON_PIXEL_SIZE, PluginResult, SelectionGroup, PluginSelection } from './plugins_parse';
 
 const LAST_SENT_KEY = 'plugins_last_sent';    // last PluginData string we pushed
+const ICONS_SENT_KEY = 'plugins_icons_sent';  // JSON {slot: iconKey} of the bitmaps the watch has
 const LAST_FETCH_KEY = 'plugins_last_fetch';  // unix-seconds of the last fetch attempt
 // Plugin data is local to the phone, but each subscription can wake a plugin that hits
 // the network; coalesce bursts of watch polls.
@@ -45,6 +46,7 @@ function fetchGroup(g: SelectionGroup, sels: (PluginSelection | null)[],
   try {
     sub = Pebble.subscribeToSource!({
       plugin: g.plugin, category: g.category, item: g.item, properties: g.properties,
+      iconPixelSize: g.icons ? { w: ICON_PIXEL_SIZE, h: ICON_PIXEL_SIZE } : undefined,
       onData: (env) => {
         finish(g.slots.map((slot) => resultFor(slot, sels[slot] as PluginSelection, env)));
       },
@@ -81,14 +83,38 @@ export function updatePlugins(forceUpdate?: boolean): void {
       const packed = packPluginData(results);
       // A failed fetch must not hold off the retry for MIN_FETCH_INTERVAL_S.
       if (allNoData(results)) { window.localStorage.removeItem(LAST_FETCH_KEY); }
-      if (!forceUpdate && window.localStorage.getItem(LAST_SENT_KEY) === packed) {
+      let sentIcons: Record<string, string> = {};
+      try { sentIcons = JSON.parse(window.localStorage.getItem(ICONS_SENT_KEY) || '{}') || {}; } catch (e) { sentIcons = {}; }
+      sentIcons = pruneIconKeys(sentIcons, results);
+      window.localStorage.setItem(ICONS_SENT_KEY, JSON.stringify(sentIcons));
+      const icons = iconMessages(results, sentIcons, !!forceUpdate);
+      const dataChanged = !!forceUpdate || window.localStorage.getItem(LAST_SENT_KEY) !== packed;
+      if (!dataChanged && icons.length === 0) {
         console.log('plugins: nothing changed, not sending');
         return;
       }
-      Pebble.sendAppMessage(buildPluginMessage(results), () => {
-        window.localStorage.setItem(LAST_SENT_KEY, packed);
-        console.log('plugins: sent ' + packed);
-      }, () => { console.log('plugins: failed to send to Pebble'); });
+      // PluginData first (it tells the watch which slots are icons), then one AppMessage per
+      // changed bitmap, strictly one after the other.
+      const queue: { msg: Record<string, any>; ok: () => void }[] = [];
+      if (dataChanged) {
+        queue.push({ msg: buildPluginMessage(results), ok: () => {
+          window.localStorage.setItem(LAST_SENT_KEY, packed);
+          console.log('plugins: sent ' + packed);
+        } });
+      }
+      icons.forEach((m) => {
+        queue.push({ msg: m.msg, ok: () => {
+          sentIcons[String(m.slot)] = m.key;
+          window.localStorage.setItem(ICONS_SENT_KEY, JSON.stringify(sentIcons));
+          console.log('plugins: sent icon for slot ' + m.slot);
+        } });
+      });
+      const sendNext = (k: number) => {
+        if (k >= queue.length) { return; }
+        Pebble.sendAppMessage(queue[k].msg, () => { queue[k].ok(); sendNext(k + 1); },
+          () => { console.log('plugins: failed to send to Pebble'); });
+      };
+      sendNext(0);
     });
   });
 }

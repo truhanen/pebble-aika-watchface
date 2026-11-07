@@ -262,7 +262,7 @@ static bool widget_source_missing(uint8_t w) {
       if (Crypto_isWid(w))   { return Crypto_find(w) == NULL; }
       if (Currency_isWid(w)) { return Currency_find(w) == NULL; }
       if (Tuya_isWid(w))     { return Tuya_find(w) == NULL; }
-      if (Plugin_isWid(w))   { return Plugin_find(w) == NULL; }
+      if (Plugin_isWid(w))   { return Plugin_find(w) == NULL || Plugin_iconMissing(w); }
       return false;
   }
 }
@@ -503,6 +503,7 @@ static void deinit() {
   // unload weather stuff
   Weather_deinit();
   Electricity_deinit();
+  Plugin_deinit();
   Settings_deinit();
   BatteryDays_save();
 

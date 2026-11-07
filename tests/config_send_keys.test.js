@@ -125,10 +125,11 @@ test('SettingPrecipUnit is a mm/inch radiogroup (default mm) sent straight throu
 test('rain message keys are declared at the end of package.json messageKeys', () => {
   const keys = require('../package.json').pebble.messageKeys;
   // TestDate and TestSeconds (emulator test hooks) and SettingMovingCentre were appended after them.
-  // PluginData was appended after them.
-  assert.deepStrictEqual(keys.slice(-6),
+  // PluginData and the PluginIcon* keys (one bitmap per message) were appended after them.
+  assert.deepStrictEqual(keys.slice(-11),
     ['SettingPrecipUnit', 'TestDate', 'TestSeconds', 'SettingMovingCentre',
-      'SettingMinuteOffscreen', 'PluginData']);
+      'SettingMinuteOffscreen', 'PluginData', 'PluginIconSlot', 'PluginIconWidth',
+      'PluginIconHeight', 'PluginIconPalette', 'PluginIconPixels']);
   assert.ok(keys.indexOf('WeatherRainMax') !== -1);
 });
 

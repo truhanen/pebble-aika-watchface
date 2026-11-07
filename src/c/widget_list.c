@@ -40,8 +40,8 @@ bool WidgetList_iconOnlyId(uint8_t id) {
 }
 
 void WidgetList_canonical(uint8_t *id, uint8_t *flags) {
-  if (*id == WL_LEGACY_WEATHER_ICON_ID) {
-    *id = WL_WEATHER_CURRENT_ID;
+  if (*id == WL_LEGACY_WEATHER_ICON_ID || *id == WL_LEGACY_BATTERY_ICON_ID) {
+    *id = (*id == WL_LEGACY_WEATHER_ICON_ID) ? WL_WEATHER_CURRENT_ID : WL_BATTERY_METER_ID;
     *flags = (uint8_t)(WidgetList_flagFont(*flags) | WL_FLAG_ICONONLY);
     return;
   }

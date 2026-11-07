@@ -16,7 +16,7 @@ The phone-only Clay keys are `WidgetListCenter`, `WidgetList` and `WidgetListRig
 
 Default centre column: `[date "Wkday dd" (30), Empty (0)]`, so the date sits at the top and the Empty slot below keeps the space. The edges are unchanged.
 
-`SettingShowBatteryPct` is removed. Use the battery widget (2) in unit mode (`63 %`) or icon mode, or the icon-only battery widget (36).
+`SettingShowBatteryPct` is removed. Use the battery widget (2) in unit mode (`63 %`) icon mode or icon-only mode (`◉`, the old widget 36).
 
 ## Payload format (v2)
 
@@ -32,13 +32,13 @@ A list is a sequence of slots. Each slot is either:
 | 0–4 | Font index 0..16, see the table below. 31 means "position default": 5 for the edges, 7 (Bitham large) for the centre column. |
 | 5 | Identifier NONE (hidden). |
 | 6 | Identifier UNIT (the widget's unit label instead of its icon). |
-| 7 | Identifier ICONONLY: draw only the widget's icon, in the standard icon box (for id 7 this is the old widget 37). Valid on the widgets that have an icon beside a value only: ids 2, 7, 8, 9, 10, 12, 20, 21, 22, 24, 25, 40..44 (`WidgetList_iconOnlyId`, `ICONLY_IDS`). It dominates bits 5/6. Cleared by the sanitizers (watch and phone) on every other id. |
+| 7 | Identifier ICONONLY: draw only the widget's icon, in the standard icon box (for id 7 this is the old widget 37, for id 2 the old widget 36). Valid on the widgets that have an icon beside a value only: ids 2, 7, 8, 9, 10, 12, 20, 21, 22, 24, 25, 40..44 (`WidgetList_iconOnlyId`, `ICONLY_IDS`). It dominates bits 5/6. Cleared by the sanitizers (watch and phone) on every other id. |
 
 Identifier mode = bits 5/6: neither = ICON, bit 6 = UNIT, bit 5 = NONE. Both bits set is invalid and is read as NONE (the sanitizer rewrites it to NONE). Bit 7 on an id that supports it selects ICONONLY and overrides bits 5/6 (the sanitizer clears them).
 
 Each widget declares which identifiers it has (an icon, a unit, or both). When the requested mode is unavailable the watch falls back: UNIT -> ICON -> NONE, or ICON -> UNIT -> NONE. The config page offers only the available modes, in the order ICON, UNIT, NONE, ICONONLY, labelled by what is shown (`V` = the value, `◉` = the icon, `U` = the unit): `V◉` (value + icon), `VU` (value + unit), `V` (value only), `◉` (icon only). A plugin widget whose property is an icon shows an inactive `◉` (nothing to switch); a widget with no identifier at all has an empty placeholder instead of a button. Older stored config entries `{id, hide, font}` load as hide -> `none`, else `icon`; the stored field is now `ident: 'icon'|'unit'|'none'|'iconly'`.
 
-**ICONONLY.** Offered for every widget with an icon beside a value, derived from the icon kind of the WidgetDesc table in `src/c/widgets.c`: battery 2, WEATHER condition 7, forecast 8, sleep 9, steps 10, heart rate 12, deep sleep 20, distance 21, battery days 22, sleep + deep 24, sleep + deep bar 25 and max rain 40..44. Excluded: the LED row 23 and the widgets 1, 36, 38 and plugin icon properties (already icon-only: no value to drop), and every widget without an icon (unit-only or text widgets). The cycle is ICON, UNIT, NONE, ICONONLY, skipping the modes a widget does not have (e.g. `V◉`, `VU`, `V`, `◉` for steps). In this mode the watch neither measures nor draws the value: the icon is drawn alone in the standard icon box, above the hands with the background shadow, exactly as the icon-only widgets 36..38 are, and the slot is as high as the icon. The icon is the live one (battery level / charging, current or forecast condition, rain, sleep bar share), so it still updates; a widget whose icon is not available yet (weather before the first fetch) draws nothing, as in ICON mode, and the data-source checks still apply to the widget id (weather, rain). Mode 7 draws exactly what the old widget 37 drew. In the fallback-slot choice an ICONONLY slot is not preferred as a replaceable weather slot (as 37 was not). WEATHER condition therefore cycles `V◉` (icon + temperature), `VU` (temperature + unit), `V` (temperature only) and `◉` (the condition icon alone).
+**ICONONLY.** Offered for every widget with an icon beside a value, derived from the icon kind of the WidgetDesc table in `src/c/widgets.c`: battery 2, WEATHER condition 7, forecast 8, sleep 9, steps 10, heart rate 12, deep sleep 20, distance 21, battery days 22, sleep + deep 24, sleep + deep bar 25 and max rain 40..44. Excluded: the LED row 23 and the widgets 1, 38 and plugin icon properties (already icon-only: no value to drop), and every widget without an icon (unit-only or text widgets). The cycle is ICON, UNIT, NONE, ICONONLY, skipping the modes a widget does not have (e.g. `V◉`, `VU`, `V`, `◉` for steps). In this mode the watch neither measures nor draws the value: the icon is drawn alone in the standard icon box, above the hands with the background shadow, exactly as the icon-only widgets (38, and the retired 36 / 37) were, and the slot is as high as the icon. The icon is the live one (battery level / charging, current or forecast condition, rain, sleep bar share), so it still updates; a widget whose icon is not available yet (weather before the first fetch) draws nothing, as in ICON mode, and the data-source checks still apply to the widget id (weather, rain). Mode 7 draws exactly what the old widget 37 drew, and widget 2 in this mode exactly what the old widget 36 drew (the legacy id 36 is migrated, see below). In the fallback-slot choice an ICONONLY slot is not preferred as a replaceable weather slot (as 37 was not). WEATHER condition therefore cycles `V◉` (icon + temperature), `VU` (temperature + unit), `V` (temperature only) and `◉` (the condition icon alone).
 
 | Widget | Icon mode | Unit mode |
 |---|---|---|
@@ -60,7 +60,7 @@ Each widget declares which identifiers it has (an icon, a unit, or both). When t
 | 144..159 plugin, numeric property | (no icon; shows the unit) | the plugin value's unit (`°C`); none = no identifier |
 | 144..159 plugin, icon property | the plugin's bitmap alone (always shown; no identifier switch) | (same) |
 | 23 Tuya LEDs | the LED row | (none) |
-| 26..34 dates, 5 seconds, 11 beats, 36..38 icon-only | no identifier switch | |
+| 26..34 dates, 5 seconds, 11 beats, 37 (legacy), 38 icon-only | no identifier switch | |
 
 - `id` uses the whole byte. The old 0x20 hide-flag-in-id encoding is gone.
 - `id` 0 (Empty) is a valid slot.
@@ -162,11 +162,12 @@ Other existing ids:
 | 33 | Date `dd Mon` | DATE dd mon | 04 Jul |
 | 34 | Date `yyyy-mm-dd` | DATE yyyy-mm-dd | 2026-07-04 |
 | 35 | Digital time | TIME digital | Follows `clock_is_24h_style()`. In 12 h mode AM/PM is drawn as a unit. The leading zero follows `SettingShowLeadingZero`. |
-| 36 | Battery icon only | BATTERY icon | |
+| 36 | **Retired**: battery icon only | (not offered) | Merged into id 2 (BATTERY percentage) as its ICONONLY mode (flags bit 7); see "Migration" below. |
 | 37 | **Retired**: weather icon only | (not offered) | Merged into id 7 as its ICONONLY mode (flags bit 7); see "Migration" below. |
 | 38 | Bluetooth icon only | MISC bluetooth icon | Shows a connected or disconnected glyph. |
 
 - Weekday and month names are localised (`languages.c`).
 
 **Migration of id 37 (weather merge).** Id 37 is accepted as legacy input only and is rewritten to `7` with the ICONONLY bit, keeping the font bits and dropping bits 5/6 (the old widget had no identifier switch). This happens everywhere a list is read: on the watch in `WidgetList_sanitize` / `WidgetList_parse` (plain slots and rotating-group members; the sanitizer runs on every received list and again when the persisted settings load, so a stored `37` is rewritten on the first start of the new build, and parse reads it correctly even before that), and on the phone in `widgetListToPayload` plus the config component's `normEntry` (a Clay-stored `{id: 37, ident, font}` loads as `{id: 7, ident: 'iconly', font}`; legacy flat int lists keep the old meaning of 37 = hidden id 5). No settings-version bump is needed: the persisted layout does not change. A list that holds both 7 and 37 stays valid: duplicates of an id are allowed in the lists, so it becomes two id-7 slots (e.g. `[7 NONE, 7 ICONONLY]`), nothing is dropped or de-duplicated. ICONONLY on an id that does not support it is cleared (the id 37 rewrite is the only id change).
-- `MAX_WIDGET_TYPE` is 38. Id 39 (a separate Battery % widget) existed briefly and is gone: widget 2 in unit mode replaces it.
+**Migration of id 36 (battery merge).** Same rule as 37: id 36 is accepted as legacy input only and is rewritten to `2` with the ICONONLY bit (font bits kept, bits 5/6 dropped), alone or as a rotating-group member, on the watch (`WidgetList_canonical`, used by sanitize / parse / the settings-load rewrite and by the auto-battery scan, so an icon-only id 2 or a stored 36 both disable the auto-battery substitution) and on the phone (`widgetListToPayload`, `normEntry`; an object-encoded Clay value `{id: 36, ...}` loads as `{id: 2, ident: 'iconly', font}`). Id 36 is no longer offered in the picker. The legacy FLAT int encoding is unchanged: there the 0x20 hide flag window is `0x21..0x39`, so a bare `36` (= 0x20 | 4) has always meant the hidden retired date (4) and is dropped, exactly as before (and a flat `37` is the hidden id 5); flat lists predate ids 26+, so no real stored value ever meant 36 / 37. A list holding both 2 and 36 becomes two id-2 slots. No settings-version bump: the persisted layout does not change. The default right edge is `[2 ICONONLY, 2 UNIT, ...]`.
+- `MAX_WIDGET_TYPE` is 44 (`RAIN_MAX_12H`; the retired ids 36 / 37 stay inside the range as accepted legacy input). Id 39 (a separate Battery % widget) existed briefly and is gone: widget 2 in unit mode replaces it.

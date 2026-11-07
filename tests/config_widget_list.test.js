@@ -65,7 +65,7 @@ test('Empty rows have a font control and its value is read and encoded', () => {
 });
 
 test('icon-only widgets have no font control; text widgets in groups do', () => {
-  const { root } = mount([w(36), w(36), w(38), w(10),
+  const { root } = mount([w(38), w(38), w(38), w(10),
     { rotating: true, interval: 3, members: [w(38), w(10), w(0 + 2)] }]);
   const rows = root.querySelectorAll('.wl-row');
   for (let i = 0; i < 3; i++) { assert.strictEqual(rows[i].querySelectorAll('.wl-fontbox').length, 0); }
@@ -90,7 +90,7 @@ test('every row in a list has the same slot elements with placeholders for missi
   const { root: sideList } = mount([
     w(10),           // plain widget
     w(0),            // Empty (has font, no hide)
-    w(36),           // icon-only (no font, no hide)
+    w(38),           // icon-only (no font, no hide)
     w(38),           // icon-only
     { rotating: true, interval: 3, members: [w(2), w(10), w(38)] },  // rotating group
   ], { defaultFont: 5 });
@@ -211,7 +211,7 @@ test('a unit-only widget cycles only unit <-> none and starts on the unit', () =
 });
 
 test('widgets without an identifier get the placeholder, not a button', () => {
-  const { root } = mount([wid(0, 'icon'), wid(5, 'icon'), wid(26, 'icon'), wid(36, 'icon'), wid(11, 'icon')]);
+  const { root } = mount([wid(0, 'icon'), wid(5, 'icon'), wid(26, 'icon'), wid(38, 'icon'), wid(11, 'icon')]);
   root.querySelectorAll('.wl-row').forEach((r) => {
     assert.strictEqual(r.querySelectorAll('.wl-main .wl-hide').length, 0);
     assert.strictEqual(r.querySelectorAll('.wl-main .wl-hide-ph').length, 1);
@@ -319,6 +319,35 @@ test('a list holding both 7 (temperature) and 37 keeps two id-7 slots', () => {
   const v = component.manipulator.get.call(self);
   assert.deepStrictEqual(v, [{ id: 7, ident: 'none', font: 31 }, { id: 7, ident: 'iconly', font: 31 }]);
   assert.deepStrictEqual(widgetListToPayload(v), [7, 31 | 0x20, 7, 31 | 0x80]);
+});
+
+test('the picker no longer offers the retired battery icon (36); BATTERY percentage (2) does', () => {
+  assert.strictEqual(STATIC_WIDGETS.find((o) => o.id === 36), undefined);
+  const { root } = mount([w(2)]);
+  const opts = Array.from(root.querySelectorAll('.wl-sel option')).map((o) => o.value);
+  assert.ok(opts.indexOf('2') !== -1 && opts.indexOf('36') === -1);
+  assert.ok(/BATTERY percentage</.test(root.innerHTML) && !/BATTERY icon/.test(root.innerHTML));
+});
+
+test('a saved legacy battery icon (36) loads as 2 in icon-only mode, font kept, never "Unknown #36"', () => {
+  const { root, self } = mount([{ id: 36, ident: 'icon', font: 31 }, { id: 36, ident: 'none', font: 5 },
+    { rotating: true, interval: 3, members: [{ id: 36, ident: 'unit', font: 4 }, w(10)] }]);
+  const v = component.manipulator.get.call(self);
+  assert.deepStrictEqual(v[0], { id: 2, ident: 'iconly', font: 31 });
+  assert.deepStrictEqual(v[1], { id: 2, ident: 'iconly', font: 5 });
+  assert.deepStrictEqual(v[2].members[0], { id: 2, ident: 'iconly', font: 4 });
+  assert.ok(!/Unknown #/.test(root.innerHTML));
+  // normalised once, the value is stable (idempotent) and encodes as id 2 + bit 7
+  assert.deepStrictEqual(widgetListToPayload(v), [2, 31 | 0x80, 2, 5 | 0x80, 255, 2, 3, 2, 4 | 0x80, 10, 31]);
+});
+
+test('a list holding both 2 and 36 keeps two id-2 slots; widget 2 cycles V◉ VU V ◉ and has a font', () => {
+  const { self, root } = mount([{ id: 2, ident: 'unit', font: 31 }, { id: 36, ident: 'icon', font: 31 }]);
+  const v = component.manipulator.get.call(self);
+  assert.deepStrictEqual(v, [{ id: 2, ident: 'unit', font: 31 }, { id: 2, ident: 'iconly', font: 31 }]);
+  const rows = root.querySelectorAll('.wl-row');
+  rows.forEach((r) => assert.strictEqual(r.querySelectorAll('.wl-main .wl-fontbox').length, 1));
+  assert.deepStrictEqual(component.manipulator.get.call(self), v);
 });
 
 test('an unknown id is labelled "Unknown #N", not as a crypto rate', () => {

@@ -13,8 +13,8 @@ export interface WidgetOption { id: number; label: string; }
 
 // KEEP IN SYNC with docs/widget_contract.md, src/c/widgets.h (WidgetType) and the
 // inlined STATIC_OPTIONS copy in config_widget_list.ts (tests/widget_options_sync).
-// Id 1 (BT disconnect, internal), 4 (retired date) and 37 (the old weather icon, merged into 7
-// as its icon-only mode, see ICONLY below) are deliberately not listed.
+// Id 1 (BT disconnect, internal), 4 (retired date) 37 and 36 (the old weather / battery icons, merged into 7 and 2
+// as their icon-only mode, see ICONLY below) are deliberately not listed.
 export const STATIC_WIDGETS: WidgetOption[] = [
   { id: 0, label: 'EMPTY' },
   { id: 255, label: '🔁 Rotating' },
@@ -48,7 +48,6 @@ export const STATIC_WIDGETS: WidgetOption[] = [
   { id: 24, label: 'SLEEP + deep hours' },
   { id: 25, label: 'SLEEP hours + deep bar' },
   { id: 2, label: 'BATTERY percentage' },
-  { id: 36, label: 'BATTERY icon' },
   { id: 22, label: 'BATTERY days left' },
   { id: 14, label: 'ELECTR price' },
   { id: 18, label: 'ELECTR next cheap' },
@@ -142,11 +141,11 @@ export function memberOptions(rows: any, pluginRows?: any): WidgetOption[] {
 // Identifier modes: what can stand beside a widget's value. KEEP IN SYNC with the
 // WidgetDesc table in src/c/widgets.c (icon / unit per widget) and the inlined copy in
 // config_widget_list.ts. Widgets with neither (Empty, seconds, dates, beats) and the
-// icon-only ones (36..38: nothing to switch off) are not toggleable.
+// icon-only one (38: nothing to switch off) are not toggleable.
 // 'iconly' = the icon alone (flags bit 7), offered by every widget that draws an icon next to a
 // value (IDENT_ICON_IDS minus the LED row 23, which is icon-only already). KEEP IN SYNC with
 // the WidgetDesc table in src/c/widgets.c (widgets with an icon and a value) and
-// WidgetList_iconOnlyId() in src/c/widget_list.c. WEATHER condition's mode is the old widget 37.
+// WidgetList_iconOnlyId() in src/c/widget_list.c. WEATHER condition's mode is the old widget 37, battery's the old widget 36.
 export type WidgetIdent = 'icon' | 'unit' | 'none' | 'iconly';
 export const ICONLY_IDS: number[] = [2, 7, 8, 9, 10, 12, 20, 21, 22, 24, 25, 40, 41, 42, 43, 44];
 // Config button labels: V = the value is shown, ◉ = the icon symbol, U = the unit.

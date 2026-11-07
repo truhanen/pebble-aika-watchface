@@ -53,8 +53,8 @@ test('Empty (0) is a valid slot', () => {
 
 test('every contract id is accepted, in order', () => {
   const ok = [0, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-    25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 40, 41, 42, 43, 44];   // 37 = legacy input, sent as 7
-  const sent = ok.map((id) => (id === 37 ? 7 : id));
+    25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 40, 41, 42, 43, 44];   // 36 / 37 = legacy input, sent as 2 / 7
+  const sent = ok.map((id) => (id === 37 ? 7 : id === 36 ? 2 : id));
   // list in two halves so the 64-byte cap does not truncate
   const half = widgetListToPayload(ok.slice(0, 20).map((id) => w(id)));
   assert.deepStrictEqual(half.filter((_, i) => i % 2 === 0), sent.slice(0, 20));
@@ -268,12 +268,31 @@ test('weather merge: a list with both 7 and 37 keeps both as two id-7 slots', ()
   assert.deepStrictEqual(widgetListIds([w(7), w(37)]), [7, 7]);
 });
 
+test('battery merge: legacy 36 becomes 2 + icon-only, font kept, hide / unit dropped', () => {
+  assert.deepStrictEqual(widgetListToPayload([w(36)]), [2, 31 | 0x80]);
+  assert.deepStrictEqual(widgetListToPayload([w(36, true, 5)]), [2, 5 | 0x80]);
+  assert.deepStrictEqual(widgetListToPayload([{ id: 36, ident: 'unit', font: 9 }]), [2, 9 | 0x80]);
+  assert.deepStrictEqual(widgetListToPayload([{ id: '36', ident: 'icon', font: 16 }]), [2, 16 | 0x80]);
+  // legacy FLAT int encoding is unchanged: 36 = 0x20 | 4 = the hidden retired date -> dropped
+  assert.deepStrictEqual(widgetListToPayload([36]), []);
+  assert.deepStrictEqual(widgetListToPayload([36, 7]), [7, 31]);
+});
+
+test('battery merge: 36 inside a rotating group; 2 and 36 together; idempotent', () => {
+  assert.deepStrictEqual(widgetListToPayload([rot(2, [w(36, false, 4), w(10)])]), [255, 2, 2, 2, 4 | 0x80, 10, 31]);
+  assert.deepStrictEqual(widgetListToPayload([w(2, true), w(36)]), [2, 31 | 0x20, 2, 31 | 0x80]);
+  assert.deepStrictEqual(widgetListIds([w(2), w(36)]), [2, 2]);
+  assert.deepStrictEqual(widgetListIds([rot(1, [w(36), w(10)])]), [2, 10]);   // auto-battery scan sees id 2
+  assert.deepStrictEqual(widgetListToPayload([iconly(2, 5)]), widgetListToPayload([w(36, false, 5)]));
+  assert.deepStrictEqual(widgetListToPayload([{ id: 2, ident: 'iconly', font: 5 }]), [2, 5 | 0x80]);
+});
+
 test('weather merge: the new icon-only mode round-trips; the bit is cleared on other ids', () => {
   assert.deepStrictEqual(widgetListToPayload([iconly(7, 6)]), [7, 6 | 0x80]);
   assert.deepStrictEqual(widgetListToPayload([iconly(10, 6)]), [10, 6 | 0x80]);   // steps: has an icon
   assert.deepStrictEqual(widgetListToPayload([iconly(3, 6)]), [3, 6]);            // alt clock: no icon
   assert.deepStrictEqual(widgetListToPayload([iconly(23, 6)]), [23, 6]);          // LED row: icon-only already
-  assert.deepStrictEqual(widgetListToPayload([iconly(36, 6), iconly(38, 6)]), [36, 6, 38, 6]);
+  assert.deepStrictEqual(widgetListToPayload([iconly(38, 6), iconly(1, 6)]), [38, 6]);   // 38 stays icon-only already (1 is internal)
   assert.deepStrictEqual(widgetListToPayload([rot(1, [iconly(7), iconly(2)])]), [255, 2, 1, 7, 31 | 0x80, 2, 31 | 0x80]);
   // migrating is idempotent: the payload of a migrated value is the payload of the legacy one
   assert.deepStrictEqual(widgetListToPayload([iconly(7, 5)]), widgetListToPayload([w(37, false, 5)]));

@@ -41,7 +41,9 @@
 #define WL_FLAG_UNIT        0x40   // identifier is the unit
 #define WL_FLAG_ICONONLY    0x80   // the icon alone (WEATHER condition: the legacy id 37)
 #define WL_LEGACY_WEATHER_ICON_ID 37   // retired: read as WEATHER_CURRENT (7) + WL_FLAG_ICONONLY
+#define WL_LEGACY_BATTERY_ICON_ID 36   // retired: read as BATTERY_METER (2) + WL_FLAG_ICONONLY
 #define WL_WEATHER_CURRENT_ID 7
+#define WL_BATTERY_METER_ID   2
 #define WL_FONT_MAX         16     // highest font index (widget_fonts.h)
 #define WL_FONT_POS_DEFAULT 31     // "use the position's default font"
 
@@ -59,12 +61,12 @@ WlIdent WidgetList_resolveIdent(WlIdent requested, bool has_icon, bool has_unit)
 // A flags byte in canonical form: out-of-range font -> 31, both identifier bits ->
 // NONE; ICONONLY (bit 7) is kept and then the only identifier bit.
 uint8_t WidgetList_cleanFlags(uint8_t flags);
-// Canonical (id, flags) of a list entry: the legacy id 37 becomes id 7 + ICONONLY (font
+// Canonical (id, flags) of a list entry: the legacy ids 37 / 36 become id 7 / 2 + ICONONLY (font
 // kept, NONE/UNIT dropped); ICONONLY on an id that does not support it is cleared.
 void WidgetList_canonical(uint8_t *id, uint8_t *flags);
 // True for the widgets that offer ICONONLY: every one with an icon beside a value
 // (2, 7..10, 12, 20..22, 24, 25, 40..44). The LED row (23) and the icon-only widgets
-// (1, 36, 38, plugin icons) are icon-only already and do not. Mirrored in ICONLY_IDS of
+// (1, 38, plugin icons) are icon-only already and do not. Mirrored in ICONLY_IDS of
 // src/ts/widget_options.ts and widget_list_payload.ts.
 bool WidgetList_iconOnlyId(uint8_t id);
 

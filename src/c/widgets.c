@@ -494,7 +494,6 @@ static const WidgetDesc DESC_BT = { NULL, ICON_BT_OFF, NULL };
 static const WidgetDesc DESC_BT_ICON = { NULL, ICON_BT_STATE, NULL };
 static const WidgetDesc DESC_BATTERY = { value_battery, ICON_BATTERY, unit_battery };
 static const WidgetDesc DESC_BATTERY_DAYS = { value_battery_days, ICON_BATTERY, unit_battery_days };
-static const WidgetDesc DESC_BATTERY_ICON = { NULL, ICON_BATTERY, NULL };
 static const WidgetDesc DESC_STEPS = { value_steps, ICON_STEPS, unit_steps };
 static const WidgetDesc DESC_DISTANCE = { value_distance, ICON_STEPS, unit_distance };
 static const WidgetDesc DESC_HEART = { value_heart, ICON_HEART, unit_heart };
@@ -547,7 +546,6 @@ static const WidgetDesc *desc_for(uint8_t id) {
     case SLEEP_COMBINED:       return &DESC_SLEEP_COMBINED;
     case SLEEP_DEEP_BAR:       return &DESC_SLEEP_BAR;
     case DIGITAL_TIME:         return &DESC_DIGITAL_TIME;
-    case BATTERY_ICON:         return &DESC_BATTERY_ICON;
     case BLUETOOTH_ICON:       return &DESC_BT_ICON;
     case RAIN_MAX_1H: case RAIN_MAX_3H: case RAIN_MAX_6H: case RAIN_MAX_9H: case RAIN_MAX_12H:
                                return &DESC_RAIN;

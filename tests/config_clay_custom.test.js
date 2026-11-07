@@ -626,7 +626,7 @@ test('Widgets section: three widgetLists in order (centre first), with the expec
   const ids = (l) => l.defaultValue.map((e) => e.id);
   assert.deepStrictEqual(ids(lists[0]), [30, 0]);   // date at the top, Empty below it
   assert.deepStrictEqual(ids(lists[1]), [7, 7, 0, 0, 0, 0, 0, 10]);
-  assert.deepStrictEqual(ids(lists[2]), [36, 2, 0, 0, 0, 0, 0, 12]);
+  assert.deepStrictEqual(ids(lists[2]), [2, 2, 0, 0, 0, 0, 0, 12]);
   lists.forEach((l) => l.defaultValue.forEach((e) => {
     assert.strictEqual(e.font, 31, 'defaults use the position default font');
   }));
@@ -634,7 +634,7 @@ test('Widgets section: three widgetLists in order (centre first), with the expec
   assert.deepStrictEqual(lists[1].defaultValue.map((e) => e.ident),
     ['iconly', 'none', 'icon', 'icon', 'icon', 'icon', 'icon', 'icon']);
   assert.deepStrictEqual(lists[2].defaultValue.map((e) => e.ident),
-    ['icon', 'unit', 'icon', 'icon', 'icon', 'icon', 'icon', 'icon']);
+    ['iconly', 'unit', 'icon', 'icon', 'icon', 'icon', 'icon', 'icon']);
   const labels = items.filter((it) => it.type === 'text' && /^<b>(Center|Left|Right) /.test(it.defaultValue))
     .map((it) => it.defaultValue);
   assert.deepStrictEqual(labels,

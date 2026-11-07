@@ -43,7 +43,9 @@ const FLAG_NONE = 0x20;
 const FLAG_UNIT = 0x40;
 const FLAG_ICONLY = 0x80;
 const LEGACY_WEATHER_ICON = 37;     // retired: read as WEATHER_CURRENT (7) in 'iconly' mode
+const LEGACY_BATTERY_ICON = 36;     // retired: read as BATTERY_METER (2) in 'iconly' mode
 const WEATHER_CURRENT = 7;
+const BATTERY_METER = 2;
 // Ids that offer the icon alone (bit 7): every widget with an icon beside a value. KEEP IN SYNC with
 // ICONLY_IDS in widget_options.ts (a test compares them) and WidgetList_iconOnlyId() in src/c/widget_list.c.
 const ICONLY_IDS: number[] = [2, 7, 8, 9, 10, 12, 20, 21, 22, 24, 25, 40, 41, 42, 43, 44];
@@ -83,10 +85,11 @@ function identOf(o: any): WidgetIdent {
   return (o && o.hide) ? 'none' : 'icon';
 }
 
-// The legacy id 37 becomes 7 + 'iconly' (font kept); 'iconly' on an id without an icon beside
+// The legacy ids 37 / 36 become 7 / 2 + 'iconly' (font kept); 'iconly' on an id without an icon beside
 // its value is 'icon'.
 // Mirrors WidgetList_canonical in src/c/widget_list.c.
 function canonical(e: Entry): Entry {
+  if (e.id === LEGACY_BATTERY_ICON) { return { id: BATTERY_METER, ident: 'iconly', font: e.font }; }
   if (e.id === LEGACY_WEATHER_ICON) { return { id: WEATHER_CURRENT, ident: 'iconly', font: e.font }; }
   if (e.ident === 'iconly' && ICONLY_IDS.indexOf(e.id) === -1) { return { id: e.id, ident: 'icon', font: e.font }; }
   return e;

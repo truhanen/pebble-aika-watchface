@@ -226,7 +226,7 @@ int main(void) {
     assert(n == 4 && b[0] == 7 && b[1] == (D | H) && b[2] == 7 && b[3] == (D | 0x80)); }
   { uint8_t b[] = {7, D | 0x80, 3, D | 0x80}; int n = SAN(b, 64, 16);  // ICONONLY only where there is an icon beside a value
     assert(n == 4 && b[1] == (D | 0x80) && b[3] == D); }
-  { uint8_t b[] = {10, D | 0x80 | H, 23, D | 0x80, 36, D | 0x80, 1, 0x80 | 4, 40, D | 0x80 | 0x40};
+  { uint8_t b[] = {10, D | 0x80 | H, 23, D | 0x80, 38, D | 0x80, 1, 0x80 | 4, 40, D | 0x80 | 0x40};
     int n = SAN(b, 64, 16);                                         // steps keeps it (and it dominates NONE/UNIT)
     assert(n == 10 && b[1] == (D | 0x80) && b[3] == D && b[5] == D && b[7] == 4 && b[9] == (D | 0x80)); }
   { uint8_t b[] = {0xFF, 2, 1, 2, D | 0x80, 3, D | 0x80}; int n = SAN(b, 64, 16);   // in a group, per member
@@ -240,6 +240,29 @@ int main(void) {
     int n = WidgetList_parse(b, sizeof b, s, 4);
     assert(n == 2 && s[0].members[0] == 7 && WidgetList_flagIdent(s[0].flags[0]) == WL_IDENT_ICONONLY);
     assert(s[1].members[0] == 7 && WidgetList_flagIdent(s[1].flags[0]) == WL_IDENT_NONE); }
+  // --- battery merge: legacy id 36 reads as id 2 + ICONONLY, font kept ---
+  { uint8_t b[] = {36, 5}; int n = SAN(b, 64, 16);
+    assert(n == 2 && b[0] == 2 && b[1] == (5 | 0x80)); }
+  { uint8_t b[] = {36, D | H}; int n = SAN(b, 64, 16);              // NONE/UNIT dropped
+    assert(n == 2 && b[0] == 2 && b[1] == (D | 0x80)); }
+  { uint8_t b[] = {36, D | 0x40}; int n = SAN(b, 64, 16);
+    assert(n == 2 && b[0] == 2 && b[1] == (D | 0x80)); }
+  { uint8_t b[] = {0xFF, 3, 1, 10, D, 36, 9, 7, D}; int n = SAN(b, 64, 16);   // inside a group
+    assert(n == 9 && b[5] == 2 && b[6] == (9 | 0x80) && b[7] == 7 && b[8] == D); }
+  { uint8_t b[] = {2, D | H, 36, D}; int n = SAN(b, 64, 16);        // both present: two id-2 slots
+    assert(n == 4 && b[0] == 2 && b[1] == (D | H) && b[2] == 2 && b[3] == (D | 0x80)); }
+  { uint8_t b[] = {36, 4, 37, 6}; int n = SAN(b, 64, 16);           // both merges at once
+    assert(n == 4 && b[0] == 2 && b[1] == (4 | 0x80) && b[2] == 7 && b[3] == (6 | 0x80)); }
+  { uint8_t b[] = {36, D, 2, D | 0x80}; WidgetSlot s[4];
+    int n = WidgetList_parse(b, sizeof b, s, 4);
+    assert(n == 2 && s[0].members[0] == 2 && s[1].members[0] == 2);
+    assert(WidgetList_flagIdent(s[0].flags[0]) == WL_IDENT_ICONONLY);
+    assert(s[0].flags[0] == s[1].flags[0]); }
+  { uint8_t b[] = {36, D}; collectedN = 0;                          // the auto-battery scan sees id 2
+    WidgetList_forEachId(b, sizeof b, collect_cb, NULL);
+    assert(collectedN == 1 && collected[0] == 2); }
+  { uint8_t b[] = {2, D | 0x80}; int n = SAN(b, 64, 16);            // idempotent (battery)
+    assert(n == 2 && b[0] == 2 && b[1] == (D | 0x80)); }
   { uint8_t b[] = {7, D | 0x80}; int n = SAN(b, 64, 16);            // idempotent
     assert(n == 2 && b[0] == 7 && b[1] == (D | 0x80)); }
 

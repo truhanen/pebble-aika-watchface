@@ -64,7 +64,7 @@ static void set_defaults(void) {
 #define FIVE_EMPTY EMPTY, D, EMPTY, D, EMPTY, D, EMPTY, D, EMPTY, D
   static const uint8_t LEFT[] = { WEATHER_CURRENT, D | WL_FLAG_ICONONLY, WEATHER_CURRENT, VALUE_ONLY, FIVE_EMPTY,
                                   STEP_COUNTER, D };
-  static const uint8_t RIGHT[] = { BATTERY_ICON, D, BATTERY_METER, WITH_UNIT, FIVE_EMPTY,
+  static const uint8_t RIGHT[] = { BATTERY_METER, D | WL_FLAG_ICONONLY, BATTERY_METER, WITH_UNIT, FIVE_EMPTY,
                                    HEARTRATE, D };
 #undef FIVE_EMPTY
 #undef WITH_UNIT
@@ -153,7 +153,7 @@ static void dyn_scan_cb(uint8_t w, void *ctx) {
     dynamicSettings.disableWeather = false;
   }
   if (w == SECONDS) { dynamicSettings.updateScreenEverySecond = true; }
-  if (w == BATTERY_METER || w == BATTERY_ICON) { dynamicSettings.enableAutoBatteryWidget = false; }
+  if (w == BATTERY_METER) { dynamicSettings.enableAutoBatteryWidget = false; }
   if (w == BEATS) { dynamicSettings.enableBeats = true; }
   if (w == ALT_TIME_ZONE) { dynamicSettings.enableAltTimeZone = true; }
 }

@@ -173,7 +173,7 @@ const config = [
       // the edges, Bitham large in the center column). Each edge groups an icon-only
       // widget over its value (temperature: no identifier; battery: the % unit) in the top corner and one widget in the
       // bottom corner; the centre column holds the date at the top and an Empty slot below it; five Empty slots push them apart. Ids: 7 weather condition (icon only / no
-      // identifier), 0 Empty, 10 steps, 36 battery icon, 2 battery, 12 heart rate,
+      // identifier), 0 Empty, 10 steps, 2 battery (icon only / % unit), 12 heart rate,
       // 30 date "Wkday dd". Must match the watch defaults in src/c/settings.c.
       { type: 'text', defaultValue: '<b>Center column</b>' },
       { type: 'widgetList', messageKey: 'WidgetListCenter', defaultFont: 7,
@@ -185,7 +185,7 @@ const config = [
           { id: 10, ident: 'icon', font: 31 }] },
       { type: 'text', defaultValue: '<b>Right edge</b>' },
       { type: 'widgetList', messageKey: 'WidgetListRight', defaultFont: 5,
-        defaultValue: [{ id: 36, ident: 'icon', font: 31 }, { id: 2, ident: 'unit', font: 31 },
+        defaultValue: [{ id: 2, ident: 'iconly', font: 31 }, { id: 2, ident: 'unit', font: 31 },
           emptySlot(), emptySlot(), emptySlot(), emptySlot(), emptySlot(),
           { id: 12, ident: 'icon', font: 31 }] },
       { type: 'radiogroup', messageKey: 'SettingDisableAutobattery', label: 'Auto-show battery meter',

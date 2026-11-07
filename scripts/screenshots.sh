@@ -31,7 +31,7 @@
 #   left|right|center LIST   widget list of a column, space separated slots:
 #                           ID[/FONT][:i|u|n|o]   i = icon, u = unit, n = no identifier,
 #                           o = icon only (any widget with an icon beside a value:
-#                           2, 7..10, 12, 20..22, 24, 25, 40..44; `weather_icon` = `weather:o`, bytes 7 + bit 7);
+#                           2, 7..10, 12, 20..22, 24, 25, 40..44; `weather_icon` = `weather:o`, bytes 7 + bit 7; `bat_icon` = `battery:o`, bytes 2 + bit 7);
 #                           ID is a number or an alias (see ALIASES in the python helper)
 #                           FONT 0..16 (docs/widget_contract.md), default = the position's font
 #                           rG<code>=SLOT,SLOT,...  rotating group, <code> 0..5 =
@@ -291,7 +291,7 @@ ALIASES = {
   'uv': 13, 'elec': 14, 'cheap_next': 18, 'cheapest': 19, 'distance': 21,
   'battery_days': 22, 'date_d_m': 26, 'date_dd_mm': 27, 'date_wkday_dd': 30,
   'date_wkday_d_m': 31, 'date_wkday': 32, 'date_dd_mon': 33, 'date_iso': 34,
-  'digital': 35, 'bat_icon': 36, 'weather_icon': 7, 'bt_icon': 38,
+  'digital': 35, 'bat_icon': 2, 'weather_icon': 7, 'bt_icon': 38,
   'tuya_leds': 23, 'sleep_bar': 25, 'deep': 20, 'sleep_deep': 24,
   'rain1': 40, 'rain3': 41, 'rain6': 42, 'rain9': 43, 'rain12': 44,
 }
@@ -306,8 +306,9 @@ def member(tok):
     tok, f = tok.split('/')
     font = int(f)
   wid = ALIASES[tok] if tok in ALIASES else int(tok)
-  if tok == 'weather_icon': ident = 0x80   # WEATHER condition, icon only (the old widget 37)
-  if wid == 37: wid, ident = 7, 0x80       # legacy id: the merged widget in icon-only mode
+  if tok in ('weather_icon', 'bat_icon'): ident = 0x80   # WEATHER condition / BATTERY percentage, icon only (the old widgets 37 / 36)
+  if wid == 37: wid, ident = 7, 0x80       # legacy ids: the merged widgets in icon-only mode
+  if wid == 36: wid, ident = 2, 0x80
   if ident == 0x80 and wid not in ICONLY: sys.exit('icon only (:o) needs a widget with an icon beside a value, not %s' % tok)
   return [wid, font | ident]
 # --- autopad: "A B | C D" = group A B at the top, group C D at the bottom, `empty` spacers
@@ -327,7 +328,7 @@ INFO = {0: (0, 0, None), 2: (1, 1, '%'), 3: (1, 0, None), 5: (1, 0, None), 6: (1
         11: (1, 0, None), 12: (1, 1, 'bpm'), 13: (1, 0, 'UVI'), 14: (1, 0, 'c/kWh'),
         18: (1, 0, 'c/kWh'), 19: (1, 0, 'c/kWh'), 20: (1, 1, 'h'), 21: (1, 1, 'km'),
         22: (1, 1, 'd'), 23: (0, 1, None), 24: (1, 1, 'h'), 25: (1, 1, 'h'),
-        35: (1, 0, None), 36: (0, 1, None), 38: (0, 1, None),
+        35: (1, 0, None), 38: (0, 1, None),
         40: (1, 1, 'mm/h'), 41: (1, 1, 'hi mm/3 h'), 42: (1, 1, 'hi mm/6 h'),
         43: (1, 1, 'hi mm/9 h'), 44: (1, 1, 'hi mm/12 h')}
 for w in range(26, 35): INFO[w] = (1, 0, None)

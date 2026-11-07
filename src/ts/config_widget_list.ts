@@ -85,7 +85,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   // Has a font setting: text widgets and Empty (the font sets the slot height), not
   // the icon-only widgets nor a rotating group's header (its members have their own).
   function hasFontId(id: number): boolean {
-    return !(id >= 36 && id <= 38) && id !== ROTATING;
+    return id !== 38 && id !== ROTATING;
   }
   function hideBtnHtml(id: number, ident: string, cls: string): string {
     if (identModes(id).length === 0) {
@@ -149,7 +149,6 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     { id: 24, label: 'SLEEP + deep hours' },
     { id: 25, label: 'SLEEP hours + deep bar' },
     { id: 2, label: 'BATTERY percentage' },
-    { id: 36, label: 'BATTERY icon' },
     { id: 22, label: 'BATTERY days left' },
     { id: 14, label: 'ELECTR price' },
     { id: 18, label: 'ELECTR next cheap' },
@@ -380,8 +379,10 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     if (raw && typeof raw === 'object') {
       const id = parseInt(raw.id, 10) || 0;
       let ident = normIdent(raw);
-      // The retired "WEATHER condition icon" (37) is now WEATHER condition (7) in icon-only mode.
+      // The retired "WEATHER condition icon" (37) and "BATTERY icon" (36) are now WEATHER condition (7)
+      // and BATTERY percentage (2) in icon-only mode.
       if (id === 37) { return { id: 7, ident: 'iconly', font: normFont(raw.font) }; }
+      if (id === 36) { return { id: 2, ident: 'iconly', font: normFont(raw.font) }; }
       // The retired "Battery %" widget (39) is now battery (2) in unit mode.
       if (id === 39) { return { id: 2, ident: ident === 'none' ? 'none' : 'unit', font: normFont(raw.font) }; }
       return { id: id, ident: ident, font: normFont(raw.font) };

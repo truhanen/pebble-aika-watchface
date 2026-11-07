@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Tuomas Airaksinen
 
 /* Widget names for plugin-sourced widgets (ids 144..159), shown in the widget picker:
-     CATEGORY Plugin Item Instance Prop      e.g.  WEATHER FMI Loc Jyv Tem
+     CATEGORY Plugin Item Instance Prop      e.g.  WEATHER Wea Loc Lon Tem
    Rules:
    - category: upper case (ASCII-folded).
    - plugin / item / instance / property: ASCII-folded (diacritics stripped, a-umlaut ->

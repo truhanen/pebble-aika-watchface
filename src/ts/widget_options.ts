@@ -89,7 +89,7 @@ export const FONT_PICKER_ORDER: number[] = [0, 1, 2, 3, 4, 5, 6, 9, 8, 7, 10, 12
 export const ROTATING_ID = 255;
 
 // Plugin widget options (ids 144..159): one per configured pluginList row, labelled with
-// the row's generated name (plugin_names.ts: "WEATHER FMI Loc Jyv Tem"), inserted after
+// the row's generated name (plugin_names.ts: "WEATHER Wea Loc Lon Tem"), inserted after
 // the last option of the same category (the label's first word, e.g. the WEATHER group)
 // or appended when the category is new. KEEP IN SYNC with pluginOptionsInto() inlined in
 // config_widget_list.ts.

@@ -30,7 +30,8 @@
 #   int Key=V ...         any integer AppMessage key (emu.sh int), e.g. WeatherTemperature
 #   left|right|center LIST   widget list of a column, space separated slots:
 #                           ID[/FONT][:i|u|n|o]   i = icon, u = unit, n = no identifier,
-#                           o = icon only (weather only; `weather_icon` = `weather:o`, bytes 7 + bit 7);
+#                           o = icon only (any widget with an icon beside a value:
+#                           2, 7..10, 12, 20..22, 24, 25, 40..44; `weather_icon` = `weather:o`, bytes 7 + bit 7);
 #                           ID is a number or an alias (see ALIASES in the python helper)
 #                           FONT 0..16 (docs/widget_contract.md), default = the position's font
 #                           rG<code>=SLOT,SLOT,...  rotating group, <code> 0..5 =
@@ -294,6 +295,7 @@ ALIASES = {
   'tuya_leds': 23, 'sleep_bar': 25, 'deep': 20, 'sleep_deep': 24,
   'rain1': 40, 'rain3': 41, 'rain6': 42, 'rain9': 43, 'rain12': 44,
 }
+ICONLY = (2, 7, 8, 9, 10, 12, 20, 21, 22, 24, 25, 40, 41, 42, 43, 44)   # widget_list.c WidgetList_iconOnlyId
 def member(tok):
   ident = 0
   if ':' in tok:
@@ -306,6 +308,7 @@ def member(tok):
   wid = ALIASES[tok] if tok in ALIASES else int(tok)
   if tok == 'weather_icon': ident = 0x80   # WEATHER condition, icon only (the old widget 37)
   if wid == 37: wid, ident = 7, 0x80       # legacy id: the merged widget in icon-only mode
+  if ident == 0x80 and wid not in ICONLY: sys.exit('icon only (:o) needs a widget with an icon beside a value, not %s' % tok)
   return [wid, font | ident]
 # --- autopad: "A B | C D" = group A B at the top, group C D at the bottom, `empty` spacers
 # in between so the slack is ~0 (min gap 5 px). A Python port of the watch's slot heights
@@ -335,7 +338,7 @@ def center_offset(outer, inner):
   return d // 2 if d >= 0 else -((-d + 1) // 2)
 def height(wid, font, ident):
   if wid not in INFO: sys.exit('autopad: no height model for widget %d' % wid)
-  value, gfx, unit = (0, 1, None) if (wid == 7 and ident == 0x80) else INFO[wid]   # icon only
+  value, gfx, unit = (0, 1, None) if ident == 0x80 else INFO[wid]   # icon only: the icon alone, as high as the icon
   if font == 31: font = 5
   ink = DIGIT_H[font] if (value or wid == 0) else 0
   # identifier: unit -> icon -> none, or icon -> unit -> none (docs/widget_contract.md)

@@ -28,13 +28,24 @@ uint8_t WidgetList_cleanFlags(uint8_t flags) {
                    (m == WL_IDENT_NONE ? WL_FLAG_NONE : (m == WL_IDENT_UNIT ? WL_FLAG_UNIT : 0)));
 }
 
+bool WidgetList_iconOnlyId(uint8_t id) {
+  switch (id) {
+    case 2: case 7: case 8: case 9: case 10: case 12:
+    case 20: case 21: case 22: case 24: case 25:
+    case 40: case 41: case 42: case 43: case 44:
+      return true;
+    default:
+      return false;
+  }
+}
+
 void WidgetList_canonical(uint8_t *id, uint8_t *flags) {
   if (*id == WL_LEGACY_WEATHER_ICON_ID) {
     *id = WL_WEATHER_CURRENT_ID;
     *flags = (uint8_t)(WidgetList_flagFont(*flags) | WL_FLAG_ICONONLY);
     return;
   }
-  if (*id != WL_WEATHER_CURRENT_ID) { *flags &= (uint8_t)~WL_FLAG_ICONONLY; }
+  if (!WidgetList_iconOnlyId(*id)) { *flags &= (uint8_t)~WL_FLAG_ICONONLY; }
   *flags = WidgetList_cleanFlags(*flags);
 }
 

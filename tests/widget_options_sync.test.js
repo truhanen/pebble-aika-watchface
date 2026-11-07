@@ -93,3 +93,26 @@ test('font picker order is a permutation of the font indices, same in both copie
   assert.deepStrictEqual(FONT_PICKER_ORDER.slice().sort((a, b) => a - b),
     FONT_OPTIONS.map((_, i) => i));
 });
+
+// The icon-only mode set: the same ids in widget_options.ts, widget_list_payload.ts, the inlined
+// copy in config_widget_list.ts and WidgetList_iconOnlyId() in src/c/widget_list.c; and exactly
+// the widgets that have an icon beside a value (identModes offers 'icon') minus the LED row.
+test('ICONLY_IDS is the same in every copy (TS, inline, C)', () => {
+  const { ICONLY_IDS, identModes } = require('../src/pkjs/widget_options');
+  const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const list = (src) => {
+    const m = /const ICONLY_IDS: number\[\] = \[([^\]]*)\]/.exec(src);
+    assert.ok(m, 'ICONLY_IDS literal');
+    return m[1].split(',').map((x) => parseInt(x, 10));
+  };
+  assert.deepStrictEqual(list(read('src/ts/config_widget_list.ts')), ICONLY_IDS);
+  assert.deepStrictEqual(list(read('src/ts/widget_list_payload.ts')), ICONLY_IDS);
+  const c = read('src/c/widget_list.c');
+  const body = c.slice(c.indexOf('bool WidgetList_iconOnlyId'), c.indexOf('void WidgetList_canonical'));
+  const cIds = [];
+  body.replace(/case (\d+):/g, (_, n) => { cIds.push(parseInt(n, 10)); return ''; });
+  assert.deepStrictEqual(cIds, ICONLY_IDS);
+  const derived = [];
+  for (let id = 0; id < 45; id++) { if (identModes(id).indexOf('icon') !== -1 && id !== 23) { derived.push(id); } }
+  assert.deepStrictEqual(derived, ICONLY_IDS);
+});

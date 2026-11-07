@@ -8,7 +8,7 @@
    an array of slot objects:
      { id, ident, font }                                  plain widget
      { rotating: true, interval, members: [{id, ident, font}, ...] }
-   `ident` is 'icon' | 'unit' | 'none' | 'iconly' (icon alone, WEATHER condition only): what stands beside the value; the button on the
+   `ident` is 'icon' | 'unit' | 'none' | 'iconly' (the icon alone, for widgets with an icon): what stands beside the value; the button on the
    row cycles the modes the widget offers (older entries: hide -> 'none').
    `font` is 0..16 (widget_options.ts FONT_OPTIONS) or 31 = the position's default
    font. Older stored values (a flat marker-encoded int array: 255, count, interval,
@@ -39,6 +39,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
   // config_widget_list.test.js compares them for every offered id).
   const IDENT_ICON_IDS: number[] = [2, 7, 8, 9, 10, 12, 20, 21, 22, 23, 24, 25, 40, 41, 42, 43, 44];
   const IDENT_UNIT_IDS: number[] = [2, 3, 6, 7, 8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 24, 25, 35, 40, 41, 42, 43, 44];
+  const ICONLY_IDS: number[] = [2, 7, 8, 9, 10, 12, 20, 21, 22, 24, 25, 40, 41, 42, 43, 44];
   // A plugin widget whose property is an icon (the pluginList row carries data-shape="i").
   function isPluginIcon(id: number): boolean {
     const rowEls = document.querySelectorAll('.pl-root .pl-row');
@@ -56,7 +57,7 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     if (IDENT_ICON_IDS.indexOf(id) !== -1) { out.push('icon'); }
     if (slot || IDENT_UNIT_IDS.indexOf(id) !== -1) { out.push('unit'); }
     if (out.length) { out.push('none'); }
-    if (id === 7) { out.push('iconly'); }   // the icon alone (the old widget 37)
+    if (ICONLY_IDS.indexOf(id) !== -1) { out.push('iconly'); }   // the icon alone
     return out;
   }
   // The ident a freshly chosen widget starts with: its unit where the unit is the point
@@ -78,15 +79,23 @@ function widgetListInitialize(this: any, _minified: any, clayConfig: any): void 
     if (raw && (raw.ident === 'icon' || raw.ident === 'unit' || raw.ident === 'none' || raw.ident === 'iconly')) { return raw.ident; }
     return (raw && raw.hide) ? 'none' : 'icon';
   }
-  const IDENT_GLYPH: any = { icon: '◉', unit: 'U', none: '⊘', iconly: '▣' };
-  const IDENT_TITLE: any = { icon: 'Identifier: icon', unit: 'Identifier: unit', none: 'Identifier: none', iconly: 'Identifier: icon only' };
+  // Button labels: V = the value is shown, ◉ = the icon symbol, U = the unit.
+  const IDENT_GLYPH: any = { icon: 'V◉', unit: 'VU', none: 'V', iconly: '◉' };
+  const IDENT_TITLE: any = { icon: 'Value + icon', unit: 'Value + unit', none: 'Value only', iconly: 'Icon only' };
   // Has a font setting: text widgets and Empty (the font sets the slot height), not
   // the icon-only widgets nor a rotating group's header (its members have their own).
   function hasFontId(id: number): boolean {
     return !(id >= 36 && id <= 38) && id !== ROTATING;
   }
   function hideBtnHtml(id: number, ident: string, cls: string): string {
-    if (identModes(id).length === 0) { return hidePlaceholderHtml(); }
+    if (identModes(id).length === 0) {
+      // a plugin icon property: the icon alone, nothing to switch (an inactive label)
+      if (id >= 144 && id <= 159 && isPluginIcon(id)) {
+        return '<button type="button" class="' + cls + ' wl-fixed" disabled data-ident="icon" title="' +
+          IDENT_TITLE.iconly + '">' + IDENT_GLYPH.iconly + '</button>';
+      }
+      return hidePlaceholderHtml();
+    }
     const m = resolveIdent(id, ident);
     return '<button type="button" class="' + cls + (m === 'none' ? ' wl-hidden' : '') +
       '" data-ident="' + m + '" title="' + IDENT_TITLE[m] + '">' + IDENT_GLYPH[m] + '</button>';
@@ -776,6 +785,8 @@ const widgetListComponent = {
       'padding:0 0.3rem;font-size:.85rem;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;color-scheme:dark}' +
     '.wl-row .wl-main button,.wl-mem .wl-mmain button{flex:0 0 auto;min-width:0;width:2rem;height:2.6rem;' +
       'margin:0 0 0 3px;padding:0;font-size:.85rem}' +
+    '.wl-row .wl-main button.wl-hide,.wl-mem .wl-mmain button.wl-mhide{width:2.7rem;font-size:.8rem;' +
+      'white-space:nowrap;overflow:hidden;letter-spacing:0}' +
     '.wl-row .wl-hidden{opacity:.55}' +
     '.wl-row button[disabled]{opacity:.35}' +
     '.wl-fontbox{position:relative;flex:0 0 auto;width:2.5rem;height:2.6rem;margin:0 0 0 3px;' +
@@ -789,7 +800,7 @@ const widgetListComponent = {
       'opacity:0;border:none;font-size:16px}' +
     '.wl-placeholder{flex:0 0 auto;visibility:hidden;pointer-events:none}' +
     '.wl-fontbox-ph{width:2.5rem;height:2.6rem;margin:0 0 0 3px}' +
-    '.wl-hide-ph{width:2rem;height:2.6rem;margin:0 0 0 3px}' +
+    '.wl-hide-ph{width:2.7rem;height:2.6rem;margin:0 0 0 3px}' +
     '.wl-btn-ph{width:2rem;height:2.6rem;margin:0 0 0 3px}' +
     '.wl-group{margin:6px 0 0 12px;padding:0;border-left:3px solid #767676}' +
     '.wl-introw{display:flex;align-items:center;margin:0 0 6px -12px;padding:6px 0 0 20px}' +

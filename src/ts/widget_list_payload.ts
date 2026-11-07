@@ -7,8 +7,9 @@
 //   rotating group : 0xFF, count (2..6), interval_code (0..5), (id, flags) x count
 //   flags          : bits 0-4 font index (0..16, 31 = position default),
 //                    bit 5 no identifier ('none'), bit 6 the unit ('unit'; neither bit =
-//                    the icon), bit 7 the icon alone ('iconly', id 7 only; the old
-//                    widget 37, which is accepted as legacy input and sent as id 7 + bit 7).
+//                    the icon), bit 7 the icon alone ('iconly', widgets with an
+//                    icon beside a value only; the old widget 37 is accepted as legacy input
+//                    and sent as id 7 + bit 7).
 // The Clay value is an array of slot objects:
 //   { id, ident: 'icon'|'unit'|'none', font }           plain slot
 //   { rotating: true, interval, members: [{id, ident, font}, ...] }
@@ -43,6 +44,9 @@ const FLAG_UNIT = 0x40;
 const FLAG_ICONLY = 0x80;
 const LEGACY_WEATHER_ICON = 37;     // retired: read as WEATHER_CURRENT (7) in 'iconly' mode
 const WEATHER_CURRENT = 7;
+// Ids that offer the icon alone (bit 7): every widget with an icon beside a value. KEEP IN SYNC with
+// ICONLY_IDS in widget_options.ts (a test compares them) and WidgetList_iconOnlyId() in src/c/widget_list.c.
+const ICONLY_IDS: number[] = [2, 7, 8, 9, 10, 12, 20, 21, 22, 24, 25, 40, 41, 42, 43, 44];
 const LEGACY_HIDE_FLAG = 0x20;      // old encoding: hide flag OR-ed into the id
 const LEGACY_MAX_TYPE = 25;
 
@@ -79,11 +83,12 @@ function identOf(o: any): WidgetIdent {
   return (o && o.hide) ? 'none' : 'icon';
 }
 
-// The legacy id 37 becomes 7 + 'iconly' (font kept); 'iconly' on any other id is 'icon'.
+// The legacy id 37 becomes 7 + 'iconly' (font kept); 'iconly' on an id without an icon beside
+// its value is 'icon'.
 // Mirrors WidgetList_canonical in src/c/widget_list.c.
 function canonical(e: Entry): Entry {
   if (e.id === LEGACY_WEATHER_ICON) { return { id: WEATHER_CURRENT, ident: 'iconly', font: e.font }; }
-  if (e.ident === 'iconly' && e.id !== WEATHER_CURRENT) { return { id: e.id, ident: 'icon', font: e.font }; }
+  if (e.ident === 'iconly' && ICONLY_IDS.indexOf(e.id) === -1) { return { id: e.id, ident: 'icon', font: e.font }; }
   return e;
 }
 

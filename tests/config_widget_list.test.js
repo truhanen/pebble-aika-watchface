@@ -182,16 +182,20 @@ const wid = (id, ident) => ({ id, ident, font: 31 });
 const identBtn = (root, i) => root.querySelectorAll('.wl-row')[i || 0].querySelector('.wl-main .wl-hide');
 const click = (el) => el.dispatchEvent(new (el.ownerDocument.defaultView.MouseEvent)('click', { bubbles: true }));
 
-test('the identifier button cycles icon -> unit -> none -> icon for a widget with both', () => {
+test('the identifier button cycles V\u25c9 -> VU -> V -> \u25c9 -> V\u25c9 for a widget with both', () => {
   const { self, root } = mount([wid(12, 'icon')]);
   const b = identBtn(root);
-  assert.deepStrictEqual([b.textContent, b.getAttribute('data-ident')], ['\u25c9', 'icon']);
+  assert.deepStrictEqual([b.textContent, b.getAttribute('data-ident')], ['V\u25c9', 'icon']);
   click(b);
-  assert.deepStrictEqual([identBtn(root).textContent, identBtn(root).getAttribute('data-ident')], ['U', 'unit']);
+  assert.deepStrictEqual([identBtn(root).textContent, identBtn(root).getAttribute('data-ident')], ['VU', 'unit']);
   assert.ok(/unit/i.test(identBtn(root).title));
   click(identBtn(root));
-  assert.deepStrictEqual([identBtn(root).textContent, identBtn(root).getAttribute('data-ident')], ['\u2298', 'none']);
-  assert.deepStrictEqual(component.manipulator.get.call(self), [wid(12, 'none')]);
+  assert.deepStrictEqual([identBtn(root).textContent, identBtn(root).getAttribute('data-ident')], ['V', 'none']);
+  assert.ok(/value only/i.test(identBtn(root).title));
+  click(identBtn(root));
+  assert.deepStrictEqual([identBtn(root).textContent, identBtn(root).getAttribute('data-ident')], ['\u25c9', 'iconly']);
+  assert.ok(/icon only/i.test(identBtn(root).title));
+  assert.deepStrictEqual(component.manipulator.get.call(self), [wid(12, 'iconly')]);
   click(identBtn(root));
   assert.strictEqual(identBtn(root).getAttribute('data-ident'), 'icon');
 });
@@ -253,12 +257,13 @@ test('the button of every offered widget cycles exactly identModes()', () => {
 });
 
 test('identModes: the documented widgets', () => {
-  assert.deepStrictEqual(identModes(2), ['icon', 'unit', 'none']);
-  assert.deepStrictEqual(identModes(22), ['icon', 'unit', 'none']);
+  assert.deepStrictEqual(identModes(2), ['icon', 'unit', 'none', 'iconly']);
+  assert.deepStrictEqual(identModes(22), ['icon', 'unit', 'none', 'iconly']);
+  assert.deepStrictEqual(identModes(10), ['icon', 'unit', 'none', 'iconly']);
   assert.deepStrictEqual(identModes(7), ['icon', 'unit', 'none', 'iconly']);   // WEATHER condition: N, N U, N-only, icon only
   assert.deepStrictEqual(identModes(13), ['unit', 'none']);
   assert.deepStrictEqual(identModes(210), ['unit', 'none']);
-  assert.deepStrictEqual(identModes(23), ['icon', 'none']);
+  assert.deepStrictEqual(identModes(23), ['icon', 'none']);   // the LED row is icon-only already
   assert.deepStrictEqual(identModes(5), []);
   assert.deepStrictEqual(identModes(30), []);
 });

@@ -44,7 +44,7 @@ typedef enum {
   DATE_ISO                  = 34,   // 2026-07-04
   DIGITAL_TIME              = 35,
   BATTERY_ICON              = 36,   // icon only
-  WEATHER_ICON              = 37,   // retired id: saved lists read it as WEATHER_CURRENT + WL_FLAG_ICONONLY; internal descriptor id of that mode
+  WEATHER_ICON              = 37,   // retired id: saved lists read it as WEATHER_CURRENT + WL_FLAG_ICONONLY
   BLUETOOTH_ICON            = 38,   // icon only, connected or disconnected glyph
   RAIN_MAX_1H               = 40,   // max hourly rain in the next N hours (40..44: 1/3/6/9/12 h)
   RAIN_MAX_3H               = 41,
@@ -91,9 +91,10 @@ typedef struct {
 // draws nothing.
 const Widget *Widgets_get(uint8_t id);
 
-// True for an icon-only widget (an icon, no value or unit): the layer draws it above the
-// hands together with the values, and draw_icon gives it the background shadow.
-bool Widgets_iconOnTop(uint8_t id);
+// True for an icon-only widget (an icon, no value or unit: a widget without a value, or any
+// widget with an icon in WL_IDENT_ICONONLY mode): the layer draws it above the hands together
+// with the values, and draw_icon gives it the background shadow.
+bool Widgets_iconOnTop(const WidgetCtx *ctx);
 
 void Widgets_init(void);
 void Widgets_deinit(void);

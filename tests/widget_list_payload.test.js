@@ -270,8 +270,11 @@ test('weather merge: a list with both 7 and 37 keeps both as two id-7 slots', ()
 
 test('weather merge: the new icon-only mode round-trips; the bit is cleared on other ids', () => {
   assert.deepStrictEqual(widgetListToPayload([iconly(7, 6)]), [7, 6 | 0x80]);
-  assert.deepStrictEqual(widgetListToPayload([iconly(10, 6)]), [10, 6]);
-  assert.deepStrictEqual(widgetListToPayload([rot(1, [iconly(7), iconly(2)])]), [255, 2, 1, 7, 31 | 0x80, 2, 31]);
+  assert.deepStrictEqual(widgetListToPayload([iconly(10, 6)]), [10, 6 | 0x80]);   // steps: has an icon
+  assert.deepStrictEqual(widgetListToPayload([iconly(3, 6)]), [3, 6]);            // alt clock: no icon
+  assert.deepStrictEqual(widgetListToPayload([iconly(23, 6)]), [23, 6]);          // LED row: icon-only already
+  assert.deepStrictEqual(widgetListToPayload([iconly(36, 6), iconly(38, 6)]), [36, 6, 38, 6]);
+  assert.deepStrictEqual(widgetListToPayload([rot(1, [iconly(7), iconly(2)])]), [255, 2, 1, 7, 31 | 0x80, 2, 31 | 0x80]);
   // migrating is idempotent: the payload of a migrated value is the payload of the legacy one
   assert.deepStrictEqual(widgetListToPayload([iconly(7, 5)]), widgetListToPayload([w(37, false, 5)]));
 });

@@ -63,9 +63,9 @@ function clayConfigCustom(this: ClayConfigThis, minified: unknown): void {
     function addEntry(raw: any): void {
       if (raw && typeof raw === 'object') {
         const id = parseInt(raw.id, 10) || 0;
-        // WEATHER condition in icon-only mode counts as the old icon-only widget 37: it
-        // needs the weather source but shows no temperature (so no unit setting).
-        ids.push(id === 7 && raw.ident === 'iconly' ? 37 : id);
+        // A widget in icon-only mode is listed as id + 1000: it still needs its data source
+        // (weather, ...) but shows no value (so no temperature / precipitation unit setting).
+        ids.push(raw.ident === 'iconly' ? id + 1000 : id);
         return;
       }
       const v = parseInt(raw, 10) || 0;
@@ -107,7 +107,7 @@ function clayConfigCustom(this: ClayConfigThis, minified: unknown): void {
     const ids = widgetIds();
     // 40..44 = rain-max widgets (1/3/6/9/12 h); they need the weather location/source too.
     const rain = has(ids, [40, 41, 42, 43, 44]);
-    const weather = has(ids, [7, 8, 13, 37]) || rain;
+    const weather = has(ids, [7, 8, 13, 37, 40, 41, 42, 43, 44, 1007, 1008, 1040, 1041, 1042, 1043, 1044]);
     const temp = has(ids, [7, 8]);
     const manual = weather && key('weather_loc_mode').get() === 'manual';
     const cheapHour = has(ids, [18, 19]);

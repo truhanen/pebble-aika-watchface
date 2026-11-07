@@ -499,7 +499,6 @@ static const WidgetDesc DESC_STEPS = { value_steps, ICON_STEPS, unit_steps };
 static const WidgetDesc DESC_DISTANCE = { value_distance, ICON_STEPS, unit_distance };
 static const WidgetDesc DESC_HEART = { value_heart, ICON_HEART, unit_heart };
 static const WidgetDesc DESC_WEATHER = { value_weather, ICON_WEATHER, unit_temperature };
-static const WidgetDesc DESC_WEATHER_ICON = { NULL, ICON_WEATHER, NULL };
 static const WidgetDesc DESC_FORECAST = { value_forecast, ICON_FORECAST, unit_temperature };
 static const WidgetDesc DESC_RAIN = { value_rain, ICON_RAIN, unit_rain };
 static const WidgetDesc DESC_UV = { value_uv, ICON_NONE, unit_uv };
@@ -549,7 +548,6 @@ static const WidgetDesc *desc_for(uint8_t id) {
     case SLEEP_DEEP_BAR:       return &DESC_SLEEP_BAR;
     case DIGITAL_TIME:         return &DESC_DIGITAL_TIME;
     case BATTERY_ICON:         return &DESC_BATTERY_ICON;
-    case WEATHER_ICON:         return &DESC_WEATHER_ICON;
     case BLUETOOTH_ICON:       return &DESC_BT_ICON;
     case RAIN_MAX_1H: case RAIN_MAX_3H: case RAIN_MAX_6H: case RAIN_MAX_9H: case RAIN_MAX_12H:
                                return &DESC_RAIN;
@@ -738,15 +736,22 @@ static void draw_leds(GContext *g, GRect box, GColor fg) {
 
 /********** the Widget functions **********/
 
+// ICONONLY mode of a widget that has an icon: the icon alone, in the standard icon box, as
+// if the widget had no value (the widget's value is neither measured nor drawn).
+static bool icon_only(const WidgetCtx *c, const WidgetDesc *d) {
+  return c->ident == WL_IDENT_ICONONLY && d->icon != ICON_NONE;
+}
+
 static void measure(const WidgetCtx *c, WidgetSize *out) {
   memset(out, 0, sizeof(*out));
   const WidgetDesc *d = desc_for(c->id);
   if (!d) { return; }
   char buf[24];
-  if (d->value || (d->icon == ICON_NONE && !d->unit)) {   // a value, or EMPTY: reserves the font's ink height
+  bool only = icon_only(c, d);
+  if (!only && (d->value || (d->icon == ICON_NONE && !d->unit))) {   // a value, or EMPTY: reserves the font's ink height
     out->ink_h = (int16_t)WidgetText_inkHeight(c->font);
   }
-  if (d->value && d->value(c, buf, sizeof(buf))) {
+  if (!only && d->value && d->value(c, buf, sizeof(buf))) {
     out->value_w = (int16_t)WidgetText_width(buf, c->font);
     out->value_desc = wl_text_has_descender(buf);
   }
@@ -806,9 +811,9 @@ static void measure(const WidgetCtx *c, WidgetSize *out) {
 // Icon-only widgets are drawn above the hands with a background shadow (the same
 // diamond as the value shadow): their silhouette in bg at every shadow offset, then the
 // icon itself. A widget with a value or a unit keeps its icon below the hands.
-bool Widgets_iconOnTop(uint8_t id) {
-  const WidgetDesc *d = desc_for(id);
-  return d && !d->value && d->icon != ICON_NONE;
+bool Widgets_iconOnTop(const WidgetCtx *c) {
+  const WidgetDesc *d = desc_for(c->id);
+  return d && d->icon != ICON_NONE && (!d->value || icon_only(c, d));
 }
 
 // The icon's shape in one colour (no per-frame allocation: the PDC images are recoloured
@@ -851,7 +856,7 @@ static void draw_icon(GContext *g, const WidgetCtx *c, GRect box) {
     if (d->unit(c, buf, sizeof(buf))) { WidgetUnit_draw(g, buf, box, fg); }
     return;
   }
-  if (Widgets_iconOnTop(c->id)) { draw_icon_shadow(g, c, box, bg); }
+  if (Widgets_iconOnTop(c)) { draw_icon_shadow(g, c, box, bg); }
   switch (kind) {
     case ICON_NONE:      break;
     case ICON_BT_STATE:  draw_bt_rune(g, box, bluetooth_connection_service_peek(), fg, bg); break;
@@ -873,7 +878,7 @@ static void draw_icon(GContext *g, const WidgetCtx *c, GRect box) {
 static void draw_value(GContext *g, const WidgetCtx *c, GRect box, GTextAlignment align) {
   const WidgetDesc *d = desc_for(c->id);
   char buf[24];
-  if (!d || !d->value || !d->value(c, buf, sizeof(buf))) { return; }
+  if (!d || !d->value || icon_only(c, d) || !d->value(c, buf, sizeof(buf))) { return; }
   WidgetText_drawValue(g, buf, c->font, box.origin.x, box.origin.y, theme.timeColor, theme.timeBgColor);
 }
 

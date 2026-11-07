@@ -55,7 +55,7 @@ test('the rain max widgets 40..44 are labelled and sit in the WEATHER group afte
   assert.strictEqual(at(40), at(13) + 1);
   assert.deepStrictEqual([40, 41, 42, 43, 44].map(at), [at(40), at(40) + 1, at(40) + 2, at(40) + 3, at(40) + 4]);
   [40, 41, 42, 43, 44].forEach((id) => {
-    assert.deepStrictEqual(identModes(id), ['icon', 'unit', 'none']);
+    assert.deepStrictEqual(identModes(id), ['icon', 'unit', 'none', 'iconly']);
   });
 });
 

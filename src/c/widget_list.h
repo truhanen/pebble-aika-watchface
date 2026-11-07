@@ -13,8 +13,9 @@
    `id, flags`, or a rotating group: WIDGET_ROTATING_MARKER, count, interval_code,
    then count x (id, flags). flags: bits 0-4 font index (31 = the position's default),
    bit 5 no identifier (NONE), bit 6 the unit as identifier (UNIT; neither bit = ICON,
-   both bits = invalid, read as NONE), bit 7 ICONONLY (only valid on WEATHER_CURRENT: draws just
-   the condition icon, the old widget 37; it dominates bits 5/6; cleared on every other id). */
+   both bits = invalid, read as NONE), bit 7 ICONONLY (valid on the widgets with an icon beside a
+   value, WidgetList_iconOnlyId: draws just that icon; for WEATHER_CURRENT it is the old widget 37;
+   it dominates bits 5/6; cleared on every other id). */
 
 // Numeric mirrors -- keep in sync with src/c/widgets.h (MAX_WIDGET_TYPE),
 // src/c/crypto.h (CRYPTO_WID_BASE / MAX_CRYPTO), src/c/tuya.h, src/ts/widget_list_payload.ts,
@@ -38,7 +39,7 @@
 #define WL_FLAG_FONT_MASK   0x1F
 #define WL_FLAG_NONE        0x20   // identifier hidden
 #define WL_FLAG_UNIT        0x40   // identifier is the unit
-#define WL_FLAG_ICONONLY    0x80   // WEATHER condition: the icon alone (legacy id 37)
+#define WL_FLAG_ICONONLY    0x80   // the icon alone (WEATHER condition: the legacy id 37)
 #define WL_LEGACY_WEATHER_ICON_ID 37   // retired: read as WEATHER_CURRENT (7) + WL_FLAG_ICONONLY
 #define WL_WEATHER_CURRENT_ID 7
 #define WL_FONT_MAX         16     // highest font index (widget_fonts.h)
@@ -59,8 +60,13 @@ WlIdent WidgetList_resolveIdent(WlIdent requested, bool has_icon, bool has_unit)
 // NONE; ICONONLY (bit 7) is kept and then the only identifier bit.
 uint8_t WidgetList_cleanFlags(uint8_t flags);
 // Canonical (id, flags) of a list entry: the legacy id 37 becomes id 7 + ICONONLY (font
-// kept, NONE/UNIT dropped); ICONONLY on any id other than 7 is cleared.
+// kept, NONE/UNIT dropped); ICONONLY on an id that does not support it is cleared.
 void WidgetList_canonical(uint8_t *id, uint8_t *flags);
+// True for the widgets that offer ICONONLY: every one with an icon beside a value
+// (2, 7..10, 12, 20..22, 24, 25, 40..44). The LED row (23) and the icon-only widgets
+// (1, 36, 38, plugin icons) are icon-only already and do not. Mirrored in ICONLY_IDS of
+// src/ts/widget_options.ts and widget_list_payload.ts.
+bool WidgetList_iconOnlyId(uint8_t id);
 
 typedef struct {
   uint8_t members[MAX_GROUP_MEMBERS];   // widget ids

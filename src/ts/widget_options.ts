@@ -143,10 +143,17 @@ export function memberOptions(rows: any, pluginRows?: any): WidgetOption[] {
 // WidgetDesc table in src/c/widgets.c (icon / unit per widget) and the inlined copy in
 // config_widget_list.ts. Widgets with neither (Empty, seconds, dates, beats) and the
 // icon-only ones (36..38: nothing to switch off) are not toggleable.
-// 'iconly' = the icon alone (flags bit 7), offered by WEATHER condition (7) only; it is the
-// old widget 37.
+// 'iconly' = the icon alone (flags bit 7), offered by every widget that draws an icon next to a
+// value (IDENT_ICON_IDS minus the LED row 23, which is icon-only already). KEEP IN SYNC with
+// the WidgetDesc table in src/c/widgets.c (widgets with an icon and a value) and
+// WidgetList_iconOnlyId() in src/c/widget_list.c. WEATHER condition's mode is the old widget 37.
 export type WidgetIdent = 'icon' | 'unit' | 'none' | 'iconly';
-export const ICONLY_IDS: number[] = [7];
+export const ICONLY_IDS: number[] = [2, 7, 8, 9, 10, 12, 20, 21, 22, 24, 25, 40, 41, 42, 43, 44];
+// Config button labels: V = the value is shown, ◉ = the icon symbol, U = the unit.
+export const IDENT_GLYPH: { [m: string]: string } = { icon: 'V◉', unit: 'VU', none: 'V', iconly: '◉' };
+export const IDENT_TITLE: { [m: string]: string } = {
+  icon: 'Value + icon', unit: 'Value + unit', none: 'Value only', iconly: 'Icon only'
+};
 const IDENT_ICON_IDS: number[] = [2, 7, 8, 9, 10, 12, 20, 21, 22, 23, 24, 25, 40, 41, 42, 43, 44];
 const IDENT_UNIT_IDS: number[] = [2, 3, 6, 7, 8, 9, 10, 12, 13, 14, 18, 19, 20, 21, 22, 24, 25, 35, 40, 41, 42, 43, 44];
 

@@ -148,7 +148,7 @@ void Settings_saveToStorage() {
 
 static void dyn_scan_cb(uint8_t w, void *ctx) {
   (void)ctx;
-  if (w == WEATHER_CURRENT || w == WEATHER_FORECAST_TODAY || w == WEATHER_UV_INDEX || w == WEATHER_ICON
+  if (w == WEATHER_CURRENT || w == WEATHER_FORECAST_TODAY || w == WEATHER_UV_INDEX
       || (w >= RAIN_MAX_1H && w <= RAIN_MAX_12H)) {
     dynamicSettings.disableWeather = false;
   }

@@ -74,10 +74,6 @@ static void measure_member(int pos, const WidgetSlot *slot, int member, WidgetCt
   ctx->id = slot->members[member];
   ctx->font = (uint8_t)font_for(pos, slot->flags[member]);
   ctx->ident = (uint8_t)WidgetList_flagIdent(slot->flags[member]);
-  if (ctx->ident == WL_IDENT_ICONONLY) {     // WEATHER condition, icon only: the icon-only descriptor
-    ctx->id = WEATHER_ICON;
-    ctx->ident = WL_IDENT_ICON;
-  }
   Widgets_get(ctx->id)->measure(ctx, size);
 }
 
@@ -116,8 +112,8 @@ static bool auto_battery_shown(void) {
 static int replaceable_slot(const WidgetSlot *slots, int count) {
   for (int i = 0; i < count; i++) {
     if (slots[i].count == 1 &&
-        ((slots[i].members[0] == WEATHER_CURRENT && !(slots[i].flags[0] & WL_FLAG_ICONONLY)) ||
-         slots[i].members[0] == WEATHER_FORECAST_TODAY)) {
+        (slots[i].members[0] == WEATHER_CURRENT || slots[i].members[0] == WEATHER_FORECAST_TODAY) &&
+        !(slots[i].flags[0] & WL_FLAG_ICONONLY)) {
       return i;
     }
   }
@@ -247,7 +243,7 @@ void WidgetLayer_prepare(GRect bounds) {
 void WidgetLayer_drawIcons(GContext *ctx) {
   for (int i = 0; i < s_placed_count; i++) {
     const Placed *p = &s_placed[i];
-    if (p->has_icon && !Widgets_iconOnTop(p->ctx.id)) { Widgets_get(p->ctx.id)->draw_icon(ctx, &p->ctx, p->icon_box); }
+    if (p->has_icon && !Widgets_iconOnTop(&p->ctx)) { Widgets_get(p->ctx.id)->draw_icon(ctx, &p->ctx, p->icon_box); }
   }
 }
 
@@ -263,7 +259,7 @@ void WidgetLayer_drawValues(GContext *ctx, const CfHandPose *hour, const CfHandP
     if (p->has_value) {
       Widgets_get(p->ctx.id)->draw_value(ctx, &p->ctx, p->value_box, GTextAlignmentLeft);
     }
-    if (p->has_icon && Widgets_iconOnTop(p->ctx.id)) {   // icon-only: above the hands, shadowed
+    if (p->has_icon && Widgets_iconOnTop(&p->ctx)) {   // icon-only: above the hands, shadowed
       Widgets_get(p->ctx.id)->draw_icon(ctx, &p->ctx, p->icon_box);
     }
   }

@@ -219,7 +219,11 @@ test('icon properties: selectable, stored with shape icon, row marked, picker of
   // numeric widget keeps its unit / none button, the icon one has just a placeholder
   const wrows = Array.from(t.wroot.querySelectorAll('.wl-row'));
   assert.strictEqual(wrows[0].querySelector('.wl-main .wl-hide').tagName, 'BUTTON');
-  assert.ok(wrows[1].querySelector('.wl-main .wl-hide-ph'));
+  // the icon property shows the inactive icon-only label
+  const fixed = wrows[1].querySelector('.wl-main .wl-hide');
+  assert.strictEqual(fixed.textContent, '\u25c9');
+  assert.strictEqual(fixed.disabled, true);
+  assert.strictEqual(wrows[1].querySelector('.wl-main .wl-hide-ph'), null);
   // switching the property back to a numeric one drops the shape
   t.choose(t.rows()[1], 'pl-prop', 'temperature');
   assert.deepStrictEqual(t.get()[1], { plugin: WEATHER, category: 'weather', item: 'location',

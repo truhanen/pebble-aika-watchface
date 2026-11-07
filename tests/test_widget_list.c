@@ -92,7 +92,7 @@ int main(void) {
     assert(n == 2 && b[0] == 7); }
 
   // --- sanitize: font out of range falls back to the default, reserved bits cleared ---
-  { uint8_t b[] = {7, 20, 10, 0xC0 | 4 | H}; int n = SAN(b, 64, 16);
+  { uint8_t b[] = {7, 20, 3, 0xC0 | 4 | H}; int n = SAN(b, 64, 16);
     assert(n == 4 && b[1] == D && b[3] == (4 | H)); }
 
   // --- sanitize: a valid group is preserved with each member's flags ---
@@ -180,7 +180,7 @@ int main(void) {
   // --- parse: maxSlots, and agreement with sanitize on a messy list ---
   { WidgetSlot s[2]; uint8_t b[] = {1, D, 2, D, 3, D};
     assert(WidgetList_parse(b, 6, s, 2) == 2); }
-  { uint8_t raw[] = {12, 0xE0 | 4, 99, 0, 0xFF, 3, 9, 15, D, 4, D, 16, 0x30};
+  { uint8_t raw[] = {3, 0xE0 | 4, 99, 0, 0xFF, 3, 9, 15, D, 4, D, 16, 0x30};
     WidgetSlot s[MAX_WIDGET_SLOTS];
     int n = WidgetList_parse(raw, (int)sizeof(raw), s, MAX_WIDGET_SLOTS);
     uint8_t c[sizeof(raw)]; memcpy(c, raw, sizeof(raw));
@@ -224,8 +224,18 @@ int main(void) {
     assert(n == 9 && b[5] == 7 && b[6] == (9 | 0x80) && b[7] == 2); }
   { uint8_t b[] = {7, D | H, 37, D}; int n = SAN(b, 64, 16);        // both present: two id-7 slots
     assert(n == 4 && b[0] == 7 && b[1] == (D | H) && b[2] == 7 && b[3] == (D | 0x80)); }
-  { uint8_t b[] = {7, D | 0x80, 10, D | 0x80}; int n = SAN(b, 64, 16);  // ICONONLY only on id 7
+  { uint8_t b[] = {7, D | 0x80, 3, D | 0x80}; int n = SAN(b, 64, 16);  // ICONONLY only where there is an icon beside a value
     assert(n == 4 && b[1] == (D | 0x80) && b[3] == D); }
+  { uint8_t b[] = {10, D | 0x80 | H, 23, D | 0x80, 36, D | 0x80, 1, 0x80 | 4, 40, D | 0x80 | 0x40};
+    int n = SAN(b, 64, 16);                                         // steps keeps it (and it dominates NONE/UNIT)
+    assert(n == 10 && b[1] == (D | 0x80) && b[3] == D && b[5] == D && b[7] == 4 && b[9] == (D | 0x80)); }
+  { uint8_t b[] = {0xFF, 2, 1, 2, D | 0x80, 3, D | 0x80}; int n = SAN(b, 64, 16);   // in a group, per member
+    assert(n == 7 && b[4] == (D | 0x80) && b[6] == D); }
+  { const uint8_t yes[] = {2, 7, 8, 9, 10, 12, 20, 21, 22, 24, 25, 40, 41, 42, 43, 44};
+    int count = 0;
+    for (int id = 0; id < 256; id++) { if (WidgetList_iconOnlyId((uint8_t)id)) { count++; } }
+    assert(count == (int)sizeof yes);
+    for (unsigned k = 0; k < sizeof yes; k++) { assert(WidgetList_iconOnlyId(yes[k])); } }
   { uint8_t b[] = {37, D, 7, D | H}; WidgetSlot s[4];
     int n = WidgetList_parse(b, sizeof b, s, 4);
     assert(n == 2 && s[0].members[0] == 7 && WidgetList_flagIdent(s[0].flags[0]) == WL_IDENT_ICONONLY);
